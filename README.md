@@ -281,6 +281,6 @@ vendor/bin/pint
 ## 📄 Lisensi, Hak Cipta & Atribusi
 
 - **Disclaimer Aplikasi**: Aplikasi ini merupakan proyek *fan-made* non-komersial yang dikembangkan untuk membantu para trainer dalam mencatat riwayat gacha dan ritme grinding fans kuota Circle Club.
-- **Hak Cipta Karakter & Aset Game**: *Uma Musume: Pretty Derby (ウマ娘 プリティーダービー)* beserta seluruh materi terkait merupakan hak cipta eksklusif milik © **Cygames, Inc.**
+- **Hak Cipta Karakter & Aset Game**: [*Uma Musume: Pretty Derby (ウマ娘 プリティーダービー)*](https://umamusume.jp/) beserta seluruh materi dan aset terkait merupakan hak cipta eksklusif milik © [**Cygames, Inc.**](https://www.cygames.co.jp/)
 - **Sumber Data Katalog Komunitas**: Seluruh data nama karakter, varian kostum, kartu bantuan, dan jadwal banner JP disinkronkan dari platform komunitas [GameTora](https://gametora.com/umamusume).
-- **Pengembangan dengan Bantuan AI**: Repositori ini dikembangkan dengan bantuan AI dan telah melalui audit verifikasi arsitektur serta pengujian otomatis untuk memastikan stabilitas dan kesesuaian logika aplikasi.
+- **Pengembangan dengan Bantuan AI**: Program dan repositori ini dibuat seutuhnya (*100% full AI-generated*) dengan bantuan kecerdasan buatan (AI) yang dipandu dan diaudit melalui pengujian otomatis untuk memastikan stabilitas serta kesesuaian logika aplikasi.
