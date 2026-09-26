@@ -46,6 +46,27 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
   - **Dukungan Aksara Jepang Lengkap (Kanji, Katakana, Hiragana)**: Menambahkan teks nama karakter dalam aksara Jepang asli (seperti `アドマイヤグルーヴ`, `アドマイヤベガ`, `アグネスデジタル`, `ゼンノロブロイ`, `めんこいめんこいむつのはな`, `茶の子雪ん子`, dll.) agar pembacaan OCR dari screenshot client game server Jepang (JP) dapat dikenali secara instan dan presisi.
   - **Peningkatan Toleransi Format OCR**: Menangani variasi tanda baca, simbol khusus (`♡`), tanda petik (`'`), serta variasi spasi dan hyphen untuk meminimalkan kegagalan pencocokan akibat artefak kompresi screenshot.
 
+### 👑 Dukungan Peringkat Legendaris LF (LF s/d LF24) & Perhitungan Rating Otomatis Karier
+- **Integrasi Penuh Tier LF Berdasarkan Verifikasi GameWith & Datamine Komunitas JP**:
+  - Mengonfirmasi catatan kalkulator penilaian resmi GameWith (*評価点シミュレーター*): *"現在 LF20の2230までのステータス入力に対応しています"* (Mendukung stat input hingga patokan LF20 di nilai 2.230 stat).
+  - Menambahkan tier legendaris tertinggi baru di atas LG24, yaitu **LF (Legend F)** yang memiliki 25 sub-tingkatan (**`LF`**, serta **`LF1` s/d `LF24`**) yang merupakan batas teoritis skenario ulang tahun ke-5 (*Beyond Dreams*).
+- **Pemetaan Ambang Nilai Skor Evaluasi Resmi (`UmaCatalog.php`)**:
+  - `LF` : $\ge 91.400$
+  - `LF1` s/d `LF5`: $92.000$ – $94.400$
+  - `LF6` s/d `LF9`: $95.000$ – $96.900$
+  - `LF10` s/d `LF19`: $97.500$ – $102.200$
+  - `LF20`: $\ge 102.700$ (Patokan Simulator GameWith)
+  - `LF21` s/d `LF23`: $103.200$ – $104.300$
+  - `LF24`: $\ge 104.800$ (Maksimal Teoritis Skenario 5th Anniv)
+- **Otomatisasi Penentuan Rank pada Input Skor Evaluasi (`FansView.jsx` & `EditCareerRunModal.jsx`)**:
+  - Input skor evaluasi secara real-time langsung mengalkulasikan dan menentukan peringkat LF secara otomatis saat skor mencapai $\ge 91.400$.
+  - Menambahkan tombol *"💡 Isi Cepat Skor Evaluasi"* baru: **91.400 (LF)** dan **102.700 (LF20)**.
+  - Menambahkan grup tab pemilih manual **`LEGEND (LF)`** pada formulir penambahan dan penyuntingan sesi latihan karier.
+- **Peningkatan OCR Screenshot Hasil Lari (`CareerOcrZone.jsx`)**:
+  - Mendukung pengenalan pola teks rank `LF` serta memperluas batas deteksi angka skor evaluasi hingga 6 digit ($100.000$ s/d $200.000$).
+- **Visualisasi Lencana Prestise Baru (`RankBadge.jsx`)**:
+  - Menghadirkan lencana visual khusus tier LF bertema *celestial emerald-teal-cyan* bercahaya dengan ikon mahkota kaisar (*Crown*), cincin halo, dan animasi pelangi ultra-prestisius.
+
 ### 📋 Sinkronisasi Modal Changelog Navbar (`ChangelogModal.jsx` & `/api/changelog`)
 - **Penyajian Pembaruan Real-Time**:
   - Memastikan seluruh catatan pembaruan versi 2.0.9 langsung terindeks dan tersaji pada modal interaktif *Riwayat Pembaruan (Changelog)* yang diakses melalui tombol **Changelog** pada bilah navigasi (Navbar).

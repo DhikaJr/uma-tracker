@@ -196,6 +196,15 @@ export default function CareerOcrZone({
             return matched;
         }
         // Standard fallback thresholds
+        if (score >= 91400) return 'LF';
+        if (score >= 72400) return 'LG';
+        if (score >= 63400) return 'US';
+        if (score >= 55200) return 'UA';
+        if (score >= 47600) return 'UB';
+        if (score >= 40700) return 'UC';
+        if (score >= 34400) return 'UD';
+        if (score >= 28800) return 'UE';
+        if (score >= 23900) return 'UF';
         if (score >= 19600) return 'UG';
         if (score >= 19200) return 'SS+';
         if (score >= 17500) return 'SS';
@@ -288,11 +297,11 @@ export default function CareerOcrZone({
         if (!detectedScore) {
             // Remove skill points with "pt" or "Poin" suffix to prevent collision (e.g. 2,483pt)
             const textWithoutPt = text.replace(/([0-9,.]+)\s*(?:pt|Pt|PT|Poin|ポイント)/gi, '');
-            // Find 4 to 5 digit standalone numbers
-            const allNumbers = textWithoutPt.match(/\b\d{1,3}(?:[.,]\d{3})+\b|\b\d{4,5}\b/g) || [];
+            // Find 4 to 6 digit standalone numbers
+            const allNumbers = textWithoutPt.match(/\b\d{1,3}(?:[.,]\d{3})+\b|\b\d{4,6}\b/g) || [];
             for (const numStr of allNumbers) {
                 const num = parseInt(numStr.replace(/[^0-9]/g, ''), 10);
-                if (num >= 1000 && num <= 99999 && num !== detectedFans) {
+                if (num >= 1000 && num <= 200000 && num !== detectedFans) {
                     detectedScore = num;
                     break;
                 }
@@ -315,9 +324,9 @@ export default function CareerOcrZone({
                 detectedRank = rankLabelMatch[1].toUpperCase();
             }
         }
-        // High-tier compound ranks that do not conflict with single letter words (UG, UF, UE, UD, UC, UB, UA, US, SS+, SS, S+, LG)
+        // High-tier compound ranks that do not conflict with single letter words (LF, LG, US, UA, UB, UC, UD, UE, UF, UG, SS+, SS, S+)
         if (!detectedRank) {
-            const compoundMatch = text.match(/\b(LG\d*|US\d*|UA\d*|UB\d*|UC\d*|UD\d*|UE\d*|UF\d*|UG\d*|SS\+|SS|S\+)\b/i);
+            const compoundMatch = text.match(/\b(LF\d*|LG\d*|US\d*|UA\d*|UB\d*|UC\d*|UD\d*|UE\d*|UF\d*|UG\d*|SS\+|SS|S\+)\b/i);
             if (compoundMatch) {
                 detectedRank = compoundMatch[1].toUpperCase();
             }

@@ -18,6 +18,10 @@ const rankTierGroups = {
         'LG', 'LG1', 'LG2', 'LG3', 'LG4', 'LG5', 'LG6', 'LG7', 'LG8', 'LG9',
         'LG10', 'LG12', 'LG15', 'LG18', 'LG20', 'LG22', 'LG24',
     ],
+    'LEGEND (LF)': [
+        'LF', 'LF1', 'LF2', 'LF3', 'LF4', 'LF5', 'LF6', 'LF7', 'LF8', 'LF9',
+        'LF10', 'LF12', 'LF15', 'LF18', 'LF20', 'LF22', 'LF24',
+    ],
     'STAR (A-SS)': [
         'A', 'A+', 'S', 'S+', 'SS', 'SS+',
     ],
@@ -94,6 +98,7 @@ export default function EditCareerRunModal({
             if (list.includes(rank)) return tier;
         }
         if (/^(UG|UF|UE|UD|UC|UB|UA|US)/.test(rank)) return 'U-TIER';
+        if (rank.startsWith('LF')) return 'LEGEND (LF)';
         if (rank.startsWith('LG')) return 'LEGEND (LG)';
         if (/^(A|S)/.test(rank)) return 'STAR (A-SS)';
         if (/^(G|F|E|D|C|B)/.test(rank)) return 'BEGINNER (G-B)';
@@ -222,11 +227,11 @@ export default function EditCareerRunModal({
     };
 
     return (
-        <div 
+        <div
             className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
             onClick={onClose}
         >
-            <div 
+            <div
                 className="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[90vh]"
                 onClick={(e) => e.stopPropagation()}
             >

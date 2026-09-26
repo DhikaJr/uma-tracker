@@ -345,6 +345,15 @@ class UmaTrackerApiTest extends TestCase
 
         $this->assertTrue($thresholds->has('LG24'));
         $this->assertSame(86800, $thresholds['LG24']['score']);
+
+        $this->assertTrue($thresholds->has('LF'));
+        $this->assertSame(91400, $thresholds['LF']['score']);
+
+        $this->assertTrue($thresholds->has('LF20'));
+        $this->assertSame(102700, $thresholds['LF20']['score']);
+
+        $this->assertTrue($thresholds->has('LF24'));
+        $this->assertSame(104800, $thresholds['LF24']['score']);
     }
 
     public function test_can_record_career_run_with_evaluation_score_and_auto_select_rank(): void
@@ -394,9 +403,48 @@ class UmaTrackerApiTest extends TestCase
         $response3->assertStatus(201)
             ->assertJsonPath('data.final_rank', 'UG1')
             ->assertJsonPath('data.evaluation_score', 20000);
+
+        // 4. 91400 automatically selects LF
+        $response4 = $this->postJson('/api/career/runs', [
+            'uma_name' => 'Almond Eye',
+            'scenario' => 'Beyond Dreams',
+            'fans_gained' => 50000000,
+            'evaluation_score' => 91400,
+            'run_date' => '2026-09-15',
+        ]);
+
+        $response4->assertStatus(201)
+            ->assertJsonPath('data.final_rank', 'LF')
+            ->assertJsonPath('data.evaluation_score', 91400);
+
+        // 5. 102700 automatically selects LF20
+        $response5 = $this->postJson('/api/career/runs', [
+            'uma_name' => 'Almond Eye',
+            'scenario' => 'Beyond Dreams',
+            'fans_gained' => 55000000,
+            'evaluation_score' => 102700,
+            'run_date' => '2026-09-15',
+        ]);
+
+        $response5->assertStatus(201)
+            ->assertJsonPath('data.final_rank', 'LF20')
+            ->assertJsonPath('data.evaluation_score', 102700);
+
+        // 6. 104800 automatically selects LF24
+        $response6 = $this->postJson('/api/career/runs', [
+            'uma_name' => 'Almond Eye',
+            'scenario' => 'Beyond Dreams',
+            'fans_gained' => 60000000,
+            'evaluation_score' => 104800,
+            'run_date' => '2026-09-15',
+        ]);
+
+        $response6->assertStatus(201)
+            ->assertJsonPath('data.final_rank', 'LF24')
+            ->assertJsonPath('data.evaluation_score', 104800);
     }
 
-    public function test_career_metadata_includes_g_to_lg_ranks_and_new_scenarios(): void
+    public function test_career_metadata_includes_g_to_lf_ranks_and_new_scenarios(): void
     {
         $response = $this->getJson('/api/career/metadata');
         $response->assertStatus(200);
@@ -413,6 +461,9 @@ class UmaTrackerApiTest extends TestCase
         $this->assertContains('UA1', $ranks);
         $this->assertContains('US1', $ranks);
         $this->assertContains('LG24', $ranks);
+        $this->assertContains('LF', $ranks);
+        $this->assertContains('LF20', $ranks);
+        $this->assertContains('LF24', $ranks);
 
         $this->assertContains('The Twinkle Legends', $scenarios);
         $this->assertContains('Design Your Island', $scenarios);
