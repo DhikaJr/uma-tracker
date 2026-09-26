@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import SkillDetailModal from './SkillDetailModal';
-import { 
-    X, 
-    Star, 
-    CheckCircle2, 
-    Sparkles, 
-    ShieldCheck, 
-    BookOpen, 
-    Layers, 
-    Zap, 
-    ArrowRight, 
-    User, 
-    Compass, 
+import {
+    X,
+    Star,
+    CheckCircle2,
+    Sparkles,
+    ShieldCheck,
+    BookOpen,
+    Layers,
+    Zap,
+    ArrowRight,
+    User,
+    Compass,
     Award,
     ExternalLink,
     Info,
@@ -87,6 +87,103 @@ const STAT_ITEMS = [
     { key: 'guts', label: 'Guts', labelJp: '根性', icon: '/images/icons/utx_ico_obtain_03.png', fallback: 'https://gametora.com/images/umamusume/icons/utx_ico_obtain_03.png' },
     { key: 'wit', label: 'Wit', labelJp: '賢さ', icon: '/images/icons/utx_ico_obtain_04.png', fallback: 'https://gametora.com/images/umamusume/icons/utx_ico_obtain_04.png' },
 ];
+
+function translateObjectiveTitle(title) {
+    if (!title) return '';
+    const t = String(title).replace(/^\d+\.\s*/, '').trim();
+
+    // Have at least X fans
+    let m = t.match(/^Have at least ([\d,]+) fans$/i);
+    if (m) return `Kumpulkan minimal ${m[1]} fans`;
+
+    // Participate in the <Race>
+    m = t.match(/^Participate in the (.+)$/i);
+    if (m) return `Ikuti balapan ${m[1]}`;
+
+    // Participate in X G1 races
+    m = t.match(/^Participate in (\d+) G1 races$/i);
+    if (m) return `Ikuti ${m[1]} balapan tingkat G1`;
+
+    // Participate in X graded/G2/G3 or higher races
+    m = t.match(/^Participate in (\d+) (G2|G3|graded) or higher races$/i);
+    if (m) return `Ikuti ${m[1]} balapan tingkat ${m[2] === 'graded' ? 'berperingkat (graded)' : m[2]} atau lebih tinggi`;
+
+    // Place 1st in the <Race>
+    m = t.match(/^Place 1st in the (.+)$/i);
+    if (m) return `Raih Juara 1 di ${m[1]}`;
+
+    // Place 1st in X G1 races
+    m = t.match(/^Place 1st in (\d+) G1 races$/i);
+    if (m) return `Raih Juara 1 di ${m[1]} balapan tingkat G1`;
+
+    // Place 1st in X graded/G2/G3 or higher races
+    m = t.match(/^Place 1st in (\d+) (G2|G3|graded) or higher races$/i);
+    if (m) return `Raih Juara 1 di ${m[1]} balapan tingkat ${m[2] === 'graded' ? 'berperingkat (graded)' : m[2]} atau lebih tinggi`;
+
+    // Place Nth or better in the <Race>
+    m = t.match(/^Place (\d+)(?:st|nd|rd|th) or better in the (.+)$/i);
+    if (m) return `Raih posisi ${m[1]} besar atau lebih baik di ${m[2]}`;
+
+    // Place Nth or better in X G1 races
+    m = t.match(/^Place (\d+)(?:st|nd|rd|th) or better in (\d+) G1 races$/i);
+    if (m) return `Raih posisi ${m[1]} besar atau lebih baik di ${m[2]} balapan tingkat G1`;
+
+    // Place Nth or better in X graded/G2/G3 or higher races
+    m = t.match(/^Place (\d+)(?:st|nd|rd|th) or better in (\d+) (G2|G3|graded) or higher races$/i);
+    if (m) return `Raih posisi ${m[1]} besar atau lebih baik di ${m[2]} balapan tingkat ${m[3] === 'graded' ? 'berperingkat (graded)' : m[3]} atau lebih tinggi`;
+
+    // Career Objective X
+    m = t.match(/^Career Objective (\d+)$/i);
+    if (m) return `Target Karir ${m[1]}`;
+
+    return t;
+}
+
+function translateTurnText(turnText) {
+    if (!turnText) return '';
+    const m = String(turnText).match(/^Turn (\d+)(?:\s*\(previous \+ (\d+)\))?$/i);
+    if (m) {
+        if (m[2]) {
+            return `Giliran ${m[1]} (jeda +${m[2]} giliran)`;
+        }
+        return `Giliran ${m[1]}`;
+    }
+    return turnText.replace(/Turn/gi, 'Giliran').replace(/previous/gi, 'sebelumnya');
+}
+
+function translateClassPeriod(period) {
+    if (!period) return '';
+    return String(period)
+        .replace(/Junior Class/gi, 'Tahun Junior')
+        .replace(/Classic Class/gi, 'Tahun Klasik')
+        .replace(/Senior Class/gi, 'Tahun Senior')
+        .replace(/Finals/gi, 'Final (URA)')
+        .replace(/Early/gi, 'Awal')
+        .replace(/Late/gi, 'Akhir')
+        .replace(/January/gi, 'Januari')
+        .replace(/February/gi, 'Februari')
+        .replace(/March/gi, 'Maret')
+        .replace(/April/gi, 'April')
+        .replace(/May/gi, 'Mei')
+        .replace(/June/gi, 'Juni')
+        .replace(/July/gi, 'Juli')
+        .replace(/August/gi, 'Agustus')
+        .replace(/September/gi, 'September')
+        .replace(/October/gi, 'Oktober')
+        .replace(/November/gi, 'November')
+        .replace(/December/gi, 'Desember');
+}
+
+function translateTrackCondition(cond) {
+    if (!cond) return '';
+    return String(cond)
+        .replace(/\bTurf\b/g, 'Rumput')
+        .replace(/\bDirt\b/g, 'Pasir')
+        .replace(/\bShort\b/g, 'Jarak Pendek')
+        .replace(/\bMile\b/g, 'Mil')
+        .replace(/\bMedium\b/g, 'Jarak Menengah')
+        .replace(/\bLong\b/g, 'Jarak Jauh');
+}
 
 export default function CharacterDetailModal({ character, isOpen, onClose }) {
     const [activeTab, setActiveTab] = useState('skills'); // 'skills' | 'stats' | 'aptitude' | 'objectives'
@@ -173,9 +270,9 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6">
             {/* Backdrop */}
-            <div 
-                className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity" 
-                onClick={onClose} 
+            <div
+                className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity"
+                onClick={onClose}
             />
 
             {/* Modal Dialog Content */}
@@ -196,9 +293,9 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                         <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 border-2 border-amber-400/80 bg-emerald-950 shadow-md relative flex items-center justify-center">
                             <User className="w-8 h-8 text-emerald-300/40 absolute" />
                             {imageUrl ? (
-                                <img 
-                                    src={imageUrl} 
-                                    alt={name} 
+                                <img
+                                    src={imageUrl}
+                                    alt={name}
                                     className="w-full h-full object-cover object-top relative z-10"
                                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                 />
@@ -230,8 +327,8 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
 
                                 {/* Ownership Badge */}
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-black border ${
-                                    isOwned 
-                                        ? 'bg-emerald-500/30 text-emerald-200 border-emerald-400/50' 
+                                    isOwned
+                                        ? 'bg-emerald-500/30 text-emerald-200 border-emerald-400/50'
                                         : 'bg-black/30 text-white/60 border-white/20'
                                 }`}>
                                     <CheckCircle2 className={`w-3 h-3 ${isOwned ? 'text-emerald-300' : 'text-white/40'}`} />
@@ -317,10 +414,10 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
 
                                     <div className="space-y-3">
                                         {uniqueVersions.map((uSkill, uIdx) => {
-                                            const versionLabel = uSkill.version_label 
+                                            const versionLabel = uSkill.version_label
                                                 || (uniqueVersions.length > 1 ? (uIdx === 0 ? '☆ and ☆☆' : '☆☆☆+') : '☆☆☆+');
                                             return (
-                                                <div 
+                                                <div
                                                     key={uSkill.id || uIdx}
                                                     onClick={() => setSelectedSkillModal(uSkill)}
                                                     className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs cursor-pointer hover:border-amber-400 dark:hover:border-amber-500 transition-colors group"
@@ -338,10 +435,10 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                                                         {/* Left: Icon & Details */}
                                                         <div className="flex flex-col items-center gap-1 shrink-0">
                                                             {uSkill.icon_url ? (
-                                                                <img 
-                                                                    src={uSkill.icon_url} 
-                                                                    alt={uSkill.name} 
-                                                                    className="w-12 h-12 rounded-xl object-contain drop-shadow-sm border border-amber-300/60 p-0.5 bg-amber-50/40 dark:bg-amber-950/30 group-hover:scale-105 transition-transform" 
+                                                                <img
+                                                                    src={uSkill.icon_url}
+                                                                    alt={uSkill.name}
+                                                                    className="w-12 h-12 rounded-xl object-contain drop-shadow-sm border border-amber-300/60 p-0.5 bg-amber-50/40 dark:bg-amber-950/30 group-hover:scale-105 transition-transform"
                                                                 />
                                                             ) : (
                                                                 <div className="w-12 h-12 rounded-xl bg-amber-400/20 text-amber-500 flex items-center justify-center shrink-0 border border-amber-300/60 group-hover:scale-105 transition-transform">
@@ -395,7 +492,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         {innateSkills.map((sk) => (
-                                            <div 
+                                            <div
                                                 key={sk.id}
                                                 onClick={() => setSelectedSkillModal(sk)}
                                                 className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-start gap-3 cursor-pointer hover:border-emerald-400 dark:hover:border-emerald-500 transition-colors group shadow-2xs"
@@ -447,7 +544,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                                         {awakeningSkills.map((sk) => {
                                             const isGold = sk.rarity === 2 || sk.level === 3 || sk.level === 5;
                                             return (
-                                                <div 
+                                                <div
                                                     key={sk.id}
                                                     onClick={() => setSelectedSkillModal(sk)}
                                                     className={`p-3.5 rounded-2xl border flex items-start gap-3.5 transition-all cursor-pointer hover:border-amber-400 dark:hover:border-amber-500 group shadow-2xs ${
@@ -508,7 +605,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
 
                                     <div className="space-y-3">
                                         {evolveSkills.map((sk) => (
-                                            <div 
+                                            <div
                                                 key={sk.id}
                                                 onClick={() => setSelectedSkillModal(sk)}
                                                 className="p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-transparent border border-purple-300/80 dark:border-purple-800/60 flex items-start gap-3.5 cursor-pointer hover:border-purple-500 dark:hover:border-purple-400 transition-colors group shadow-2xs"
@@ -618,11 +715,11 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                                     <div className="grid grid-cols-5 p-3 sm:p-4 text-center divide-x divide-slate-100 dark:divide-slate-800/80">
                                         {STAT_ITEMS.map((stat, idx) => (
                                             <div key={stat.key} className="flex flex-col items-center gap-1.5 px-1">
-                                                <img 
-                                                    src={stat.icon} 
-                                                    alt={stat.label} 
+                                                <img
+                                                    src={stat.icon}
+                                                    alt={stat.label}
                                                     onError={(e) => { e.currentTarget.src = stat.fallback; }}
-                                                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-contain drop-shadow-2xs" 
+                                                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-contain drop-shadow-2xs"
                                                 />
                                                 <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200 font-mono">
                                                     {baseStats ? (baseStats[idx] ?? '-') : '-'}
@@ -642,11 +739,11 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                                     <div className="grid grid-cols-5 p-3 sm:p-4 text-center divide-x divide-slate-100 dark:divide-slate-800/80">
                                         {STAT_ITEMS.map((stat, idx) => (
                                             <div key={stat.key} className="flex flex-col items-center gap-1.5 px-1">
-                                                <img 
-                                                    src={stat.icon} 
-                                                    alt={stat.label} 
+                                                <img
+                                                    src={stat.icon}
+                                                    alt={stat.label}
                                                     onError={(e) => { e.currentTarget.src = stat.fallback; }}
-                                                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-contain drop-shadow-2xs" 
+                                                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-contain drop-shadow-2xs"
                                                 />
                                                 <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200 font-mono">
                                                     {fiveStarStats ? (fiveStarStats[idx] ?? '-') : '-'}
@@ -669,11 +766,11 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                                             const bonusVal = statBonus ? statBonus[idx] : 0;
                                             return (
                                                 <div key={stat.key} className="flex flex-col items-center gap-1.5 px-1">
-                                                    <img 
-                                                        src={stat.icon} 
-                                                        alt={stat.label} 
+                                                    <img
+                                                        src={stat.icon}
+                                                        alt={stat.label}
                                                         onError={(e) => { e.currentTarget.src = stat.fallback; }}
-                                                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-contain drop-shadow-2xs" 
+                                                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-contain drop-shadow-2xs"
                                                     />
                                                     <span className={`text-xs sm:text-sm font-black font-mono ${bonusVal > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
                                                         {bonusVal > 0 ? `${bonusVal}%` : '-'}
@@ -771,7 +868,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                     {activeTab === 'objectives' && (
                         <div className="space-y-4">
                             <div className="text-center pb-1">
-                                <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">Objectives</h3>
+                                <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">Target Karir (Objectives)</h3>
                             </div>
 
                             {(!objectives || objectives.length === 0) ? (
@@ -785,18 +882,18 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                                         const bannerSrc = obj.banner_url || (obj.race_icon_id ? `https://media.gametora.com/umamusume/races/banners/${obj.race_icon_id}.png` : null);
 
                                         return (
-                                            <div 
+                                            <div
                                                 key={idx}
                                                 className={`p-4 sm:p-5 flex items-center gap-4 sm:gap-6 transition-colors ${
-                                                    isOdd 
-                                                        ? 'bg-[#e8f4f8] dark:bg-cyan-950/25' 
+                                                    isOdd
+                                                        ? 'bg-[#e8f4f8] dark:bg-cyan-950/25'
                                                         : 'bg-white dark:bg-slate-900'
                                                 }`}
                                             >
                                                 {/* Left: Race banner or Ribbon Badge */}
                                                 <div className="shrink-0 w-24 sm:w-28 flex items-center justify-center">
                                                     {bannerSrc ? (
-                                                        <img 
+                                                        <img
                                                             src={bannerSrc}
                                                             alt={obj.race_name || obj.title}
                                                             className="w-full h-auto max-h-12 object-contain rounded drop-shadow-2xs"
@@ -808,11 +905,11 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                                                             }}
                                                         />
                                                     ) : null}
-                                                    <div 
+                                                    <div
                                                         className={`items-center justify-center ${bannerSrc ? 'hidden' : 'flex'}`}
                                                     >
                                                         {obj.grade ? (
-                                                            <div 
+                                                            <div
                                                                 className="px-3.5 py-1 bg-blue-600 text-white font-black text-xs rounded-l tracking-wider flex items-center justify-center relative shadow-xs"
                                                                 style={{
                                                                     clipPath: 'polygon(0% 0%, 100% 0%, 82% 50%, 100% 100%, 0% 100%)',
@@ -832,21 +929,21 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                                                 {/* Right: Objective Info */}
                                                 <div className="min-w-0 flex-1 space-y-1">
                                                     <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-[15px] leading-snug">
-                                                        {obj.order ? `${obj.order}. ` : ''}{(obj.title || '').replace(/^\d+\.\s*/, '')}
+                                                        {obj.order ? `${obj.order}. ` : ''}{translateObjectiveTitle(obj.title || obj.short_title || '')}
                                                     </h4>
                                                     {obj.turn_text && (
                                                         <div className="text-xs text-slate-700 dark:text-slate-300 font-medium">
-                                                            {obj.turn_text}
+                                                            {translateTurnText(obj.turn_text)}
                                                         </div>
                                                     )}
-                                                    {obj.class_period && (
+                                                    {(obj.period || obj.class_period) && (
                                                         <div className="text-xs text-slate-700 dark:text-slate-300 font-medium">
-                                                            {obj.class_period}
+                                                            {translateClassPeriod(obj.period || obj.class_period)}
                                                         </div>
                                                     )}
                                                     {obj.track_condition && (
                                                         <div className="text-xs text-slate-700 dark:text-slate-300 font-medium">
-                                                            {obj.track_condition}
+                                                            {translateTrackCondition(obj.track_condition)}
                                                         </div>
                                                     )}
                                                 </div>
@@ -876,9 +973,9 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
 
             {/* Skill Detail Modal */}
             {selectedSkillModal && (
-                <SkillDetailModal 
-                    skill={selectedSkillModal} 
-                    onClose={() => setSelectedSkillModal(null)} 
+                <SkillDetailModal
+                    skill={selectedSkillModal}
+                    onClose={() => setSelectedSkillModal(null)}
                 />
             )}
         </div>

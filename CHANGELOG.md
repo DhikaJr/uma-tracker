@@ -2,6 +2,46 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.1.0] - 26 September 2026
+
+### 🌸 Penyesuaian Analisis Gacha Karakter (Terminologi B3) & Perbaikan Visual Pie Chart (`AnalyticsView.jsx`)
+- **Adaptasi Dinamis Terminologi Karakter B3 (3★) pada Analitik Gacha**:
+  - Mengubah seluruh penyebutan istilah "SSR" menjadi **"Karakter B3"** atau **"3★ (Rainbow)"** secara dinamis saat kategori analisis memilih **Gacha Karakter** (`gachaCategory === 'character'`).
+  - Menyesuaikan info filter aktif (`~{n} pull/Karakter B3`), kartu ringkasan gacha karakter (`~{n} Tarikan / Karakter B3`, kolom jumlah `Karakter B3`, persentase `Rate B3`), legenda pie chart, indikator hoki (`Indikator Hoki Karakter B3:`), serta grafik interval pity (`Interval Tarikan per Karakter B3 (Pity Intervals)`, badge `{n} Karakter B3`, tooltip rincian `Karakter: [Nama]`, dan pesan keterangan saat belum ada data karakter B3).
+- **Perbaikan Bug Overlap pada Grafik Distribusi Rarity (Pie / Donut Chart)**:
+  - Memperbaiki masalah tumpang-tindih visual di mana teks persentase tengah `0.0%` dan `SSR Rate (3.0%)` sebelumnya menimpa pesan keterangan *"Belum ada tarikan gacha tercatat..."* ketika data kategori/pool masih kosong (`totalPulls === 0`).
+  - Overlay angka dan rate di lubang donut kini hanya dirender ketika terdapat data tarikan (`totalPulls > 0`). Saat kosong, kontainer menampilkan ikon pie chart melingkar dengan pesan status yang bersih dan rapi tanpa tubrukan teks.
+
+### 👑 Pembaruan Palet Warna & Visual Prestise Badge Peringkat LF (`RankBadge.jsx`)
+- **Harmonisasi Estetika Tingkat Tertinggi LF dengan LG Bertema Biru Elektrik**:
+  - Mengubah skema visual lencana peringkat **LF (Legend F)** agar mengadopsi struktur prestisius seperti tier **LG** (`Crown` icon, efek `animate-rainbow`, `font-black`, `tracking-wider`, dan `text-white`), namun berbalut gradien warna biru safir dan cyan bercahaya:
+    - Gradien & Border: `bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-white border-cyan-300 ring-1 ring-cyan-300 shadow-md shadow-blue-500/40`.
+    - Ikon Mahkota: Menggunakan mahkota kaisar (*Crown*) berwarna cyan berkilau (`text-cyan-200 fill-cyan-300`).
+
+### 🇮🇩 Penerjemahan Penuh Target Karir Karakter ke Bahasa Indonesia (`CharacterDetailModal.jsx`)
+- **Lokalisasi Lengkap Tab Target Karir (Objectives)**:
+  - Menerjemahkan tab dan judul modal menjadi **"Target Karir (Objectives)"**.
+  - Mengintegrasikan fungsi penerjemah dinamis untuk seluruh variasi target karir pelatihan URA:
+    - **Target Balapan & Fans**:
+      - *"Participate in the [Race]"* &rarr; `Ikuti balapan [Race]`
+      - *"Place 1st in the [Race]"* &rarr; `Raih Juara 1 di [Race]`
+      - *"Place [N]th or better in the [Race]"* &rarr; `Raih posisi [N] besar atau lebih baik di [Race]`
+      - *"Have at least [N] fans"* &rarr; `Kumpulkan minimal [N] fans`
+      - *"Participate / Place in [N] G1 / graded races"* &rarr; `Ikuti / Raih posisi di [N] balapan tingkat G1 / berperingkat (graded) atau lebih tinggi`
+    - **Waktu Giliran (Turn Text)**:
+      - *"Turn 12"* &rarr; `Giliran 12`
+      - *"Turn 25 (previous + 13)"* &rarr; `Giliran 25 (jeda +13 giliran)`
+    - **Periode & Waktu Pelatihan**:
+      - *"Junior / Classic / Senior Class"* &rarr; `Tahun Junior / Klasik / Senior`
+      - *"Finals"* &rarr; `Final (URA)`
+      - *"Early / Late"* &rarr; `Awal / Akhir`
+      - Nama-nama bulan: Januari s/d Desember.
+    - **Kondisi Trek Balapan**:
+      - *"Turf / Dirt"* &rarr; `Rumput / Pasir`
+      - *"Short / Mile / Medium / Long"* &rarr; `Jarak Pendek / Mil / Jarak Menengah / Jarak Jauh` (misal: `G1 - Rumput - 2400m - Jarak Menengah`).
+
+---
+
 ## [Versi 2.0.9] - 26 September 2026
 
 ### 🌸🃏 Pemisahan Analisis Gacha Karakter vs Support Card pada Menu Analitik

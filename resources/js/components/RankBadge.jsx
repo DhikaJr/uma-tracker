@@ -14,8 +14,8 @@ export default function RankBadge({ rank, size = 'md' }) {
     let icon = null;
 
     if (rankStr.startsWith('LF')) {
-        bgClasses = 'bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 text-slate-950 border-emerald-200 shadow-md shadow-emerald-400/40 ring-1 ring-emerald-300 animate-rainbow font-black tracking-wider';
-        icon = <Crown className="w-3.5 h-3.5 text-emerald-950 fill-emerald-800 inline mr-0.5" />;
+        bgClasses = 'bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-white border-cyan-300 shadow-md shadow-blue-500/40 ring-1 ring-cyan-300 animate-rainbow font-black tracking-wider';
+        icon = <Crown className="w-3.5 h-3.5 text-cyan-200 fill-cyan-300 inline mr-0.5" />;
     } else if (rankStr.startsWith('LG')) {
         bgClasses = 'bg-gradient-to-r from-amber-400 via-rose-500 to-indigo-600 text-white border-amber-300 shadow-md shadow-amber-400/40 ring-1 ring-amber-300 animate-rainbow font-black tracking-wider';
         icon = <Crown className="w-3.5 h-3.5 text-amber-200 fill-amber-300 inline mr-0.5" />;

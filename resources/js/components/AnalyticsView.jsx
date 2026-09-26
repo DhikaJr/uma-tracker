@@ -54,7 +54,7 @@ function CustomPityTooltip({ active, payload, label }) {
                     <span className="font-mono font-black text-slate-900 dark:text-white text-sm">{payload[0].value} tarikan</span>
                 </div>
                 <div className="text-slate-700 dark:text-slate-300 font-medium">
-                    Kartu: <span className="font-bold text-slate-900 dark:text-white">{data.item_name || 'SSR'}</span>
+                    {data.is_character ? 'Karakter:' : 'Kartu:'} <span className="font-bold text-slate-900 dark:text-white">{data.item_name || (data.is_character ? 'Karakter B3' : 'SSR')}</span>
                     {data.is_rate_up && (
                         <span className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
                             Rate Up!
@@ -272,23 +272,25 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
     const currentExpectedInterval = currentBaseRate > 3.0 ? 22.2 : 33.3;
     const currentLuckyThreshold = currentBaseRate > 3.0 ? 22 : 33;
 
+    const isChar = gachaCategory === 'character';
+
     const rarityDonutData = [
         {
-            name: 'SSR (Rainbow)',
+            name: isChar ? 'Karakter 3★ / B3 (Rainbow)' : (gachaCategory === 'support_card' ? 'SSR Support Card (Rainbow)' : 'SSR / B3 (Rainbow)'),
             value: ssrCount,
             percentage: ssrPct,
             baseline: `${currentBaseRate.toFixed(1)}%`,
             color: currentBaseRate > 3.0 ? '#f43f5e' : '#f59e0b'
         },
         {
-            name: 'SR (Gold)',
+            name: isChar ? 'Karakter 2★ / B2 (Gold)' : 'SR (Gold)',
             value: srCount,
             percentage: srPct,
             baseline: '18.0%',
             color: '#6366f1'
         },
         {
-            name: 'R (Silver)',
+            name: isChar ? 'Karakter 1★ / B1 (Silver)' : 'R (Silver)',
             value: rCount,
             percentage: rPct,
             baseline: currentBaseRate > 3.0 ? '77.5%' : '79.0%',
@@ -302,8 +304,9 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
         const itemBaseRate = item.banner_base_rate || currentBaseRate;
         const expectedPulls = itemBaseRate > 3.0 ? 22.2 : 33.3;
         const luckyThreshold = itemBaseRate > 3.0 ? 22 : 33;
+        const itemIsChar = item.is_character || isChar;
         return {
-            label: item.label || `SSR #${idx + 1}`,
+            label: item.label || (itemIsChar ? `B3 #${idx + 1}` : `SSR #${idx + 1}`),
             ssr_number: item.ssr_number,
             pulls_count: item.pulls_count,
             item_name: item.item_name,
@@ -313,6 +316,7 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
             is_boosted: item.is_boosted || itemBaseRate > 3.0,
             is_lucky: item.pulls_count <= luckyThreshold,
             expected_pulls: expectedPulls,
+            is_character: itemIsChar,
         };
     });
 
@@ -647,7 +651,7 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
                             </span>
                             <span className="text-slate-300 dark:text-slate-700">•</span>
                             <span className="text-slate-600 dark:text-slate-400">
-                                Target Patokan: <strong className="text-slate-900 dark:text-white font-mono">{currentBaseRate.toFixed(1)}%</strong> (~{currentExpectedInterval} pull/SSR)
+                                Target Patokan: <strong className="text-slate-900 dark:text-white font-mono">{currentBaseRate.toFixed(1)}%</strong> (~{currentExpectedInterval} pull/{isChar ? 'Karakter B3' : 'SSR'})
                             </span>
                         </div>
 
@@ -718,7 +722,7 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
                                 <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
                                     <span>Target Interval Patokan:</span>
                                     <span className="font-bold text-slate-700 dark:text-slate-300 font-mono">
-                                        ~{charCat.expected_interval} Tarikan / SSR
+                                        ~{charCat.expected_interval} Tarikan / Karakter B3
                                     </span>
                                 </div>
                                 <div className="grid grid-cols-3 gap-2 pt-1 text-center">
@@ -729,13 +733,13 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
                                         </div>
                                     </div>
                                     <div className="bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl">
-                                        <div className="text-[10px] text-slate-400 font-medium">SSR</div>
+                                        <div className="text-[10px] text-slate-400 font-medium">Karakter B3</div>
                                         <div className="text-base font-black text-rose-600 dark:text-rose-400 font-mono mt-0.5">
                                             {charCat.ssr_count}
                                         </div>
                                     </div>
                                     <div className="bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl">
-                                        <div className="text-[10px] text-slate-400 font-medium">SSR Rate</div>
+                                        <div className="text-[10px] text-slate-400 font-medium">Rate B3</div>
                                         <div className={`text-base font-black font-mono mt-0.5 ${charCat.luck_diff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                                             {charCat.ssr_rate}%
                                         </div>
@@ -865,7 +869,7 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
                                 </div>
                                 <div className="flex items-center justify-between text-[10px] pt-1 font-semibold">
                                     <span className="text-slate-500 dark:text-slate-400">
-                                        {charCat.ssr_count} SSR Karakter • {suppCat.ssr_count} SSR Support
+                                        {charCat.ssr_count} B3 Karakter • {suppCat.ssr_count} SSR Support
                                     </span>
                                     <span className="text-indigo-600 dark:text-indigo-400 font-bold">
                                         {gachaCategory === 'all' ? '● Aktif Ditampilkan' : 'Pilih Semua →'}
@@ -885,42 +889,48 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
                                         <span className="text-[11px] font-normal text-slate-400">vs Patokan Resmi ({currentBaseRate.toFixed(1)}%)</span>
                                     </h3>
                                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                        Persentase perolehan SSR aktual {gachaCategory === 'character' ? 'Gacha Karakter' : gachaCategory === 'support_card' ? 'Gacha Support Card' : 'Semua Gacha'} dibandingkan target patokan {currentBaseRate.toFixed(1)}%
+                                        Persentase perolehan {isChar ? 'Karakter B3' : 'SSR'} aktual {gachaCategory === 'character' ? 'Gacha Karakter' : gachaCategory === 'support_card' ? 'Gacha Support Card' : 'Semua Gacha'} dibandingkan target patokan {currentBaseRate.toFixed(1)}%
                                     </p>
                                 </div>
 
                                 <div className="h-48 w-full relative mt-2">
                                     {totalPulls > 0 ? (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie
-                                                    data={rarityDonutData}
-                                                    innerRadius={52}
-                                                    outerRadius={76}
-                                                    paddingAngle={3}
-                                                    dataKey="value"
-                                                    onMouseEnter={(entry) => setHoveredRarity(entry)}
-                                                    onMouseLeave={() => setHoveredRarity(null)}
-                                                >
-                                                    {rarityDonutData.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                                    ))}
-                                                </Pie>
-                                                <Tooltip content={<CustomDonutTooltip />} wrapperStyle={{ zIndex: 40 }} />
-                                            </PieChart>
-                                        </ResponsiveContainer>
+                                        <>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie
+                                                        data={rarityDonutData}
+                                                        innerRadius={52}
+                                                        outerRadius={76}
+                                                        paddingAngle={3}
+                                                        dataKey="value"
+                                                        onMouseEnter={(entry) => setHoveredRarity(entry)}
+                                                        onMouseLeave={() => setHoveredRarity(null)}
+                                                    >
+                                                        {rarityDonutData.map((entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                                        ))}
+                                                    </Pie>
+                                                    <Tooltip content={<CustomDonutTooltip />} wrapperStyle={{ zIndex: 40 }} />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                            <div className={`absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-opacity duration-150 z-0 ${hoveredRarity ? 'opacity-0' : 'opacity-100'}`}>
+                                                <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">{ssrPct}%</span>
+                                                <span className={`text-[10px] font-black uppercase tracking-wider ${currentBaseRate > 3.0 ? 'text-rose-500' : 'text-amber-500'}`}>
+                                                    {isChar ? 'Rate B3' : 'SSR Rate'} ({currentBaseRate.toFixed(1)}%)
+                                                </span>
+                                            </div>
+                                        </>
                                     ) : (
-                                        <div className="h-full flex items-center justify-center text-xs text-slate-400">
-                                            Belum ada tarikan gacha tercatat pada kategori/pool ini.
+                                        <div className="h-full flex flex-col items-center justify-center text-center p-4">
+                                            <div className="w-12 h-12 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center mb-2">
+                                                <PieChartIcon className="w-6 h-6 text-slate-400" />
+                                            </div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                Belum ada tarikan gacha tercatat pada kategori/pool ini.
+                                            </p>
                                         </div>
                                     )}
-
-                                    <div className={`absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-opacity duration-150 z-0 ${hoveredRarity ? 'opacity-0' : 'opacity-100'}`}>
-                                        <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">{ssrPct}%</span>
-                                        <span className={`text-[10px] font-black uppercase tracking-wider ${currentBaseRate > 3.0 ? 'text-rose-500' : 'text-amber-500'}`}>
-                                            SSR Rate ({currentBaseRate.toFixed(1)}%)
-                                        </span>
-                                    </div>
                                 </div>
                             </div>
 
@@ -940,7 +950,7 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
                                 ))}
 
                                 <div className="mt-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-[11px]">
-                                    <span className="font-bold text-slate-600 dark:text-slate-400">Indikator Hoki SSR:</span>
+                                    <span className="font-bold text-slate-600 dark:text-slate-400">Indikator Hoki {isChar ? 'Karakter B3' : 'SSR'}:</span>
                                     <span className={`font-black font-mono px-2 py-0.5 rounded-md ${
                                         parseFloat(ssrPct) >= currentBaseRate
                                             ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
@@ -957,17 +967,17 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
                                 <div>
                                     <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                                        <span>Interval Tarikan per Kartu SSR (Pity Intervals)</span>
+                                        <span>Interval Tarikan per {isChar ? 'Karakter B3' : 'Kartu SSR'} (Pity Intervals)</span>
                                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
                                             gachaCategory === 'character' || currentBaseRate > 3.0
                                                 ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
                                                 : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
                                         }`}>
-                                            {formattedIntervals.length} SSR {gachaCategory === 'character' ? 'Karakter' : gachaCategory === 'support_card' ? 'Support Card' : 'Total'}
+                                            {formattedIntervals.length} {isChar ? 'Karakter B3' : (gachaCategory === 'support_card' ? 'SSR Support Card' : 'SSR')}
                                         </span>
                                     </h3>
                                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                        Jumlah tarikan yang dibutuhkan untuk tiap kartu SSR (Patokan rata-rata: ~{currentExpectedInterval} tarikan pada rate {currentBaseRate.toFixed(1)}%)
+                                        Jumlah tarikan yang dibutuhkan untuk tiap {isChar ? 'Karakter B3' : 'kartu SSR'} (Patokan rata-rata: ~{currentExpectedInterval} tarikan pada rate {currentBaseRate.toFixed(1)}%)
                                     </p>
                                 </div>
 
@@ -986,7 +996,7 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
                             <div className="h-64 w-full">
                                 {formattedIntervals.length === 0 ? (
                                     <div className="h-full flex items-center justify-center text-xs text-slate-400">
-                                        Belum ada data kartu SSR tercatat pada kategori/pool ini untuk mengukur interval tarikan.
+                                        Belum ada data {isChar ? 'Karakter B3' : 'kartu SSR'} tercatat pada kategori/pool ini untuk mengukur interval tarikan.
                                     </div>
                                 ) : (
                                     <ResponsiveContainer width="100%" height="100%">
