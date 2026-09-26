@@ -1,0 +1,362 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@source "../views/**/*.blade.php";
+@source "../js/**/*.{js,jsx,ts,tsx}";
+
+@theme {
+    --color-turf-50: #f0fdf4;
+    --color-turf-100: #dcfce7;
+    --color-turf-200: #bbf7d0;
+    --color-turf-500: #22c55e;
+    --color-turf-600: #16a34a;
+    --color-turf-700: #15803d;
+    --color-turf-800: #166534;
+    --color-uma-pink: #f43f5e;
+    --color-uma-gold: #f59e0b;
+}
+
+@keyframes rainbow-shimmer {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.animate-rainbow {
+    background-size: 200% 200%;
+    animation: rainbow-shimmer 3s ease infinite;
+}
+
+.bg-ssr-rainbow {
+    background: linear-gradient(135deg, #f59e0b 0%, #ec4899 50%, #6366f1 100%);
+}
+
+.ssr-slot-rainbow {
+    background: linear-gradient(135deg, 
+        rgba(244, 63, 94, 0.16) 0%, 
+        rgba(245, 158, 11, 0.16) 20%, 
+        rgba(16, 185, 129, 0.16) 40%, 
+        rgba(14, 165, 233, 0.16) 60%, 
+        rgba(168, 85, 247, 0.16) 80%, 
+        rgba(244, 63, 94, 0.16) 100%
+    );
+    background-size: 250% 250%;
+    animation: rainbow-shimmer 4s ease infinite;
+    border-color: rgba(244, 63, 94, 0.45) !important;
+    box-shadow: 0 0 16px rgba(244, 63, 94, 0.14), inset 0 0 14px rgba(56, 189, 248, 0.08);
+}
+
+html.dark .ssr-slot-rainbow {
+    background: linear-gradient(135deg, 
+        rgba(244, 63, 94, 0.28) 0%, 
+        rgba(245, 158, 11, 0.22) 20%, 
+        rgba(16, 185, 129, 0.22) 40%, 
+        rgba(14, 165, 233, 0.24) 60%, 
+        rgba(168, 85, 247, 0.26) 80%, 
+        rgba(244, 63, 94, 0.28) 100%
+    );
+    background-size: 250% 250%;
+    animation: rainbow-shimmer 4s ease infinite;
+    border-color: rgba(236, 72, 153, 0.65) !important;
+    box-shadow: 0 0 20px rgba(236, 72, 153, 0.22), inset 0 0 16px rgba(139, 92, 246, 0.16);
+}
+
+.badge-ssr {
+    background: linear-gradient(135deg, #fbbf24 0%, #f43f5e 50%, #818cf8 100%);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 10px rgba(244, 63, 94, 0.35);
+}
+
+.badge-sr {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 8px rgba(217, 119, 6, 0.25);
+}
+
+.badge-r {
+    background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+    color: white;
+}
+
+/* ==========================================================================
+   Dark Mode Palette & Theme Overrides
+   ========================================================================== */
+html.dark {
+    color-scheme: dark;
+}
+
+html.dark body {
+    background-color: #0b0f19;
+    color: #f1f5f9;
+}
+
+html.dark .bg-slate-50 {
+    background-color: #0b0f19 !important;
+}
+
+html.dark .bg-white {
+    background-color: #111827 !important;
+    color: #f1f5f9;
+}
+
+html.dark .border-slate-200,
+html.dark .border-slate-200\/80,
+html.dark .border-slate-300 {
+    border-color: #1f2937 !important;
+}
+
+html.dark .border-slate-100 {
+    border-color: #1f2937 !important;
+}
+
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+    border-color: #1f2937 !important;
+}
+
+html.dark .text-slate-900,
+html.dark .text-slate-800 {
+    color: #f9fafb !important;
+}
+
+html.dark .text-slate-700 {
+    color: #e5e7eb !important;
+}
+
+html.dark .text-slate-600 {
+    color: #cbd5e1 !important;
+}
+
+html.dark .text-slate-500 {
+    color: #94a3b8 !important;
+}
+
+html.dark .text-slate-400 {
+    color: #64748b !important;
+}
+
+html.dark .bg-slate-100 {
+    background-color: #1f2937 !important;
+}
+
+html.dark .bg-slate-200 {
+    background-color: #334155 !important;
+}
+
+html.dark .bg-slate-300 {
+    background-color: #475569 !important;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+    background-color: #111827 !important;
+    color: #f9fafb !important;
+    border-color: #374151 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+    color: #6b7280 !important;
+}
+
+html.dark .bg-amber-50,
+html.dark .bg-amber-50\/40,
+html.dark .bg-amber-50\/60,
+html.dark .bg-amber-50\/80 {
+    background-color: rgba(245, 158, 11, 0.12) !important;
+}
+
+html.dark .border-amber-100,
+html.dark .border-amber-200,
+html.dark .border-amber-300 {
+    border-color: rgba(245, 158, 11, 0.25) !important;
+}
+
+html.dark .text-amber-900,
+html.dark .text-amber-800,
+html.dark .text-amber-700 {
+    color: #fbbf24 !important;
+}
+
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-50\/40,
+html.dark .bg-emerald-50\/50,
+html.dark .bg-emerald-50\/60 {
+    background-color: rgba(16, 185, 129, 0.12) !important;
+}
+
+html.dark .border-emerald-100,
+html.dark .border-emerald-200,
+html.dark .border-emerald-300 {
+    border-color: rgba(16, 185, 129, 0.25) !important;
+}
+
+html.dark .text-emerald-950,
+html.dark .text-emerald-900,
+html.dark .text-emerald-800,
+html.dark .text-emerald-700 {
+    color: #34d399 !important;
+}
+
+html.dark table thead th {
+    background-color: #111827 !important;
+    color: #94a3b8 !important;
+}
+
+html.dark .hover\:bg-amber-50\/40:hover,
+html.dark .hover\:bg-emerald-50\/40:hover,
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-100:hover,
+html.dark .hover\:bg-slate-200:hover {
+    background-color: #334155 !important;
+}
+
+html.dark .hover\:bg-slate-300:hover {
+    background-color: #475569 !important;
+}
+
+
+html.dark .recharts-default-tooltip {
+    background-color: #111827 !important;
+    border-color: #374151 !important;
+    color: #f9fafb !important;
+}
+
+/* Badge Trainer Hub (Navbar) - Always high-contrast dark text on amber */
+.badge-trainer-hub {
+    background-color: #fbbf24 !important;
+    color: #090d16 !important;
+}
+
+/* Log Gacha button (Dashboard) - Always high-contrast dark text and icon on amber background */
+.btn-log-gacha,
+html.dark .btn-log-gacha,
+.btn-log-gacha *,
+html.dark .btn-log-gacha * {
+    color: #0f172a !important;
+}
+
+/* Purple utility dark mode fallbacks */
+html.dark .bg-purple-50,
+html.dark .bg-purple-50\/90 {
+    background-color: rgba(147, 51, 234, 0.18) !important;
+}
+
+html.dark .border-purple-200,
+html.dark .border-purple-300 {
+    border-color: rgba(168, 85, 247, 0.3) !important;
+}
+
+html.dark .training-opt-manual-active {
+    background-color: rgba(6, 78, 59, 0.45) !important;
+    border-color: #10b981 !important;
+}
+
+html.dark .training-opt-independent-active {
+    background-color: rgba(88, 28, 135, 0.45) !important;
+    border-color: #a855f7 !important;
+}
+
+/* ==========================================================================
+   Changelog HTML Content Styling
+   ========================================================================== */
+.changelog-html h2 {
+    display: none; /* Version & date are displayed in card header */
+}
+
+.changelog-html h3 {
+    font-size: 0.875rem;
+    font-weight: 800;
+    margin-top: 1rem;
+    margin-bottom: 0.375rem;
+    color: #047857;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+html.dark .changelog-html h3 {
+    color: #34d399;
+}
+
+.changelog-html h4 {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    margin-top: 0.75rem;
+    margin-bottom: 0.25rem;
+    color: #334155;
+}
+
+html.dark .changelog-html h4 {
+    color: #cbd5e1;
+}
+
+.changelog-html p {
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    margin-top: 0.25rem;
+    margin-bottom: 0.5rem;
+    color: #475569;
+}
+
+html.dark .changelog-html p {
+    color: #94a3b8;
+}
+
+.changelog-html ul {
+    list-style-type: disc;
+    padding-left: 1.25rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: #334155;
+}
+
+html.dark .changelog-html ul {
+    color: #cbd5e1;
+}
+
+.changelog-html li {
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.changelog-html code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.375rem;
+    background-color: #f1f5f9;
+    color: #047857;
+    border: 1px solid #e2e8f0;
+}
+
+html.dark .changelog-html code {
+    background-color: #1e293b;
+    color: #6ee7b7;
+    border-color: #334155;
+}
+
+.changelog-html strong {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+html.dark .changelog-html strong {
+    color: #f8fafc;
+}
+
+.changelog-html hr {
+    border-color: #e2e8f0;
+    margin: 0.75rem 0;
+}
+
+html.dark .changelog-html hr {
+    border-color: #334155;
+}
+
