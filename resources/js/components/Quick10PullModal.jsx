@@ -23,8 +23,6 @@ export default function Quick10PullModal({
     gachaMeta = { characters: [], support_cards: [], character_rarities: {} },
     onNotify,
 }) {
-    if (!isOpen) return null;
-
     const todayDate = new Date().toISOString().slice(0, 10);
 
     // Form state
@@ -69,6 +67,7 @@ export default function Quick10PullModal({
 
     // Synchronize ssrItems array length with ssrCount
     useEffect(() => {
+        if (!isOpen) return;
         setSsrItems(prev => {
             const next = [...prev];
             if (next.length < ssrCount) {
@@ -84,7 +83,9 @@ export default function Quick10PullModal({
             }
             return next;
         });
-    }, [ssrCount, featuredItems]);
+    }, [isOpen, ssrCount, featuredItems]);
+
+    if (!isOpen) return null;
 
     // Check if an item is considered rate-up
     const checkRateUp = (name) => {

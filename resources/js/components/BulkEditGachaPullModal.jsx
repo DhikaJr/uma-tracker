@@ -9,14 +9,14 @@ export default function BulkEditGachaPullModal({
     onSuccess,
     onNotify,
 }) {
-    if (!isOpen || selectedIds.length === 0) return null;
-
     const [pullType, setPullType] = useState('custom_ticket');
     const [bannerId, setBannerId] = useState('keep');
     const [updateDate, setUpdateDate] = useState(false);
     const [pulledAt, setPulledAt] = useState(new Date().toISOString().slice(0, 10));
     const [submitting, setSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
+
+    if (!isOpen || selectedIds.length === 0) return null;
 
     const handleSubmit = async (e) => {
         e.preventDefault();

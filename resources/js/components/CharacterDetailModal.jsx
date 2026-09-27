@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import SkillDetailModal from './SkillDetailModal';
 import {
     X,
@@ -253,7 +253,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
         : (character.objectives || []);
 
     // Group duplicate order objectives into primary and alternatives
-    const groupedObjectives = useMemo(() => {
+    const groupedObjectives = (() => {
         if (!objectives || objectives.length === 0) return [];
         const groups = [];
         const seenOrders = new Map();
@@ -274,7 +274,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
         });
 
         return groups;
-    }, [objectives]);
+    })();
 
     // Support dual unique skills for base 1★ and 2★ characters (☆ and ☆☆ vs ☆☆☆+)
     const uniqueVersions = (skills.unique_versions && skills.unique_versions.length > 0)

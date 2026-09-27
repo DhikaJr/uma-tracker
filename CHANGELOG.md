@@ -19,6 +19,12 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
   - Pada backend `GachaController.php`, response data interval tarikan (`ssr_intervals`) kini secara cerdas mendeteksi banner karakter dan memberikan prefix dinamis `B3 #1`, `B3 #2`, dst. alih-alih hardcoded `SSR #`.
   - Pada frontend `AnalyticsView.jsx`, visualisasi grafik batang (X-Axis bar label dan Tooltip popover) kini secara konsisten menampilkan penamaan `B3 #1`, `B3 #2`, dst. saat kategori Gacha Karakter aktif.
 
+### 🐛 Perbaikan Bug React Hook Crash Error #310 pada Modal Karakter (`CharacterDetailModal.jsx`)
+- **Pembersihan Pelanggaran Aturan React Hooks (Rules of Hooks)**:
+  - Memperbaiki `Minified React error #310` yang terjadi saat pengguna mengeklik karakter untuk membuka modal detail.
+  - Mengubah komputasi pengelompokan `groupedObjectives` dari `useMemo` kondisional (yang sebelumnya berada setelah klausa `if (!isOpen || !character) return null;`) menjadi kalkulasi langsung (*immediate execution*).
+  - Merapikan pemanggilan hook pada komponen modal lainnya (`BulkEditGachaPullModal.jsx` dan `Quick10PullModal.jsx`) untuk memastikan seluruh hook dideklarasikan tanpa terhalang *early return*, mencegah ketidaksinkronan urutan hook (*hook call mismatch*).
+
 ---
 
 ## [Versi 2.1.0] - 26 September 2026
