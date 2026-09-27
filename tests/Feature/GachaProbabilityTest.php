@@ -150,4 +150,34 @@ class GachaProbabilityTest extends TestCase
         $this->assertNotNull($res->json('luck_analysis.standard.percentile'));
         $this->assertNotNull($res->json('luck_analysis.boosted.percentile'));
     }
+
+    public function test_gacha_stats_formats_character_intervals_with_b3_label(): void
+    {
+        GachaPull::create([
+            'banner_type' => 'character',
+            'pull_type' => 'single',
+            'item_name' => 'Sakura Bakushin O',
+            'rarity' => 'R',
+            'pity_count_at_pull' => 1,
+            'gacha_banner_id' => $this->standardBanner->id,
+            'pulled_at' => now(),
+        ]);
+        GachaPull::create([
+            'banner_type' => 'character',
+            'pull_type' => 'single',
+            'item_name' => 'Silence Suzuka',
+            'rarity' => 'SSR',
+            'pity_count_at_pull' => 2,
+            'gacha_banner_id' => $this->standardBanner->id,
+            'pulled_at' => now(),
+        ]);
+
+        $res = $this->getJson('/api/gacha/stats?banner_type=character');
+        $res->assertStatus(200);
+
+        $intervals = $res->json('ssr_intervals');
+        $this->assertNotEmpty($intervals);
+        $this->assertSame('B3 #1', $intervals[0]['label']);
+        $this->assertTrue($intervals[0]['is_character']);
+    }
 }

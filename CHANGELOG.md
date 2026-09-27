@@ -2,6 +2,25 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.1.1] - 27 September 2026
+
+### 🎯 Dropdown Interaktif Target Karir Alternatif (`CharacterDetailModal.jsx`)
+- **Penyatuan Target Karir Bernomor Urut Sama (Duplikat Order)**:
+  - Mengelompokkan target karir karakter yang memiliki nomor urutan sama (misalnya Matikanefukukitaru dengan 3 pilihan balapan alternatif pada urutan 2, atau Agnes Tachyon dengan 2 balapan pada urutan 4).
+  - Target pertama ditampilkan sebagai target utama, sementara opsi balapan pengganti disatukan secara rapi di dalam dropdown/accordion interaktif bergaya GameTora.
+- **Komponen Accordion Dropdown Target Alternatif**:
+  - Menyediakan tombol pemicu dropdown interaktif bertuliskan *"Target alternatif dapat terjadi sebagai pengganti [N alternatif] ▾"*.
+  - Menampilkan badge jumlah alternatif yang tersedia dan ikon panah chevron beranimasi saat dibuka/tutup.
+  - Saat diperluas, menampilkan kartu rincian balapan alternatif dengan indentasi elegan, badge khusus `[Alternatif]`, banner nama balapan, giliran (turn text), periode kelas balap, dan kondisi trek lengkap berbahasa Indonesia.
+
+### 📊 Perbaikan Konsistensi Label Bar Chart Pity Interval Karakter B3 (`AnalyticsView.jsx` & `GachaController.php`)
+- **Penyelarasan Label Sumbu X & Tooltip Bar Chart Pity Karakter B3**:
+  - Memperbaiki bug di mana bar chart interval pity pada kategori Gacha Karakter masih menampilkan label `SSR #1`, `SSR #2`, dst. padahal kategori gacha karakter dan judul grafik bertuliskan *"Interval Tarikan per Karakter B3 (Pity Intervals)"*.
+  - Pada backend `GachaController.php`, response data interval tarikan (`ssr_intervals`) kini secara cerdas mendeteksi banner karakter dan memberikan prefix dinamis `B3 #1`, `B3 #2`, dst. alih-alih hardcoded `SSR #`.
+  - Pada frontend `AnalyticsView.jsx`, visualisasi grafik batang (X-Axis bar label dan Tooltip popover) kini secara konsisten menampilkan penamaan `B3 #1`, `B3 #2`, dst. saat kategori Gacha Karakter aktif.
+
+---
+
 ## [Versi 2.1.0] - 26 September 2026
 
 ### 🌸 Penyesuaian Analisis Gacha Karakter (Terminologi B3) & Perbaikan Visual Pie Chart (`AnalyticsView.jsx`)

@@ -304,10 +304,12 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
         const itemBaseRate = item.banner_base_rate || currentBaseRate;
         const expectedPulls = itemBaseRate > 3.0 ? 22.2 : 33.3;
         const luckyThreshold = itemBaseRate > 3.0 ? 22 : 33;
-        const itemIsChar = item.is_character || isChar;
+        const itemIsChar = isChar || item.is_character;
+        const fallbackNum = item.ssr_number || (idx + 1);
+        const itemLabel = itemIsChar ? `B3 #${fallbackNum}` : (item.label || `SSR #${fallbackNum}`);
         return {
-            label: item.label || (itemIsChar ? `B3 #${idx + 1}` : `SSR #${idx + 1}`),
-            ssr_number: item.ssr_number,
+            label: itemLabel,
+            ssr_number: fallbackNum,
             pulls_count: item.pulls_count,
             item_name: item.item_name,
             is_rate_up: item.is_rate_up,

@@ -705,7 +705,7 @@ class GachaController extends Controller
 
         // Calculate Pity Intervals (distance in pulls to hit each SSR)
         $allPullsForIntervals = (clone $query)
-            ->with('banner:id,name,base_rate')
+            ->with('banner:id,name,base_rate,category,banner_type')
             ->orderBy('pulled_at', 'asc')
             ->orderBy('id', 'asc')
             ->get(['id', 'gacha_banner_id', 'item_name', 'rarity', 'is_rate_up', 'pulled_at']);
@@ -718,15 +718,18 @@ class GachaController extends Controller
             if ($p->rarity === 'SSR') {
                 $ssrNumber++;
                 $bRate = (float) ($p->banner?->base_rate ?? 3.00);
+                $isChar = ($bannerType === 'character') || ($p->banner?->banner_type === 'character') || ($p->banner?->category === 'character');
+                $labelPrefix = $isChar ? 'B3' : 'SSR';
                 $ssrIntervals[] = [
                     'ssr_number' => $ssrNumber,
-                    'label' => "SSR #{$ssrNumber}",
+                    'label' => "{$labelPrefix} #{$ssrNumber}",
                     'item_name' => $p->item_name,
                     'pulls_count' => $counter,
                     'pulls_needed' => $counter,
                     'is_rate_up' => (bool) $p->is_rate_up,
                     'banner_base_rate' => $bRate,
                     'is_boosted' => $bRate > 3.00,
+                    'is_character' => $isChar,
                     'pulled_at' => Carbon::parse($p->pulled_at)->format('Y-m-d'),
                 ];
                 $counter = 0;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import SkillDetailModal from './SkillDetailModal';
 import {
     X,
@@ -17,7 +17,8 @@ import {
     Info,
     BarChart2,
     TrendingUp,
-    Flag
+    Flag,
+    ChevronDown
 } from 'lucide-react';
 
 /**
@@ -188,6 +189,19 @@ function translateTrackCondition(cond) {
 export default function CharacterDetailModal({ character, isOpen, onClose }) {
     const [activeTab, setActiveTab] = useState('skills'); // 'skills' | 'stats' | 'aptitude' | 'objectives'
     const [selectedSkillModal, setSelectedSkillModal] = useState(null);
+    const [openAlternatives, setOpenAlternatives] = useState({});
+
+    // Reset open alternatives when character or modal opens
+    useEffect(() => {
+        setOpenAlternatives({});
+    }, [character?.id, isOpen]);
+
+    const toggleAlternative = (orderKey) => {
+        setOpenAlternatives(prev => ({
+            ...prev,
+            [orderKey]: !prev[orderKey],
+        }));
+    };
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -237,6 +251,30 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
     const objectives = typeof character.objectives === 'string'
         ? (() => { try { return JSON.parse(character.objectives); } catch (e) { return []; } })()
         : (character.objectives || []);
+
+    // Group duplicate order objectives into primary and alternatives
+    const groupedObjectives = useMemo(() => {
+        if (!objectives || objectives.length === 0) return [];
+        const groups = [];
+        const seenOrders = new Map();
+
+        objectives.forEach((obj, idx) => {
+            const orderKey = obj.order ?? (idx + 1);
+            if (!seenOrders.has(orderKey)) {
+                const group = {
+                    order: orderKey,
+                    primary: obj,
+                    alternatives: [],
+                };
+                seenOrders.set(orderKey, group);
+                groups.push(group);
+            } else {
+                seenOrders.get(orderKey).alternatives.push(obj);
+            }
+        });
+
+        return groups;
+    }, [objectives]);
 
     // Support dual unique skills for base 1★ and 2★ characters (☆ and ☆☆ vs ☆☆☆+)
     const uniqueVersions = (skills.unique_versions && skills.unique_versions.length > 0)
@@ -871,27 +909,30 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                                 <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">Target Karir (Objectives)</h3>
                             </div>
 
-                            {(!objectives || objectives.length === 0) ? (
+                            {(!groupedObjectives || groupedObjectives.length === 0) ? (
                                 <div className="p-8 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-center text-slate-500 dark:text-slate-400 text-sm">
                                     Belum ada data target karir (objectives) untuk karakter ini.
                                 </div>
                             ) : (
                                 <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs divide-y divide-slate-200/60 dark:divide-slate-800">
-                                    {objectives.map((obj, idx) => {
+                                    {groupedObjectives.map((group, idx) => {
                                         const isOdd = idx % 2 === 0;
+                                        const obj = group.primary;
                                         const bannerSrc = obj.banner_url || (obj.race_icon_id ? `https://media.gametora.com/umamusume/races/banners/${obj.race_icon_id}.png` : null);
+                                        const hasAlternatives = group.alternatives.length > 0;
+                                        const isAltOpen = !!openAlternatives[group.order];
 
                                         return (
                                             <div
-                                                key={idx}
-                                                className={`p-4 sm:p-5 flex items-center gap-4 sm:gap-6 transition-colors ${
+                                                key={group.order ?? idx}
+                                                className={`p-4 sm:p-5 flex items-start gap-4 sm:gap-6 transition-colors ${
                                                     isOdd
                                                         ? 'bg-[#e8f4f8] dark:bg-cyan-950/25'
                                                         : 'bg-white dark:bg-slate-900'
                                                 }`}
                                             >
                                                 {/* Left: Race banner or Ribbon Badge */}
-                                                <div className="shrink-0 w-24 sm:w-28 flex items-center justify-center">
+                                                <div className="shrink-0 w-24 sm:w-28 flex items-center justify-center pt-0.5">
                                                     {bannerSrc ? (
                                                         <img
                                                             src={bannerSrc}
@@ -944,6 +985,115 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                                                     {obj.track_condition && (
                                                         <div className="text-xs text-slate-700 dark:text-slate-300 font-medium">
                                                             {translateTrackCondition(obj.track_condition)}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Dropdown / Toggle Target Karir Alternatif */}
+                                                    {hasAlternatives && (
+                                                        <div className="pt-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => toggleAlternative(group.order)}
+                                                                className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors cursor-pointer group/alt"
+                                                            >
+                                                                <span className="underline decoration-indigo-300 dark:decoration-indigo-700 underline-offset-2">
+                                                                    Target alternatif dapat terjadi sebagai pengganti
+                                                                </span>
+                                                                <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                                                    {group.alternatives.length} alternatif
+                                                                </span>
+                                                                <ChevronDown
+                                                                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                                                                        isAltOpen ? 'rotate-180 text-indigo-700 dark:text-indigo-300' : 'text-indigo-500'
+                                                                    }`}
+                                                                />
+                                                            </button>
+
+                                                            {/* Dropdown Container for Alternatives */}
+                                                            {isAltOpen && (
+                                                                <div className="mt-3 p-3 sm:p-4 rounded-2xl bg-indigo-50/80 dark:bg-slate-800/90 border border-indigo-200/90 dark:border-indigo-800/70 shadow-sm space-y-2.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                                                                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 pb-1.5 border-b border-indigo-200/60 dark:border-indigo-800/60">
+                                                                        <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                                                        <span>Pilihan Target Karir Alternatif ({group.alternatives.length}):</span>
+                                                                    </div>
+
+                                                                    <div className="space-y-2">
+                                                                        {group.alternatives.map((altObj, altIdx) => {
+                                                                            const altBannerSrc = altObj.banner_url || (altObj.race_icon_id ? `https://media.gametora.com/umamusume/races/banners/${altObj.race_icon_id}.png` : null);
+
+                                                                            return (
+                                                                                <div
+                                                                                    key={altIdx}
+                                                                                    className="p-3 sm:p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-700/80 flex items-start gap-3.5 sm:gap-4 shadow-2xs"
+                                                                                >
+                                                                                    {/* Left: Alt Race banner or Ribbon Badge */}
+                                                                                    <div className="shrink-0 w-20 sm:w-24 flex items-center justify-center pt-0.5">
+                                                                                        {altBannerSrc ? (
+                                                                                            <img
+                                                                                                src={altBannerSrc}
+                                                                                                alt={altObj.race_name || altObj.title}
+                                                                                                className="w-full h-auto max-h-10 object-contain rounded drop-shadow-2xs"
+                                                                                                onError={(e) => {
+                                                                                                    e.currentTarget.style.display = 'none';
+                                                                                                    if (e.currentTarget.nextElementSibling) {
+                                                                                                        e.currentTarget.nextElementSibling.style.display = 'flex';
+                                                                                                    }
+                                                                                                }}
+                                                                                            />
+                                                                                        ) : null}
+                                                                                        <div
+                                                                                            className={`items-center justify-center ${altBannerSrc ? 'hidden' : 'flex'}`}
+                                                                                        >
+                                                                                            {altObj.grade ? (
+                                                                                                <div
+                                                                                                    className="px-2.5 py-0.5 bg-blue-600 text-white font-black text-[11px] rounded-l tracking-wider flex items-center justify-center relative shadow-xs"
+                                                                                                    style={{
+                                                                                                        clipPath: 'polygon(0% 0%, 100% 0%, 82% 50%, 100% 100%, 0% 100%)',
+                                                                                                        paddingRight: '1rem'
+                                                                                                    }}
+                                                                                                >
+                                                                                                    {altObj.grade}
+                                                                                                </div>
+                                                                                            ) : (
+                                                                                                <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-800">
+                                                                                                    <Flag className="w-4 h-4" />
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    {/* Right: Alt Objective Info */}
+                                                                                    <div className="min-w-0 flex-1 space-y-0.5">
+                                                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                                                            <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-950/80 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                                                                                Alternatif
+                                                                                            </span>
+                                                                                            <h5 className="font-bold text-slate-900 dark:text-slate-100 text-xs sm:text-sm leading-snug">
+                                                                                                {altObj.order ? `${altObj.order}. ` : ''}{translateObjectiveTitle(altObj.title || altObj.short_title || '')}
+                                                                                            </h5>
+                                                                                        </div>
+                                                                                        {altObj.turn_text && (
+                                                                                            <div className="text-[11px] text-slate-700 dark:text-slate-300 font-medium">
+                                                                                                {translateTurnText(altObj.turn_text)}
+                                                                                            </div>
+                                                                                        )}
+                                                                                        {(altObj.period || altObj.class_period) && (
+                                                                                            <div className="text-[11px] text-slate-700 dark:text-slate-300 font-medium">
+                                                                                                {translateClassPeriod(altObj.period || altObj.class_period)}
+                                                                                            </div>
+                                                                                        )}
+                                                                                        {altObj.track_condition && (
+                                                                                            <div className="text-[11px] text-slate-700 dark:text-slate-300 font-medium">
+                                                                                                {translateTrackCondition(altObj.track_condition)}
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
