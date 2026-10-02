@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Trophy, Save, Calendar, Check, AlertCircle, RefreshCw, Search } from 'lucide-react';
 import RankBadge from './RankBadge';
+import { formatIndonesianDate } from '../utils/dateHelper';
 
 // Categorized Rank Tiers for quick selection
 const rankTierGroups = {
@@ -434,12 +435,20 @@ export default function EditCareerRunModal({
                     {/* Run Date & Quick Notes */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
-                                <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                                <span>Tanggal Run</span>
-                            </label>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>Tanggal Latihan</span>
+                                </label>
+                                {form.run_date && (
+                                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                                        {formatIndonesianDate(form.run_date, 'long')}
+                                    </span>
+                                )}
+                            </div>
                             <input
                                 type="date"
+                                lang="id-ID"
                                 value={form.run_date}
                                 onChange={(e) => setForm(prev => ({ ...prev, run_date: e.target.value }))}
                                 max={new Date().toISOString().slice(0, 10)}

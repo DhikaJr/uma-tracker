@@ -2,6 +2,28 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.1.2] - 2 Oktober 2026
+
+### 📅 Standardisasi Format Tanggal Bahasa Indonesia & Kolom Pelatihan Karir
+- **Format Tanggal Baku Indonesia pada Tabel & Input Form**:
+  - Mengubah kolom tabel `Date` menjadi **`Tanggal`** pada riwayat pelatihan karir (`FansView.jsx`), dan memformat tampilan tanggal dari ISO (`2026-10-02`) menjadi format standar bahasa Indonesia yang jelas dan tidak ambigu (`02 Okt 2026`).
+  - Menetapkan atribut `lang="id-ID"` dan konfigurasi aplikasi `app.locale = id` sehingga input HTML date picker secara bawaan mengenali format lokal Indonesia (`hh/bb/tttt` / `dd/mm/yyyy`) alih-alih format Amerika Serikat (`mm/dd/yyyy`).
+  - Menambahkan pratinjau teks tanggal real-time berbahasa Indonesia (misal: `02 Oktober 2026`) pada formulir pencatatan karir (`FansView.jsx`) dan modal ubah data sesi (`EditCareerRunModal.jsx`).
+  - Menyelaraskan tampilan tanggal sesi terkini pada dasbor (`DashboardView.jsx`).
+
+### 🌓 Penyempurnaan Dark Mode & Lokalisasi Penuh Modal Database GameTora (`GachaView.jsx`)
+- **Perbaikan Keterbacaan Kotak Sinkronisasi GameTora pada Dark Mode**:
+  - Mengatasi masalah teks putih/terang yang sebelumnya tidak terbaca pada kotak status `Database GameTora JP` di tema gelap akibat konflik background krem cerah dengan style override dark mode.
+  - Menerapkan latar belakang gelap terpadu (`dark:bg-slate-800/90` dan `dark:border-slate-700/90`) dengan kontras teks terang berdaya baca tinggi (`dark:text-white` dan `dark:text-slate-300`).
+- **Penerjemahan Lengkap Antarmuka Modal Database**:
+  - Mengubah judul menjadi **Database Game Uma Musume (GameTora / Kamigame)** dan menerjemahkan deskripsi alur kerja.
+  - Menerjemahkan tab kategori menjadi **`Karakter / Uma`** dan **`Kartu Bantuan`**.
+  - Menerjemahkan placeholder pencarian karakter dan kartu bantuan.
+  - Mengubah tombol aksi kartu dari `Select` menjadi **`Pilih`**.
+  - Mengubah teks ringkasan footer dan tombol `Close` menjadi **`Tutup`**.
+
+---
+
 ## [Versi 2.1.1] - 27 September 2026
 
 ### 🎯 Dropdown Interaktif Target Karir Alternatif (`CharacterDetailModal.jsx`)

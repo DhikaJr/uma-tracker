@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-    Sparkles, 
-    X, 
-    Plus, 
-    Minus, 
-    Check, 
-    AlertCircle, 
-    Calendar, 
-    Layers, 
-    ToggleLeft, 
-    ToggleRight, 
+import {
+    Sparkles,
+    X,
+    Plus,
+    Minus,
+    Check,
+    AlertCircle,
+    Calendar,
+    Layers,
+    ToggleLeft,
+    ToggleRight,
     Search,
     Zap
 } from 'lucide-react';
@@ -56,8 +56,8 @@ export default function Quick10PullModal({
     }, [currentBanner]);
 
     const catalogPool = useMemo(() => {
-        return bannerType === 'character' 
-            ? (gachaMeta.characters || []) 
+        return bannerType === 'character'
+            ? (gachaMeta.characters || [])
             : (gachaMeta.support_cards || []);
     }, [bannerType, gachaMeta]);
 
@@ -502,13 +502,13 @@ export default function Quick10PullModal({
                             <div className="space-y-2.5 pt-1">
                                 {ssrItems.map((ssr, idx) => {
                                     const search = searchQueries[idx] ?? ssr.item_name ?? '';
-                                    const filteredSuggestions = catalogPool.filter(name => 
+                                    const filteredSuggestions = catalogPool.filter(name =>
                                         name.toLowerCase().includes(search.toLowerCase())
                                     ).slice(0, 10);
 
                                     return (
-                                        <div 
-                                            key={idx} 
+                                        <div
+                                            key={idx}
                                             className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-amber-200 dark:border-slate-700 shadow-2xs space-y-2 relative"
                                         >
                                             <div className="flex items-center justify-between gap-2">

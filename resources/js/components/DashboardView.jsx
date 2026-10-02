@@ -31,6 +31,7 @@ import {
 import RarityBadge from './RarityBadge';
 import RankBadge from './RankBadge';
 import CirclePaceWidget from './CirclePaceWidget';
+import { formatIndonesianDate } from '../utils/dateHelper';
 
 export default function DashboardView({ 
     summaryData, 
@@ -756,7 +757,7 @@ export default function DashboardView({
                                                     </span>
                                                 ) : null}
                                             </div>
-                                            <div className="text-[11px] text-slate-500">{run.scenario} • {run.run_date}</div>
+                                            <div className="text-[11px] text-slate-500">{run.scenario} • {formatIndonesianDate(run.run_date)}</div>
                                         </div>
                                     </div>
                                     <div className="text-right">

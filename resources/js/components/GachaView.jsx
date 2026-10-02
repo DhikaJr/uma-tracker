@@ -2484,38 +2484,38 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
             {/* Game Database Directory Modal (Gametora / Kamigame / Gamewith) */}
             {showModal && (
                 <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col p-6 shadow-2xl border border-slate-200 animate-fadeIn">
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-fadeIn">
                         {/* Modal Header */}
-                        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
                             <div className="flex items-center gap-2">
-                                <BookOpen className="w-5 h-5 text-amber-600" />
+                                <BookOpen className="w-5 h-5 text-amber-600 dark:text-amber-500" />
                                 <div>
-                                    <h3 className="text-base font-black text-slate-900">
-                                        Uma Musume Game Database (Gametora / Kamigame)
+                                    <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
+                                        Database Game Uma Musume (GameTora / Kamigame)
                                     </h3>
-                                    <p className="text-xs text-slate-500">
-                                        Select an official character or support card to auto-fill, or type your own custom text manually
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Pilih karakter atau kartu bantuan resmi untuk pengisian otomatis, atau ketik teks kustom Anda secara manual
                                     </p>
                                 </div>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => setShowModal(false)}
-                                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
                         {/* GameTora Sync Status & Action Bar */}
-                        <div className="mt-3 p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl flex flex-wrap items-center justify-between gap-2.5">
+                        <div className="mt-3 p-3 bg-amber-50/70 dark:bg-slate-800/90 border border-amber-200/80 dark:border-slate-700/90 rounded-2xl flex flex-wrap items-center justify-between gap-2.5">
                             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2.5 text-xs">
                                 <div className="flex items-center gap-1.5">
                                     <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
-                                    <span className="font-bold text-slate-800">Database GameTora JP</span>
+                                    <span className="font-bold text-slate-800 dark:text-white">Database GameTora JP</span>
                                 </div>
-                                <span className="hidden sm:inline text-slate-300">•</span>
-                                <span className="text-[11px] text-slate-600">
+                                <span className="hidden sm:inline text-slate-300 dark:text-slate-600">•</span>
+                                <span className="text-[11px] text-slate-600 dark:text-slate-300">
                                     {syncStatus?.last_synced_at
                                         ? `Disinkronkan: ${new Date(syncStatus.last_synced_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}`
                                         : 'Status: Katalog Standar'}
@@ -2537,7 +2537,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                     type="button"
                                     disabled={syncing}
                                     onClick={() => handleSyncCatalog(true)}
-                                    className="p-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-800 active:scale-95 disabled:opacity-50 text-xs transition cursor-pointer"
+                                    className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white active:scale-95 disabled:opacity-50 text-xs transition cursor-pointer"
                                     title="Paksa unduh ulang dari awal (Force Refresh)"
                                 >
                                     <RotateCcw className="w-3.5 h-3.5" />
@@ -2553,10 +2553,10 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                                     singleForm.banner_type === 'character'
                                         ? 'bg-amber-600 text-white shadow-xs'
-                                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                                 }`}
                             >
-                                Characters / Uma ({gachaMeta.characters?.length || 0})
+                                Karakter / Uma ({gachaMeta.characters?.length || 0})
                             </button>
                             <button
                                 type="button"
@@ -2564,10 +2564,10 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                                     singleForm.banner_type === 'support_card'
                                         ? 'bg-amber-600 text-white shadow-xs'
-                                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                                 }`}
                             >
-                                Support Cards ({gachaMeta.support_cards?.length || 0})
+                                Kartu Bantuan ({gachaMeta.support_cards?.length || 0})
                             </button>
                         </div>
 
@@ -2582,10 +2582,10 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                     onChange={(e) => setModalSearch(e.target.value)}
                                     placeholder={
                                         singleForm.banner_type === 'character'
-                                            ? "Search characters (e.g. Epiphaneia, Phalaenopsis, Almond Eye, Oguri Cap)..."
-                                            : "Search support cards (e.g. Kitasan Black, Super Creek, Tazuna, Sweep Tosho)..."
+                                            ? "Cari karakter (misal: Epiphaneia, Phalaenopsis, Almond Eye, Oguri Cap)..."
+                                            : "Cari kartu bantuan (misal: Kitasan Black, Super Creek, Tazuna, Sweep Tosho)..."
                                     }
-                                    className="w-full bg-slate-50 border border-slate-300 rounded-2xl pl-10 pr-4 py-2.5 text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-2xl pl-10 pr-4 py-2.5 text-xs font-semibold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-amber-500 focus:outline-none"
                                 />
                             </div>
                         </div>
@@ -2609,7 +2609,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                                 className={`p-2.5 rounded-xl text-left border text-xs font-bold transition-all cursor-pointer flex items-center justify-between ${
                                                     singleForm.item_name === item
                                                         ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                                                        : 'bg-slate-50 hover:bg-amber-50 text-slate-800 border-slate-200 hover:border-amber-300'
+                                                        : 'bg-slate-50 dark:bg-slate-800/60 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700/80 hover:border-amber-300 dark:hover:border-amber-700'
                                                 }`}
                                             >
                                                 <div className="flex items-center gap-2 truncate pr-2">
@@ -2617,9 +2617,9 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-black shrink-0 ${
                                                             singleForm.item_name === item
                                                                 ? 'bg-white/25 text-white'
-                                                                : itemRarity === 'SSR' ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                                                                : itemRarity === 'SR' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
-                                                                : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200 dark:border dark:border-slate-600'
+                                                                : itemRarity === 'SSR' ? 'bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700'
+                                                                : itemRarity === 'SR' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-950/80 dark:text-yellow-300 dark:border-yellow-700'
+                                                                : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600'
                                                         }`}>
                                                             {itemRarity === 'SSR' && singleForm.banner_type === 'character' ? '3★' :
                                                              itemRarity === 'SR' && singleForm.banner_type === 'character' ? '2★' :
@@ -2632,7 +2632,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                                 {singleForm.item_name === item ? (
                                                     <span className="text-white font-black shrink-0">✓</span>
                                                 ) : (
-                                                    <span className="text-[10px] text-amber-600 font-normal shrink-0">Select</span>
+                                                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold shrink-0">Pilih</span>
                                                 )}
                                             </button>
                                         );
@@ -2641,18 +2641,18 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                             <span>
-                                Showing {
+                                Menampilkan {
                                     currentPool.filter(item => !modalSearch || item.toLowerCase().includes(modalSearch.toLowerCase())).length
-                                } items (Free custom text also permitted)
+                                } item (Teks bebas manual juga diizinkan)
                             </span>
                             <button
                                 type="button"
                                 onClick={() => setShowModal(false)}
-                                className="px-4 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold cursor-pointer"
+                                className="px-4 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold cursor-pointer transition-colors"
                             >
-                                Close
+                                Tutup
                             </button>
                         </div>
                     </div>
