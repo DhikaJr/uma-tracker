@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Sparkles, Trophy, Users, Sun, Moon, Menu, X, Database, BarChart3, Calculator, Layers, ScrollText } from 'lucide-react';
+import { LayoutDashboard, Sparkles, Trophy, Users, Sun, Moon, Menu, X, Database, BarChart3, Calculator, Layers, ScrollText, GitFork } from 'lucide-react';
 
 export default function Navbar({ 
     activeTab, 
@@ -35,6 +35,7 @@ export default function Navbar({
         { id: 'analytics', label: 'Analitik', shortLabel: 'Analitik', icon: BarChart3 },
         { id: 'gacha', label: 'Pelacak Gacha', shortLabel: 'Gacha', icon: Sparkles },
         { id: 'career', label: 'Karier & Fans', shortLabel: 'Karier', icon: Trophy },
+        { id: 'affinity', label: 'Kalkulator Afinitas', shortLabel: 'Afinitas', icon: GitFork },
         { id: 'collection', label: 'Koleksi', shortLabel: 'Koleksi', icon: Layers },
         { id: 'club', label: 'Circle Club', shortLabel: 'Circle', icon: Users },
         { id: 'planner', label: 'Perencana Jewel', shortLabel: 'Perencana', icon: Calculator },
@@ -49,24 +50,24 @@ export default function Navbar({
 
     return (
         <header className="sticky top-0 z-40 bg-gradient-to-r from-emerald-900 via-emerald-800 to-green-900 text-white shadow-lg border-b border-emerald-700/60">
-            <div className="w-full max-w-[1366px] 2xl:max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-5 xl:px-6">
-                <div className="flex items-center justify-between h-16 gap-2 lg:gap-3">
+            <div className="w-full max-w-[1366px] 2xl:max-w-screen-2xl mx-auto px-2 sm:px-3 lg:px-4 xl:px-5">
+                <div className="flex items-center justify-between h-16 gap-1.5 lg:gap-2 xl:gap-3">
                     {/* Brand / Logo */}
                     <div 
-                        className="flex items-center space-x-2 sm:space-x-2.5 cursor-pointer shrink-0 select-none" 
+                        className="flex items-center space-x-1.5 sm:space-x-2 cursor-pointer shrink-0 select-none" 
                         onClick={() => handleSelectTab('dashboard')}
                     >
-                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-pink-500 p-0.5 shadow-md shadow-orange-500/30 flex items-center justify-center shrink-0">
-                            <div className="w-full h-full bg-emerald-950 rounded-[14px] flex items-center justify-center text-lg sm:text-xl">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-amber-400 via-orange-500 to-pink-500 p-0.5 shadow-md shadow-orange-500/30 flex items-center justify-center shrink-0">
+                            <div className="w-full h-full bg-emerald-950 rounded-[10px] flex items-center justify-center text-base sm:text-lg">
                                 🥕
                             </div>
                         </div>
                         <div className="shrink-0">
                             <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                <span className="font-black text-base sm:text-lg tracking-tight bg-gradient-to-r from-emerald-100 via-white to-amber-200 bg-clip-text text-transparent whitespace-nowrap">
+                                <span className="font-black text-sm sm:text-base 2xl:text-lg tracking-tight bg-gradient-to-r from-emerald-100 via-white to-amber-200 bg-clip-text text-transparent whitespace-nowrap">
                                     UMA COMPANION
                                 </span>
-                                <span className="px-1.5 py-0.2 text-[9px] sm:text-[10px] uppercase font-black tracking-wider badge-trainer-hub rounded-full whitespace-nowrap" style={{ backgroundColor: '#fbbf24', color: '#090d16' }}>
+                                <span className="px-1.5 py-0.5 text-[9px] uppercase font-black tracking-wider badge-trainer-hub rounded-full whitespace-nowrap" style={{ backgroundColor: '#fbbf24', color: '#090d16' }}>
                                     Trainer Hub
                                 </span>
                             </div>
@@ -77,7 +78,7 @@ export default function Navbar({
                     </div>
 
                     {/* Desktop Navigation Tabs (Hidden on mobile / screens < md) */}
-                    <nav className="hidden md:flex items-center justify-center gap-1 lg:gap-1.5 xl:gap-2 flex-1 mx-1 lg:mx-3 shrink-0">
+                    <nav className="hidden md:flex items-center justify-center gap-0.5 lg:gap-1 xl:gap-1.5 flex-1 min-w-0 mx-1 xl:mx-2">
                         {navItems.map((item) => {
                             const Icon = item.icon;
                             const isActive = activeTab === item.id;
@@ -86,13 +87,13 @@ export default function Navbar({
                                     key={item.id}
                                     type="button"
                                     onClick={() => handleSelectTab(item.id)}
-                                    className={`flex items-center gap-1 2xl:gap-2 px-2 lg:px-2 xl:px-2.5 2xl:px-4 py-1.5 lg:py-2 rounded-xl text-xs xl:text-xs 2xl:text-sm font-bold transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 ${
+                                    className={`flex items-center gap-1 2xl:gap-2 px-1.5 lg:px-1.5 xl:px-2 2xl:px-3.5 py-1.5 rounded-xl text-[11px] xl:text-xs 2xl:text-sm font-bold transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 ${
                                         isActive
                                             ? 'bg-emerald-600/90 text-white shadow-inner ring-1 ring-emerald-400/50'
                                             : 'text-emerald-100/80 hover:text-white hover:bg-emerald-800/60'
                                     }`}
                                 >
-                                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-amber-300' : 'text-emerald-300'}`} />
+                                    <Icon className={`w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0 ${isActive ? 'text-amber-300' : 'text-emerald-300'}`} />
                                     <span className="hidden 2xl:inline whitespace-nowrap">{item.label}</span>
                                     <span className="2xl:hidden whitespace-nowrap">{item.shortLabel}</span>
                                 </button>
@@ -101,18 +102,18 @@ export default function Navbar({
                     </nav>
 
                     {/* Right Controls */}
-                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    <div className="flex items-center gap-1 sm:gap-1.5 xl:gap-2 shrink-0">
                         {/* Circle Monthly Fans Badge (Desktop Only) */}
                         <div 
                             title={`Target Bulanan Circle: ${(monthlyFans).toLocaleString()} / ${(circleGoal).toLocaleString()} fans (${circlePercent}%)`}
-                            className="hidden lg:flex items-center gap-2 bg-emerald-950/70 border border-emerald-700/50 px-2.5 py-1 rounded-xl whitespace-nowrap shrink-0 shadow-xs"
+                            className="hidden xl:flex items-center gap-1.5 bg-emerald-950/70 border border-emerald-700/50 px-2 py-1 rounded-xl whitespace-nowrap shrink-0 shadow-xs"
                         >
                             <div className="p-1 rounded-lg bg-emerald-800/80 text-amber-300 shrink-0">
                                 <Users className="w-3.5 h-3.5" />
                             </div>
                             <div className="text-right leading-tight whitespace-nowrap shrink-0">
-                                <div className="text-[10px] xl:text-[11px] text-emerald-300 font-medium flex items-center gap-1 justify-end whitespace-nowrap">
-                                    <span>Kuota Circle</span>
+                                <div className="text-[10px] text-emerald-300 font-medium flex items-center gap-1 justify-end whitespace-nowrap">
+                                    <span className="hidden 2xl:inline">Kuota Circle</span>
                                     <span className="text-amber-400 font-bold">{circlePercent}%</span>
                                 </div>
                                 <div className="text-[10px] xl:text-[11px] font-bold text-white font-mono whitespace-nowrap">
@@ -130,9 +131,9 @@ export default function Navbar({
                             onClick={onOpenChangelog}
                             title="Riwayat Pembaruan (Changelog)"
                             aria-label="Riwayat Pembaruan"
-                            className="p-2 sm:px-2.5 2xl:px-3 sm:py-2 rounded-xl bg-emerald-950/60 hover:bg-emerald-800/80 border border-emerald-700/50 text-emerald-200 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs whitespace-nowrap shrink-0"
+                            className="p-1.5 sm:px-2 2xl:px-3 sm:py-1.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-800/80 border border-emerald-700/50 text-emerald-200 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs whitespace-nowrap shrink-0"
                         >
-                            <ScrollText className="w-4 h-4 text-emerald-300 shrink-0" />
+                            <ScrollText className="w-3.5 h-3.5 xl:w-4 xl:h-4 text-emerald-300 shrink-0" />
                             <span className="text-xs font-bold hidden 2xl:inline whitespace-nowrap">Changelog</span>
                         </button>
 
@@ -142,9 +143,9 @@ export default function Navbar({
                             onClick={onOpenBackup}
                             title="Cadangkan & Pulihkan Data (Backup & Restore)"
                             aria-label="Cadangkan & Pulihkan Data"
-                            className="p-2 sm:px-2.5 2xl:px-3 sm:py-2 rounded-xl bg-emerald-950/60 hover:bg-emerald-800/80 border border-emerald-700/50 text-emerald-200 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs whitespace-nowrap shrink-0"
+                            className="p-1.5 sm:px-2 2xl:px-3 sm:py-1.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-800/80 border border-emerald-700/50 text-emerald-200 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs whitespace-nowrap shrink-0"
                         >
-                            <Database className="w-4 h-4 text-emerald-300 shrink-0" />
+                            <Database className="w-3.5 h-3.5 xl:w-4 xl:h-4 text-emerald-300 shrink-0" />
                             <span className="text-xs font-bold hidden 2xl:inline whitespace-nowrap">Backup & Restore</span>
                         </button>
 
@@ -154,16 +155,16 @@ export default function Navbar({
                             onClick={toggleDarkMode}
                             title={darkMode ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
                             aria-label={darkMode ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
-                            className="p-2 sm:px-2.5 2xl:px-3 sm:py-2 rounded-xl bg-emerald-950/60 hover:bg-emerald-800/80 border border-emerald-700/50 text-amber-300 transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs whitespace-nowrap shrink-0"
+                            className="p-1.5 sm:px-2 2xl:px-3 sm:py-1.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-800/80 border border-emerald-700/50 text-amber-300 transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs whitespace-nowrap shrink-0"
                         >
                             {darkMode ? (
                                 <>
-                                    <Sun className="w-4 h-4 text-amber-300 shrink-0" />
+                                    <Sun className="w-3.5 h-3.5 xl:w-4 xl:h-4 text-amber-300 shrink-0" />
                                     <span className="text-xs font-bold text-amber-200 hidden 2xl:inline whitespace-nowrap">Terang</span>
                                 </>
                             ) : (
                                 <>
-                                    <Moon className="w-4 h-4 text-emerald-200 shrink-0" />
+                                    <Moon className="w-3.5 h-3.5 xl:w-4 xl:h-4 text-emerald-200 shrink-0" />
                                     <span className="text-xs font-bold text-emerald-100 hidden 2xl:inline whitespace-nowrap">Gelap</span>
                                 </>
                             )}

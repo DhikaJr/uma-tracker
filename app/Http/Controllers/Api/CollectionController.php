@@ -9,6 +9,7 @@ use App\Models\UmaCatalogItem;
 use App\Models\UserCharacter;
 use App\Models\UserSupportCard;
 use App\Services\GameToraSyncService;
+use App\Services\UmaAffinityService;
 use App\Support\UmaCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -177,6 +178,8 @@ class CollectionController extends Controller
         $totalOwned = 0;
         $countByStars = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
 
+        $affinityService = app(UmaAffinityService::class);
+
         foreach ($characterNames as $name) {
             $catalogItem = $catalogItems->get($name);
             $userChar = $userCharacters->get($name);
@@ -194,6 +197,8 @@ class CollectionController extends Controller
 
             $collection[] = [
                 'id' => $userChar?->id,
+                'char_id' => isset($catalogItem?->raw_data['char_id']) ? (int) $catalogItem->raw_data['char_id'] : $affinityService->resolveCharId($name),
+                'catalog_item_id' => $catalogItem?->id,
                 'uma_catalog_item_id' => $catalogItem?->id,
                 'gametora_id' => $catalogItem?->gametora_id,
                 'name' => $name,

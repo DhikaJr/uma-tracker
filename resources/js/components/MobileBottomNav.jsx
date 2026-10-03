@@ -1,9 +1,10 @@
 import React from 'react';
-import { LayoutDashboard, Trophy, Sparkles, Users, Calculator, Layers } from 'lucide-react';
+import { LayoutDashboard, Trophy, Sparkles, Users, Calculator, Layers, GitFork } from 'lucide-react';
 
 export default function MobileBottomNav({ activeTab, setActiveTab }) {
     const navItems = [
         { id: 'dashboard', label: 'Dasbor', icon: LayoutDashboard },
+        { id: 'affinity', label: 'Afinitas', icon: GitFork },
         { id: 'career', label: 'Karier', icon: Trophy },
         { id: 'gacha', label: 'Gacha', icon: Sparkles },
         { id: 'collection', label: 'Koleksi', icon: Layers },
@@ -16,7 +17,7 @@ export default function MobileBottomNav({ activeTab, setActiveTab }) {
             aria-label="Mobile Navigation Bar"
             className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.4)] pb-[env(safe-area-inset-bottom)] sm:hidden"
         >
-            <div className="grid grid-cols-6 h-16 max-w-lg mx-auto px-1">
+            <div className="grid grid-cols-7 h-16 max-w-lg mx-auto px-0.5">
                 {navItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeTab === item.id;

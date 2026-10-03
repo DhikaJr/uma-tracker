@@ -2,6 +2,52 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.2.0] - 3 Oktober 2026
+
+### 🧬 Modul Baru: Inheritance Affinity & Compatibility Calculator Server Jepang (相性計算機)
+- **Implementasi Formula Kompatibilitas Silsilah Resmi Server Jepang (JP Server)**:
+  - Menyediakan kalkulator afinitas pewarisan faktor (Blue, Red, Green, White) berbasis matriks kompatibilitas game Umamusume Pretty Derby Jepang dan relasi dunia nyata.
+  - Struktur bagan silsilah interaktif 7 slot:
+    - **Target Trainee**: Uma yang dilatih (Slot Pusat Atas).
+    - **Parent 1 & Parent 2**: Indukan kiri dan kanan.
+    - **Grandparent 1A, 1B, 2A, 2B**: Kakek-nenek pendukung masing-masing cabang.
+  - Mengkalkulasi skor relasi dasar (Target ↔ P1, Target ↔ P2, P1 ↔ P2, P1 ↔ GP1A/B, P2 ↔ GP2A/B) serta opsi kalkulasi 3-arah (*triple affinity*).
+  - Klasifikasi Badge Kompatibilitas dinamis:
+    - **△ (Peluang Rendah)**: Skor < 51 poin.
+    - **○ (Peluang Normal)**: Skor 51 - 150 poin.
+    - **◎ (Peluang Maksimal / Double Circle)**: Skor ≥ 151 poin (efek visual pelangi/emas bersinar).
+  - Menyediakan progress bar interaktif menuju target threshold 51 (○) dan 151 (◎), lengkap dengan tabel rincian poin per cabang silsilah.
+  - **Fitur Rekomendasi Cepat "Cari Parent Terbaik"**: Algoritma cerdas yang secara otomatis menguji kombinasi karakter milik pengguna (`user_characters`) dan menyajikan pasangan parent dengan base score tertinggi.
+  - **Sinkronisasi Riwayat Karier**: Mengimpor nama karakter dari tabel `career_runs` ke dalam slot silsilah.
+
+### 🚫 Validasi Ketat Anti-Duplikasi Karakter Silsilah (Aturan Game JP)
+- **Pelarangan Duplikasi Karakter Lintas Kostum/Epithet**:
+  - Menerapkan aturan resmi game JP di mana Target Trainee tidak boleh sama dengan Parent 1 maupun Parent 2, dan Parent 1 tidak boleh sama dengan Parent 2, meskipun kostumnya berbeda (misal: Tokai Teio *Beyond the Horizon* dilarang berpasangan dengan Tokai Teio *Top of Joyful*, dan Mejiro McQueen *End of the Sky* dilarang dengan Mejiro McQueen *Fair Lady*).
+  - Memvalidasi agar Parent tidak sama dengan Grandparent pada jalurnya, dan sesama Grandparent pada cabang yang sama dilarang merupakan karakter yang sama.
+- **Indikator Visual & Proteksi Pemilihan Karakter**:
+  - Pada modal pemilihan karakter (*Character Picker Modal*), karakter yang melanggar aturan dinonaktifkan (`disabled`, opacity 40%, tombol tidak dapat diklik) dan dilengkapi badge peringatan merah: `⛔ Sama dengan Target Trainee (Aturan JP: Dilarang sama)` atau `⛔ Sama dengan Parent 2 (Aturan JP: Dilarang sama)`.
+  - Pada diagram visual silsilah, slot yang berkonflik disorot dengan bingkai merah terang (`ring-2 ring-rose-500 bg-rose-50`), badge peringatan error, dan banner penjelasan aturan resmi di atas diagram.
+  - Konektor tengah Parent 1 dan 2 menampilkan status `⛔ P1 = P2 (Dilarang)` jika terdeteksi duplikat karakter.
+
+### 🏆 Standardisasi Bonus Kemenangan G1 ke +3 Poin (Update 2nd Anniversary JP)
+- **Pembaruan Nilai Default Bonus G1 Bersama**:
+  - Menetapkan nilai default bonus kemenangan balapan G1 yang cocok antar parent dan grandparent menjadi **+3 poin per balapan** sesuai update besar *2nd Anniversary* JP (Februari 2023).
+  - Menambahkan highlight visual khusus `+3 Poin (Standar 2nd Anni)` pada selector preset serta catatan informatif aturan 2nd Anniversary.
+  - Memperbaiki komputasi potensi bonus silsilah pada modal seleksi G1 menjadi `Jumlah Balapan × 5 × Poin per Balapan` (maksimal potensi bonus silsilah 7 slot).
+
+### 🐛 Perbaikan Bug Kalkulasi Skor 0 Poin (`CollectionController.php` & `AffinityView.jsx`)
+- **Penyelarasan Canonical Character ID**:
+  - Mengatasi bug di mana skor kompatibilitas silsilah tidak terhitung sama sekali (menampilkan 0 Poin pada seluruh slot) ketika memilih karakter dari katalog koleksi.
+  - Menambahkan properti canonical `char_id` dan `catalog_item_id` pada output API `CollectionController::getCharacters()`.
+  - Memperbarui helper ekstraksi identitas slot di frontend (`getSlotId`) agar dapat mengenali ID numerik karakter secara andal dari berbagai sumber data.
+
+### 🖥️ Penyesuaian Responsivitas Navbar pada Resolusi Layar 1366x768p (`Navbar.jsx`)
+- **Pencegahan Pemotongan Kontrol Kanan & Tombol Dark Mode**:
+  - Mengoptimalkan padding horizontal kontainer, jarak antar tab navigasi (`gap-0.5 xl:gap-1.5`), serta padding tombol menu pada resolusi layar 1366x768p.
+  - Mengompres tampilan badge Kuota Circle menjadi format angka ringkas pada layar laptop standar, sehingga tombol riwayat Changelog, Backup & Restore, serta tombol toggle Dark Mode tidak lagi terpotong atau terdorong keluar layar.
+
+---
+
 ## [Versi 2.1.2] - 2 Oktober 2026
 
 ### 📅 Standardisasi Format Tanggal Bahasa Indonesia & Kolom Pelatihan Karir

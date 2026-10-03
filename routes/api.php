@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AffinityController;
 use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\CareerController;
 use App\Http\Controllers\Api\ChangelogController;
@@ -102,6 +103,14 @@ Route::prefix('collection')->group(function () {
     Route::post('/support-cards/batch', [CollectionController::class, 'batchSupportCards']);
 
     Route::get('/skill-detail', [CollectionController::class, 'getSkillDetail']);
+});
+
+// Inheritance Affinity & Compatibility Calculator Endpoints
+Route::prefix('affinity')->group(function () {
+    Route::post('/calculate', [AffinityController::class, 'calculate']);
+    Route::get('/recommendations/{targetId}', [AffinityController::class, 'recommendations']);
+    Route::get('/races', [AffinityController::class, 'races']);
+    Route::get('/career-runs', [AffinityController::class, 'careerRuns']);
 });
 
 // Changelog Endpoint
