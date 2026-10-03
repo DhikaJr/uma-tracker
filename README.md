@@ -2,7 +2,7 @@
 
 Aplikasi web pendamping (*local-first companion tool*) untuk para trainer **Uma Musume: Pretty Derby (ウマ娘 プリティーダービー)** server Jepang (JP), dibangun menggunakan **Laravel 13**, **PHP 8.5**, **SQLite**, **React 19**, **Tailwind CSS v4**, **Lucide React**, dan **Recharts**.
 
-Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna mempermudah pencatatan riwayat gacha per-banner (server JP 2026+), pemantauan target kuota fans bulanan Circle Club, ekstraksi hasil evaluasi karir via screenshot OCR, sinkronisasi katalog dari **GameTora**, serta pencadangan data transaksional yang aman melalui sistem *Backup & Restore Schema v2.0*.
+Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna mempermudah pencatatan riwayat gacha per-banner (server JP 2026+), pemantauan target kuota fans bulanan Circle Club, ekstraksi hasil evaluasi karir via screenshot OCR, simulasi kompatibilitas silsilah indukan (Inheritance Affinity JP), sinkronisasi katalog dari **GameTora**, serta pencadangan data transaksional yang aman melalui sistem *Backup & Restore Schema v2.0*.
 
 ---
 
@@ -72,7 +72,30 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
   - Pelacakan kartu bantuan lengkap per kelangkaan (SSR, SR, R) dan tipe atribut.
   - Matriks efek status limit break 0LB hingga 4LB/MLB (Lv 30–50), efek unik kartu, support hints, dan alur event latihan (*Continuous Events*).
 
-### 7. Sistem Pencadangan Data Teruji (Backup Schema v2.0)
+### 7. Inheritance Affinity & Compatibility Calculator (Server JP - 相性計算機)
+- **Diagram Visual Silsilah 7 Slot Interaktif (Pedigree Tree)**:
+  - Struktur silsilah 7 posisi lengkap: **Target Trainee** (atas), **Parent 1** (kiri), **Parent 2** (kanan), **Grandparent 1A & 1B** (kiri bawah), **Grandparent 2A & 2B** (kanan bawah).
+  - Modal pemilihan karakter terpadu dari katalog GameTora dan koleksi lokal dengan filter bintang dan filter koleksi milik pengguna.
+  - Kartu slot interaktif menampilkan avatar, nama, epithet kostum, badge subskor relasi, serta status kepemilikan.
+- **Formula Resmi Kompatibilitas Server Jepang (JP Inheritance Formula)**:
+  - **Base Affinity Matrix**: Nilai relasi dasar resmi antar karakter berdasarkan kedekatan historis, rute balapan bawaan, dan grup afinitas resmi.
+  - **G1 Shared Victory Bonus (重賞ボーナス)**: Menghitung bonus kemenangan balapan G1 yang sama antar parent dan grandparent dengan standardisasi **+3 poin per balapan** (update resmi *2nd Anniversary* JP, Februari 2023).
+  - **Triple Affinity Calculation**: Opsi kalkulasi 3-arah (*3-way compatibility*) antara Target, Parent, dan Grandparent untuk memodelkan peluang warisan faktor kakek-nenek secara akurat.
+- **Klasifikasi Badge Threshold Kompatibilitas Resmi**:
+  - **△ (Peluang Rendah)**: Skor < 51 poin.
+  - **○ (Peluang Normal)**: Skor 51 - 150 poin.
+  - **◎ (Peluang Maksimal / Double Circle)**: Skor ≥ 151 poin (disertai efek visual bersinar pelangi/emas untuk peluang keberhasilan bintang faktor tertinggi).
+  - Progress bar dinamis menuju target 51 (○) dan 151 (◎), lengkap dengan accordion tabel rincian poin per relasi.
+- **Validasi Ketat Anti-Duplikasi Karakter Silsilah**:
+  - Mencegah pelanggaran aturan resmi game: Target Trainee dilarang sama dengan Parent 1 maupun Parent 2, dan Parent 1 dilarang sama dengan Parent 2, meskipun kostumnya berbeda.
+  - Grandparent dilarang sama dengan Parent pada cabangnya, dan sesama Grandparent pada cabang yang sama dilarang duplikat.
+  - Karakter duplikat otomatis dinonaktifkan (`disabled`, opacity 40%, tombol tidak dapat diklik) di modal picker disertai badge merah peringatan alasan larangan, serta penandaan visual bingkai merah dan alert banner pada diagram pohon.
+- **Rekomendasi Cepat "Cari Parent Terbaik dari Koleksi Saya"**:
+  - Algoritma cerdas yang menelusuri seluruh karakter milik pengguna (`user_characters`) dan menyajikan peringkat pasangan parent dengan skor kompatibilitas tertinggi secara instan.
+- **Sinkronisasi Balapan dari Riwayat Karier**:
+  - Opsi impor nama karakter dari tabel `career_runs` ke slot silsilah untuk memudahkan konfigurasi silsilah dari hasil pelatihan sebelumnya.
+
+### 8. Sistem Pencadangan Data Teruji (Backup Schema v2.0)
 - **Integritas Data Transaksional**:
   - **Skema Versi 2.0**: Validasi whitelist versi ketat (`0.9`, `1.0`, `2.0`). Berkas cadangan tanpa versi atau versi tidak dikenal ditolak sebelum pemrosesan.
   - **Proteksi base_rate**: Atribut `base_rate` banner wajib bernilai numerik valid dan tidak boleh `NULL`.
@@ -83,7 +106,7 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
   - **Overwrite**: Mengosongkan 9 entitas database sebelum memulihkan seluruh data cadangan secara utuh.
 - **Antarmuka Operasional**: Dapat dijalankan via Web UI Modal atau Perintah CLI Artisan.
 
-### 8. Progressive Web App (PWA) & Mobile Navigation
+### 9. Progressive Web App (PWA) & Mobile Navigation
 - **PWA Siap Pasang (`vite-plugin-pwa`)**: Web App Manifest terkalibrasi dengan root path resmi, ikon 192x192 & 512x512, tema warna `#10b981`, serta mode standalone.
 - **Sticky Bottom Navigation**: Navigasi khusus layar ponsel dengan touch target ramah jari (&ge; 48px) dan layout tanpa scrollbar horizontal liar.
 
@@ -221,6 +244,14 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 | `GET` | `/api/career/stats` | Statistik akumulasi fans, target kuota circle, dan rata-rata per run |
 | `GET` | `/api/career/metadata` | Metadata nama skenario resmi, rank E–LG24, nama Uma, dan OCR map |
 
+### Affinity & Compatibility Endpoints
+| Metode | Endpoint | Deskripsi |
+|---|---|---|
+| `POST` | `/api/affinity/calculate` | Menghitung kompatibilitas total, breakdown subskor, badge status, dan validasi duplikasi silsilah |
+| `GET` | `/api/affinity/recommendations/{targetId}` | Mencari rekomendasi pasangan parent terbaik dari koleksi user untuk target Uma tertentu |
+| `GET` | `/api/affinity/races` | Mengambil daftar balapan G1 populer JP yang dikelompokkan per kategori preset |
+| `GET` | `/api/affinity/career-runs` | Mengambil riwayat sesi karir tersimpan untuk sinkronisasi balapan silsilah |
+
 ### Collection Endpoints
 | Metode | Endpoint | Deskripsi |
 |---|---|---|
@@ -258,10 +289,11 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 Aplikasi dilengkapi rangkaian pengujian otomatis berbasis **PHPUnit** pada database memori terisolasi (`:memory:`):
 
 ```bash
-# Menjalankan seluruh pengujian (132 tests, 1.288 assertions)
+# Menjalankan seluruh pengujian (183 tests, 1.950 assertions)
 php artisan test --compact
 
 # Menjalankan pengujian spesifik
+php artisan test --filter=AffinityCalculatorTest
 php artisan test --filter=BackupRoundTripTest
 php artisan test --filter=BackupIntegrityTest
 php artisan test --filter=GachaRateAuditTest
@@ -271,6 +303,7 @@ vendor/bin/pint
 ```
 
 ### Cakupan Pengujian:
+- **Inheritance Affinity & Compatibility**: Pengujian kalkulasi kompatibilitas silsilah 7 slot lengkap, penambahan bonus kemenangan G1 bersama (+3 poin/balapan), ambang batas klasifikasi badge (△, ○, ◎), validasi ketat anti-duplikasi karakter silsilah lintas kostum, dan algoritma rekomendasi indukan terbaik dari koleksi user.
 - **Backup & Restore Integrity**: Pengujian pemulihan round-trip, kepatuhan skema v2.0, proteksi atomik rollback, penolakan versi tidak dikenal, integritas foreign key SQLite, dan pemulihan field JSON katalog.
 - **Gacha Logic & Rate Audit**: Verifikasi persistensi atribut `base_rate` (3,00% vs 4,50%), kalkulasi dinamis featured rate-up 0,75%, eksklusi banner berbayar (`scam_gacha = true` / `restriction = premium`), dan siklus hidup pity counter.
 - **Koleksi & GameTora Sync**: Proteksi batas minimum bintang karakter bawaan, matriks efek status kartu bantuan 0LB–MLB, dan integritas hash pembaruan katalog.
