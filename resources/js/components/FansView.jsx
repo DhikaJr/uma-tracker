@@ -22,6 +22,7 @@ import RankBadge from './RankBadge';
 import DeleteConfirmModal from './DeleteConfirmModal';
 import CareerOcrZone from './CareerOcrZone';
 import EditCareerRunModal from './EditCareerRunModal';
+import ScenarioDetailModal from './ScenarioDetailModal';
 import { formatIndonesianDate } from '../utils/dateHelper';
 
 // Categorized Rank Tiers for quick selection
@@ -120,6 +121,7 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
         count: 1,
         loading: false,
     });
+    const [selectedScenarioForDetail, setSelectedScenarioForDetail] = useState(null);
 
     // Form State
     const [form, setForm] = useState({
@@ -1031,16 +1033,43 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
 
             {/* Scenario Performance Breakdown Cards */}
             {stats?.scenario_stats?.length > 0 && (
-                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Target className="w-5 h-5 text-emerald-600" />
-                        <h2 className="text-base font-black text-slate-900">Rincian Performa Skenario</h2>
+                <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                        <div className="flex items-center gap-2">
+                            <Target className="w-5 h-5 text-emerald-600" />
+                            <h2 className="text-base font-black text-slate-900 dark:text-slate-100">Rincian Performa Skenario</h2>
+                        </div>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                            Klik kartu skenario untuk melihat rincian karakter & total fans
+                        </span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {stats.scenario_stats.map((sc, idx) => (
-                            <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:border-emerald-300 transition-colors">
-                                <div className="font-black text-sm text-slate-900 truncate">{sc.scenario}</div>
-                                <div className="text-xs text-slate-500 mt-0.5">{sc.runs_count} runs completed</div>
+                            <div
+                                key={idx}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => setSelectedScenarioForDetail(sc.scenario)}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedScenarioForDetail(sc.scenario); }}
+                                className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 hover:border-emerald-500 dark:hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                                title={`Klik untuk melihat detail karakter pada skenario ${sc.scenario}`}
+                            >
+                                <div>
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="font-black text-sm text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate" title={sc.scenario}>
+                                            {sc.scenario}
+                                        </div>
+                                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all shrink-0 mt-0.5" />
+                                    </div>
+                                    <div className="flex items-center justify-between gap-2 mt-1">
+                                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                                            {sc.runs_count} runs completed
+                                        </span>
+                                        <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                            Total: {(parseInt(sc.total_fans || 0, 10)).toLocaleString('id-ID')} fans
+                                        </span>
+                                    </div>
+                                </div>
                                 <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-800 grid grid-cols-3 gap-1 text-xs">
                                     <div>
                                         <span className="text-[10px] text-slate-400 uppercase font-bold block">Min Record</span>
@@ -1568,11 +1597,18 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                 isOpen={!!editingRun}
                 onClose={() => setEditingRun(null)}
                 onSuccess={(updatedRun, msg) => {
-                    onNotify?.(msg || 'Data career run berhasil diperbarui.', 'success');
+                    onNotify?.(msg || 'Catatan career run berhasil diperbarui.', 'success');
                     fetchStats();
                     fetchRuns();
                 }}
                 metadata={metadata}
+            />
+
+            {/* Scenario Performance Detail Modal */}
+            <ScenarioDetailModal
+                isOpen={!!selectedScenarioForDetail}
+                scenarioName={selectedScenarioForDetail}
+                onClose={() => setSelectedScenarioForDetail(null)}
             />
         </div>
     );

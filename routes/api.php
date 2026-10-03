@@ -71,6 +71,7 @@ Route::prefix('career')->group(function () {
     Route::put('/runs/{id}', [CareerController::class, 'update']);
     Route::delete('/runs/{id}', [CareerController::class, 'destroy']);
     Route::get('/stats', [CareerController::class, 'stats']);
+    Route::get('/scenario-detail', [CareerController::class, 'scenarioDetail']);
     Route::get('/metadata', [CareerController::class, 'metadata']);
     Route::post('/sync-gametora', [GachaController::class, 'syncCatalog']);
 });

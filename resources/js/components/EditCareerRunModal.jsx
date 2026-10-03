@@ -3,34 +3,6 @@ import { X, Trophy, Save, Calendar, Check, AlertCircle, RefreshCw, Search } from
 import RankBadge from './RankBadge';
 import { formatIndonesianDate } from '../utils/dateHelper';
 
-// Categorized Rank Tiers for quick selection
-const rankTierGroups = {
-    'U-TIER': [
-        'UG', 'UG1', 'UG3', 'UG5', 'UG7', 'UG9',
-        'UF', 'UF1', 'UF3', 'UF5', 'UF7', 'UF9',
-        'UE', 'UE1', 'UE3', 'UE5', 'UE7', 'UE9',
-        'UD', 'UD1', 'UD3', 'UD5', 'UD7', 'UD9',
-        'UC', 'UC1', 'UC3', 'UC5', 'UC7', 'UC9',
-        'UB', 'UB1', 'UB3', 'UB5', 'UB7', 'UB9',
-        'UA', 'UA1', 'UA3', 'UA5', 'UA7', 'UA9',
-        'US', 'US1', 'US3', 'US5', 'US7', 'US9',
-    ],
-    'LEGEND (LG)': [
-        'LG', 'LG1', 'LG2', 'LG3', 'LG4', 'LG5', 'LG6', 'LG7', 'LG8', 'LG9',
-        'LG10', 'LG12', 'LG15', 'LG18', 'LG20', 'LG22', 'LG24',
-    ],
-    'LEGEND (LF)': [
-        'LF', 'LF1', 'LF2', 'LF3', 'LF4', 'LF5', 'LF6', 'LF7', 'LF8', 'LF9',
-        'LF10', 'LF12', 'LF15', 'LF18', 'LF20', 'LF22', 'LF24',
-    ],
-    'STAR (A-SS)': [
-        'A', 'A+', 'S', 'S+', 'SS', 'SS+',
-    ],
-    'BEGINNER (G-B)': [
-        'G', 'G+', 'F', 'F+', 'E', 'E+', 'D', 'D+', 'C', 'C+', 'B', 'B+',
-    ],
-};
-
 const QUICK_NOTES = [
     'Fans Gain Run',
     'Sprint Ace Run',
@@ -61,7 +33,6 @@ export default function EditCareerRunModal({
     });
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    const [rankTierTab, setRankTierTab] = useState('U-TIER');
     const [saving, setSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
@@ -93,19 +64,6 @@ export default function EditCareerRunModal({
         return matched;
     };
 
-    const getTierTabForRank = (rank) => {
-        if (!rank) return 'U-TIER';
-        for (const [tier, list] of Object.entries(rankTierGroups)) {
-            if (list.includes(rank)) return tier;
-        }
-        if (/^(UG|UF|UE|UD|UC|UB|UA|US)/.test(rank)) return 'U-TIER';
-        if (rank.startsWith('LF')) return 'LEGEND (LF)';
-        if (rank.startsWith('LG')) return 'LEGEND (LG)';
-        if (/^(A|S)/.test(rank)) return 'STAR (A-SS)';
-        if (/^(G|F|E|D|C|B)/.test(rank)) return 'BEGINNER (G-B)';
-        return 'U-TIER';
-    };
-
     useEffect(() => {
         if (!isOpen || !run) return;
 
@@ -120,7 +78,6 @@ export default function EditCareerRunModal({
             notes: run.notes || '',
             run_date: run.run_date ? String(run.run_date).slice(0, 10) : new Date().toISOString().slice(0, 10),
         });
-        setRankTierTab(getTierTabForRank(currentRank));
         setErrorMsg('');
         setShowSuggestions(false);
     }, [isOpen, run]);
@@ -164,8 +121,6 @@ export default function EditCareerRunModal({
                 const autoRank = getRankFromScore(scoreNum);
                 if (autoRank) {
                     next.final_rank = autoRank;
-                    const tier = getTierTabForRank(autoRank);
-                    if (tier) setRankTierTab(tier);
                 }
             }
             return next;
@@ -214,7 +169,7 @@ export default function EditCareerRunModal({
 
             const data = await res.json();
             if (res.ok && data.data) {
-                onSuccess?.(data.data, data.message || 'Data career run berhasil diperbarui.');
+                onSuccess?.(data.data, data.message || 'Catatan career run berhasil diperbarui.');
                 onClose?.();
             } else {
                 throw new Error(data.message || 'Gagal menyimpan perubahan career run.');
@@ -387,48 +342,25 @@ export default function EditCareerRunModal({
                         </div>
                     </div>
 
-                    {/* Final Rank Selection */}
+                    {/* Hasil Rank (Auto-Rank) */}
                     <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                <span>Hasil Rank:</span>
-                                <RankBadge rank={form.final_rank || 'G'} size="sm" />
-                            </label>
-
-                            {/* Tier Selector tabs */}
-                            <div className="flex items-center gap-1">
-                                {Object.keys(rankTierGroups).map((tier) => (
-                                    <button
-                                        key={tier}
-                                        type="button"
-                                        onClick={() => setRankTierTab(tier)}
-                                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-colors cursor-pointer ${
-                                            rankTierTab === tier
-                                                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
-                                                : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                                        }`}
-                                    >
-                                        {tier}
-                                    </button>
-                                ))}
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Hasil Rank:</span>
+                                <RankBadge rank={form.final_rank || 'G'} size="md" />
+                                {form.evaluation_score && parseNumber(form.evaluation_score) > 0 ? (
+                                    <span className="text-xs font-mono font-semibold text-emerald-700 dark:text-emerald-400">
+                                        (Auto-Rank dari {form.evaluation_score} pts)
+                                    </span>
+                                ) : (
+                                    <span className="text-xs text-slate-400 dark:text-slate-500 italic">
+                                        (Rank saat ini: {form.final_rank || 'G'})
+                                    </span>
+                                )}
                             </div>
-                        </div>
-
-                        <div className="p-2 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-wrap gap-1 max-h-24 overflow-y-auto">
-                            {(rankTierGroups[rankTierTab] || []).map((r) => (
-                                <button
-                                    key={r}
-                                    type="button"
-                                    onClick={() => setForm(prev => ({ ...prev, final_rank: r }))}
-                                    className={`px-2 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                                        form.final_rank === r
-                                            ? 'bg-emerald-600 text-white shadow-xs scale-105'
-                                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-slate-200/60 dark:border-slate-700'
-                                    }`}
-                                >
-                                    {r}
-                                </button>
-                            ))}
+                            <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-950/60 border border-emerald-300/80 dark:border-emerald-800/60 px-2.5 py-1 rounded-xl">
+                                ✨ Auto-Rank Aktif
+                            </span>
                         </div>
                     </div>
 

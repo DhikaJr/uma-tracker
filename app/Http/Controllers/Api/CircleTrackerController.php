@@ -22,7 +22,11 @@ class CircleTrackerController extends Controller
     public function status(Request $request): JsonResponse
     {
         $circleId = $request->query('circle_id');
-        $data = $this->trackerService->getStatus($circleId ? (string) $circleId : null);
+        $period = $request->query('period');
+        $data = $this->trackerService->getStatus(
+            $circleId ? (string) $circleId : null,
+            $period ? (string) $period : null
+        );
 
         return response()->json($data);
     }
@@ -56,7 +60,11 @@ class CircleTrackerController extends Controller
         AppSetting::setValue('tracked_viewer_id', $validated['viewer_id']);
 
         $circleId = $request->input('circle_id');
-        $data = $this->trackerService->getStatus($circleId ? (string) $circleId : null);
+        $period = $request->input('period');
+        $data = $this->trackerService->getStatus(
+            $circleId ? (string) $circleId : null,
+            $period ? (string) $period : null
+        );
 
         return response()->json([
             'success' => true,

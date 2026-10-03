@@ -23,7 +23,7 @@ class CircleTrackerService
      *
      * @return array<string, mixed>
      */
-    public function getStatus(?string $circleId = null): array
+    public function getStatus(?string $circleId = null, ?string $period = null): array
     {
         $savedCircleId = (string) AppSetting::getValue('circle_id', '');
         if (empty($circleId) && empty($savedCircleId)) {
@@ -37,6 +37,9 @@ class CircleTrackerService
                 'point' => 0,
                 'active_total' => 0,
                 'period' => null,
+                'available_periods' => [],
+                'is_current_period' => true,
+                'selected_period' => null,
                 'members' => [],
                 'trend_segments' => [],
                 'tracked_player' => null,
@@ -49,6 +52,31 @@ class CircleTrackerService
 
         $circleId = $circleId ?: $savedCircleId;
         $trackedViewerId = (string) AppSetting::getValue('tracked_viewer_id', '886175385');
+
+        // Check if a specific period is requested
+        if (! empty($period)) {
+            $periodNorm = substr(trim($period), 0, 7); // e.g. '2026-09'
+            $currentMonthNorm = date('Y-m');
+
+            if ($periodNorm !== $currentMonthNorm) {
+                $snapshot = CircleSnapshot::where('circle_id', $circleId)
+                    ->where('period', 'LIKE', "{$periodNorm}%")
+                    ->latest('last_refreshed_at')
+                    ->first();
+
+                if (! $snapshot) {
+                    try {
+                        $snapshot = $this->fetchAndSavePeriod($circleId, $periodNorm);
+                    } catch (Exception $e) {
+                        Log::error("Fetching circle snapshot for period {$periodNorm} failed: ".$e->getMessage());
+                    }
+                }
+
+                if ($snapshot) {
+                    return $this->formatSnapshotResponse($snapshot, $circleId, $trackedViewerId);
+                }
+            }
+        }
 
         $latest = CircleSnapshot::where('circle_id', $circleId)
             ->latest('last_refreshed_at')
@@ -213,6 +241,63 @@ class CircleTrackerService
     }
 
     /**
+     * Fetch from muxueuma contributions endpoint for a specific period (e.g. '2026-09') and save snapshot.
+     */
+    public function fetchAndSavePeriod(string $circleId, string $periodNorm): CircleSnapshot
+    {
+        $headers = [
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36',
+            'Accept' => 'application/json, text/plain, */*',
+            'Referer' => self::BASE_URL.'/ja/',
+            'Accept-Language' => 'ja,en-US;q=0.8,en;q=0.7',
+        ];
+
+        $contribUrl = self::BASE_URL."/api/circles/{$circleId}/contributions?period={$periodNorm}";
+        $contribRes = Http::withoutVerifying()->withHeaders($headers)->timeout(25)->get($contribUrl);
+
+        if (! $contribRes->successful()) {
+            throw new Exception("HTTP {$contribRes->status()} from {$contribUrl}");
+        }
+
+        $contributions = $contribRes->json();
+        $circle = $contributions['circle'] ?? [];
+        $rows = $contributions['rows'] ?? [];
+
+        $activeTotal = isset($contributions['activeTotal'])
+            ? (int) $contributions['activeTotal']
+            : (int) array_sum(array_column($rows, 'contribution'));
+
+        // Fetch trend for past month rank if available
+        $trendUrl = self::BASE_URL."/api/circles/{$circleId}/ranking-trend?range=30d";
+        $trendRes = Http::withoutVerifying()->withHeaders($headers)->timeout(25)->get($trendUrl);
+        $trend = $trendRes->successful() ? $trendRes->json() : [];
+
+        $rank = null;
+        $point = $activeTotal;
+        if (isset($trend['lastMonth']) && is_array($trend['lastMonth'])) {
+            $rank = $trend['lastMonth']['rank'] ?? null;
+            if (! empty($trend['lastMonth']['point'])) {
+                $point = (int) $trend['lastMonth']['point'];
+            }
+        }
+
+        return CircleSnapshot::create([
+            'circle_id' => (string) ($circle['id'] ?? $circleId),
+            'circle_name' => (string) ($circle['name'] ?? 'Circle '.$circleId),
+            'rank' => $rank ? (int) $rank : null,
+            'point' => $point ? (int) $point : null,
+            'member_count' => isset($circle['memberCount']) ? (int) $circle['memberCount'] : count($rows),
+            'active_total' => $activeTotal,
+            'period' => (string) ($contributions['period'] ?? "{$periodNorm}-01"),
+            'payload' => [
+                'contributions' => $contributions,
+                'trend' => $trend,
+            ],
+            'last_refreshed_at' => now(),
+        ]);
+    }
+
+    /**
      * Format snapshot and payload for JSON API response.
      *
      * @return array<string, mixed>
@@ -224,6 +309,9 @@ class CircleTrackerService
                 'has_circle' => true,
                 'circle_id' => $circleId,
                 'has_data' => false,
+                'available_periods' => [],
+                'is_current_period' => true,
+                'selected_period' => null,
                 'can_refresh' => true,
                 'cooldown_seconds_remaining' => 0,
                 'next_refresh_at' => null,
@@ -246,11 +334,34 @@ class CircleTrackerService
             }
         }
 
+        // Available periods resolution
+        $availablePeriods = $contributions['availablePeriods'] ?? [];
+        if (empty($availablePeriods) && $snapshot->period) {
+            $availablePeriods = [$snapshot->period];
+        }
+
+        // Also query periods in DB for this circle
+        $dbPeriods = CircleSnapshot::where('circle_id', $circleId)
+            ->whereNotNull('period')
+            ->pluck('period')
+            ->toArray();
+        foreach ($dbPeriods as $dbp) {
+            $formattedDbp = strlen($dbp) === 7 ? "{$dbp}-01" : $dbp;
+            if (! in_array($formattedDbp, $availablePeriods, true)) {
+                $availablePeriods[] = $formattedDbp;
+            }
+        }
+        rsort($availablePeriods);
+
+        $isCurrentPeriod = isset($contributions['isCurrentPeriod'])
+            ? (bool) $contributions['isCurrentPeriod']
+            : (substr((string) $snapshot->period, 0, 7) === date('Y-m'));
+
         $lastRefreshed = Carbon::parse($snapshot->last_refreshed_at);
         $secondsElapsed = (int) $lastRefreshed->diffInSeconds(now());
-        $secondsRemaining = max(0, self::COOLDOWN_SECONDS - $secondsElapsed);
-        $canRefresh = $secondsRemaining === 0;
-        $nextRefreshAt = $lastRefreshed->copy()->addSeconds(self::COOLDOWN_SECONDS)->toIso8601String();
+        $secondsRemaining = $isCurrentPeriod ? max(0, self::COOLDOWN_SECONDS - $secondsElapsed) : 0;
+        $canRefresh = $isCurrentPeriod && ($secondsRemaining === 0);
+        $nextRefreshAt = $isCurrentPeriod ? $lastRefreshed->copy()->addSeconds(self::COOLDOWN_SECONDS)->toIso8601String() : null;
 
         return [
             'has_circle' => true,
@@ -262,6 +373,9 @@ class CircleTrackerService
             'member_count' => $snapshot->member_count,
             'active_total' => $snapshot->active_total,
             'period' => $snapshot->period,
+            'available_periods' => array_values(array_unique($availablePeriods)),
+            'is_current_period' => $isCurrentPeriod,
+            'selected_period' => $snapshot->period,
             'business_date' => $contributions['businessDate'] ?? null,
             'last_month' => $trend['lastMonth'] ?? null,
             'tracked_viewer_id' => $trackedViewerId,

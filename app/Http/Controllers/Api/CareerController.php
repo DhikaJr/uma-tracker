@@ -8,6 +8,7 @@ use App\Http\Requests\StoreCareerRunRequest;
 use App\Http\Requests\UpdateCareerRunRequest;
 use App\Models\AppSetting;
 use App\Models\CareerRun;
+use App\Models\UmaCatalogItem;
 use App\Support\UmaCatalog;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -92,7 +93,7 @@ class CareerController extends Controller
         $run = CareerRun::create($data);
 
         return response()->json([
-            'message' => 'Career run recorded successfully.',
+            'message' => 'Catatan career run berhasil dicatat.',
             'data' => $run,
         ], 201);
     }
@@ -111,7 +112,7 @@ class CareerController extends Controller
         $run->update($data);
 
         return response()->json([
-            'message' => 'Career run updated successfully.',
+            'message' => 'Catatan career run berhasil diperbarui.',
             'data' => $run,
         ]);
     }
@@ -125,7 +126,7 @@ class CareerController extends Controller
         $run->delete();
 
         return response()->json([
-            'message' => 'Career run deleted successfully.',
+            'message' => 'Catatan career run berhasil dihapus.',
         ]);
     }
 
@@ -283,6 +284,125 @@ class CareerController extends Controller
             'character_stats' => $characterStats,
             'daily_trends' => $dailyTrends,
             'top_umas' => $topUmas,
+        ]);
+    }
+
+    /**
+     * Get scenario performance detail, character breakdown, and recent runs.
+     */
+    public function scenarioDetail(Request $request): JsonResponse
+    {
+        $scenario = $request->query('scenario');
+        if (! $scenario) {
+            return response()->json([
+                'message' => 'Parameter scenario wajib diisi.',
+            ], 422);
+        }
+
+        $runsQuery = CareerRun::where('scenario', $scenario);
+        $totalRuns = (clone $runsQuery)->count();
+
+        if ($totalRuns === 0) {
+            return response()->json([
+                'scenario' => $scenario,
+                'total_runs' => 0,
+                'total_fans' => 0,
+                'avg_fans' => 0,
+                'min_fans' => 0,
+                'max_fans' => 0,
+                'characters' => [],
+                'recent_runs' => [],
+            ]);
+        }
+
+        $totalFans = (int) (clone $runsQuery)->sum('fans_gained');
+        $avgFans = (int) round($totalFans / $totalRuns);
+        $minFans = (int) (clone $runsQuery)->min('fans_gained');
+        $maxFans = (int) (clone $runsQuery)->max('fans_gained');
+
+        // Character breakdown in this scenario
+        $charStats = (clone $runsQuery)
+            ->select(
+                'uma_name',
+                DB::raw('COUNT(*) as runs_count'),
+                DB::raw('SUM(fans_gained) as total_fans'),
+                DB::raw('ROUND(AVG(fans_gained)) as avg_fans'),
+                DB::raw('MIN(fans_gained) as min_fans'),
+                DB::raw('MAX(fans_gained) as max_fans'),
+                DB::raw('MAX(evaluation_score) as max_score')
+            )
+            ->groupBy('uma_name')
+            ->orderBy('total_fans', 'desc')
+            ->get();
+
+        $catalogItems = UmaCatalogItem::where('type', 'character')->get(['name', 'gametora_id', 'raw_data']);
+
+        $characters = $charStats->map(function ($item) use ($catalogItems, $scenario) {
+            $baseName = trim(explode(' [', $item->uma_name)[0]);
+            $matchedCatalog = $catalogItems->first(fn ($c) => $c->name === $item->uma_name)
+                ?: $catalogItems->first(fn ($c) => trim(explode(' [', $c->name)[0]) === $baseName);
+
+            $imageUrl = null;
+            if ($matchedCatalog && is_array($matchedCatalog->raw_data)) {
+                $raw = $matchedCatalog->raw_data;
+                if (! empty($raw['image_url'])) {
+                    $imageUrl = (string) $raw['image_url'];
+                } else {
+                    $charId = $raw['char_id'] ?? null;
+                    $cardId = $raw['card_id'] ?? $matchedCatalog->gametora_id ?? null;
+                    if ($charId && $cardId) {
+                        $imageUrl = "https://gametora.com/images/umamusume/characters/thumb/chara_stand_{$charId}_{$cardId}.png";
+                    } else {
+                        $imageUrl = $raw['icon'] ?? $raw['thumb'] ?? null;
+                    }
+                }
+            }
+
+            // Find best rank achieved
+            $bestRun = CareerRun::where('scenario', $scenario)
+                ->where('uma_name', $item->uma_name)
+                ->whereNotNull('final_rank')
+                ->orderBy('evaluation_score', 'desc')
+                ->orderBy('fans_gained', 'desc')
+                ->first();
+
+            $bestRank = $bestRun?->final_rank;
+            if (! $bestRank && ! empty($item->max_score)) {
+                $bestRank = UmaCatalog::getRankFromScore((int) $item->max_score);
+            }
+            if (! $bestRank) {
+                $bestRank = 'G';
+            }
+
+            return [
+                'uma_name' => $item->uma_name,
+                'image_url' => $imageUrl,
+                'runs_count' => (int) $item->runs_count,
+                'total_fans' => (int) $item->total_fans,
+                'avg_fans' => (int) $item->avg_fans,
+                'min_fans' => (int) $item->min_fans,
+                'max_fans' => (int) $item->max_fans,
+                'best_score' => $item->max_score ? (int) $item->max_score : null,
+                'best_rank' => $bestRank,
+            ];
+        });
+
+        // Recent runs in this scenario (up to 25)
+        $recentRuns = (clone $runsQuery)
+            ->orderBy('run_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->take(25)
+            ->get();
+
+        return response()->json([
+            'scenario' => $scenario,
+            'total_runs' => $totalRuns,
+            'total_fans' => $totalFans,
+            'avg_fans' => $avgFans,
+            'min_fans' => $minFans,
+            'max_fans' => $maxFans,
+            'characters' => $characters,
+            'recent_runs' => $recentRuns,
         ]);
     }
 

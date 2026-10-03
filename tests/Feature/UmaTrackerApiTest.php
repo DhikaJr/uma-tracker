@@ -579,6 +579,50 @@ class UmaTrackerApiTest extends TestCase
             ->assertJsonPath('can_refresh', false);
     }
 
+    public function test_circle_tracker_status_with_historical_period_returns_past_month_data(): void
+    {
+        CircleSnapshot::create([
+            'circle_id' => '441730573',
+            'circle_name' => 'なんか適当',
+            'rank' => 853,
+            'point' => 2075037321,
+            'member_count' => 30,
+            'active_total' => 2075037321,
+            'period' => '2026-09-01',
+            'payload' => [
+                'contributions' => [
+                    'circle' => ['id' => 441730573, 'name' => 'なんか適当', 'memberCount' => 30],
+                    'period' => '2026-09-01',
+                    'availablePeriods' => ['2026-10-01', '2026-09-01'],
+                    'isCurrentPeriod' => false,
+                    'activeTotal' => 2075037321,
+                    'rows' => [
+                        [
+                            'rank' => 1,
+                            'viewerId' => 886175385,
+                            'playerName' => 'u1w0q8n6',
+                            'totalFans' => 966130757,
+                            'contribution' => 210457263,
+                        ],
+                    ],
+                ],
+                'trend' => [],
+            ],
+            'last_refreshed_at' => now()->subDays(10),
+        ]);
+
+        $response = $this->getJson('/api/circle-tracker/status?period=2026-09');
+        $response->assertStatus(200)
+            ->assertJsonPath('has_data', true)
+            ->assertJsonPath('period', '2026-09-01')
+            ->assertJsonPath('is_current_period', false)
+            ->assertJsonPath('active_total', 2075037321)
+            ->assertJsonPath('can_refresh', false)
+            ->assertJsonPath('tracked_player.contribution', 210457263);
+
+        $this->assertContains('2026-09-01', $response->json('available_periods'));
+    }
+
     public function test_circle_tracker_refresh_enforces_3_hour_cooldown(): void
     {
         // Snapshot refreshed 30 minutes ago (within 3 hour cooldown window)
@@ -2015,5 +2059,70 @@ class UmaTrackerApiTest extends TestCase
             'training_type' => 'independent',
             'fans_gained' => 650000,
         ]);
+    }
+
+    public function test_career_scenario_detail_returns_characters_and_total_fans(): void
+    {
+        CareerRun::create([
+            'uma_name' => 'Mejiro Ramonu [Epithet 1]',
+            'scenario' => 'Tracen-ken',
+            'training_type' => 'manual',
+            'fans_gained' => 400000,
+            'evaluation_score' => 62000,
+            'final_rank' => 'UA9',
+            'run_date' => '2026-03-01',
+        ]);
+
+        CareerRun::create([
+            'uma_name' => 'Mejiro Ramonu [Epithet 1]',
+            'scenario' => 'Tracen-ken',
+            'training_type' => 'manual',
+            'fans_gained' => 350000,
+            'evaluation_score' => 60000,
+            'final_rank' => 'UA7',
+            'run_date' => '2026-03-02',
+        ]);
+
+        CareerRun::create([
+            'uma_name' => 'Oguri Cap',
+            'scenario' => 'Tracen-ken',
+            'training_type' => 'independent',
+            'fans_gained' => 500000,
+            'evaluation_score' => 65000,
+            'final_rank' => 'US1',
+            'run_date' => '2026-03-03',
+        ]);
+
+        // Validation error if scenario is missing
+        $resError = $this->getJson('/api/career/scenario-detail');
+        $resError->assertStatus(422);
+
+        // Success response
+        $response = $this->getJson('/api/career/scenario-detail?scenario=Tracen-ken');
+        $response->assertStatus(200)
+            ->assertJsonPath('scenario', 'Tracen-ken')
+            ->assertJsonPath('total_runs', 3)
+            ->assertJsonPath('total_fans', 1250000)
+            ->assertJsonPath('avg_fans', 416667)
+            ->assertJsonPath('min_fans', 350000)
+            ->assertJsonPath('max_fans', 500000);
+
+        $characters = $response->json('characters');
+        $this->assertCount(2, $characters);
+
+        // Sorted by total_fans desc: Mejiro Ramonu (750k) > Oguri Cap (500k)
+        $this->assertSame('Mejiro Ramonu [Epithet 1]', $characters[0]['uma_name']);
+        $this->assertSame(2, $characters[0]['runs_count']);
+        $this->assertSame(750000, $characters[0]['total_fans']);
+        $this->assertSame('UA9', $characters[0]['best_rank']);
+
+        $this->assertSame('Oguri Cap', $characters[1]['uma_name']);
+        $this->assertSame(1, $characters[1]['runs_count']);
+        $this->assertSame(500000, $characters[1]['total_fans']);
+        $this->assertSame('US1', $characters[1]['best_rank']);
+
+        // Check recent runs count
+        $recentRuns = $response->json('recent_runs');
+        $this->assertCount(3, $recentRuns);
     }
 }

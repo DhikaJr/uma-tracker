@@ -2,6 +2,37 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.3.0] - 3 Oktober 2026
+
+### 🏛️ Penandaan Anggota Keluar (*Ex-Member*) & Statistik Historis Bulanan Fans Club Circle
+- **Penandaan Anggota yang Sudah Keluar (*Out*) dari Club (`CircleClubView.jsx`)**:
+  - Secara akurat menandai anggota yang tidak memiliki ranking (`rank: null`, `isVoided: true`, atau memiliki atribut tanggal keluar `leftOn`) sesuai visualisasi direktori Muxueuma.
+  - Kolom **Rank** menampilkan badge bulat muted bertanda strip (`ー`) alih-alih kosong.
+  - Kolom **Nama Anggota** dilengkapi badge merah kontras `Keluar (Out)` serta subteks tanggal keluar dan status resmi berbahasa Jepang: `MM-DD 脱退、貢献は除外済み (Sudah Keluar dari Club)`.
+  - Nilai delta pertambahan fans harian dan mingguan (`todayDelta`, `day3Delta`, `weekDelta`) yang bernilai `null` ditampilkan dengan tanda strip `ー` alih-alih angka `+0`.
+  - Logika sorting tabel otomatis menempatkan anggota yang keluar di urutan paling bawah ketika disortir berdasarkan Rank (mencegah nilai `null` terindeks di peringkat paling atas).
+  - Tampilan sub-bar jumlah anggota diperjelas dengan rincian status keanggotaan aktif dan keluar: `Pertambahan fans seluruh anggota circle (X aktif, Y keluar)`.
+  - Memberikan latar belakang aksen halus kemerahan (`bg-rose-500/5`) pada baris tabel anggota yang telah keluar.
+
+- **Filter & Penelusuran Statistik Periode Bulan Sebelumnya (Historical Archive)**:
+  - Menyediakan menu dropdown popover pemilih periode bulan historis bergaya Muxueuma (`YYYY年 M月`) dengan pengelompokan tahun dan penanda aktif (*active pill indicator*).
+  - Judul tabel, kolom kontribusi, dan widget secara otomatis menyesuaikan label periode yang sedang aktif (misal: `2026年 9月 (September 2026)`).
+  - Widget *Pace Target Bulanan* mendukung mode arsip historis dengan indikator status arsip masa lalu alih-alih proyeksi hari berjalan.
+  - Backend API (`CircleTrackerController.php` & `CircleTrackerService.php`) mendukung parameter `?period=YYYY-MM` dan menyimpan data snapshot per bulan (`circle_snapshot_YYYY-MM.json`) sehingga riwayat tetap tersimpan rapi dan dapat diakses cepat secara offline.
+
+- **Perbaikan Kestabilan Komponen React (`CircleClubView.jsx`)**:
+  - Mengatasi bug *Minified React error #310 (Rendered fewer hooks than expected)* dengan memposisikan seluruh hooks (`useMemo`, state, effects) di tingkat atas sebelum kondisi *early return* loading.
+
+### 🏃 Penyempurnaan Manajemen Riwayat Karir & Analisis Skenario Pelatihan
+- **Penetapan Hasil Auto Rank Otomatis pada Modal Edit Sesi (`EditCareerRunModal.jsx`)**:
+  - Menghapus input tombol rank manual dan langsung menetapkan nilai Auto Rank yang dihitung secara presisi dari akumulasi skor total poin sesi pelatihan.
+  - Menerjemahkan seluruh notifikasi perubahan catatan karir ke dalam bahasa Indonesia baku (`Catatan sesi karir berhasil diperbarui`, dll.).
+- **Modal Interaktif Rincian Karakter per Skenario Pelatihan (`ScenarioDetailModal.jsx` & `FansView.jsx`)**:
+  - Kartu statistik skenario pada riwayat karir kini dapat diklik untuk memunculkan modal pop-up detail per skenario.
+  - Menampilkan daftar karakter yang pernah dilatih pada skenario tersebut lengkap dengan avatar, nama, epithet, jumlah sesi pelatihan yang diselesaikan, dan akumulasi total perolehan fans pada skenario terkait.
+
+---
+
 ## [Versi 2.2.0] - 3 Oktober 2026
 
 ### 🧬 Modul Baru: Inheritance Affinity & Compatibility Calculator Server Jepang (相性計算機)

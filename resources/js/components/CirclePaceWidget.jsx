@@ -19,7 +19,10 @@ export default function CirclePaceWidget({
     initialPaceData = null, 
     circleGoal = 30000000, 
     onUpdateGoal,
-    compact = false 
+    compact = false,
+    isHistorical = false,
+    selectedPeriod = null,
+    onBackToCurrent = null,
 }) {
     const [pace, setPace] = useState(initialPaceData);
     const [loading, setLoading] = useState(!initialPaceData);
@@ -48,10 +51,10 @@ export default function CirclePaceWidget({
     useEffect(() => {
         if (initialPaceData) {
             setPace(initialPaceData);
-        } else {
+        } else if (!isHistorical) {
             fetchPace(circleGoal);
         }
-    }, [initialPaceData, circleGoal]);
+    }, [initialPaceData, circleGoal, isHistorical]);
 
     const handleSaveGoal = async () => {
         const val = parseInt(tempGoal, 10);
@@ -126,7 +129,22 @@ export default function CirclePaceWidget({
         },
     };
 
-    const currentStatus = statusConfig[status] || statusConfig['On Track'];
+    const formatPeriodJp = (periodStr) => {
+        if (!periodStr) return 'Bulan Ini';
+        const match = String(periodStr).match(/^(\d{4})-(\d{2})/);
+        return match ? `${match[1]}年${parseInt(match[2], 10)}月` : String(periodStr);
+    };
+
+    const currentStatus = isHistorical
+        ? {
+            label: 'Arsip Final (Selesai)',
+            color: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+            icon: Award,
+            accent: 'text-amber-500',
+            bgGlow: 'from-amber-500/10 via-orange-500/5 to-transparent',
+            badgeBg: 'bg-amber-600 text-white',
+        }
+        : (statusConfig[status] || statusConfig['On Track']);
     const StatusIcon = currentStatus.icon;
 
     return (
@@ -146,12 +164,18 @@ export default function CirclePaceWidget({
                                 <h3 className="text-base font-black text-slate-900 dark:text-white">
                                     Ritme Harian & Estimasi Run Circle
                                 </h3>
-                                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                                    Bulan Ini
+                                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-md ${
+                                    isHistorical
+                                        ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                                }`}>
+                                    {isHistorical ? `Arsip ${formatPeriodJp(selectedPeriod)}` : 'Bulan Ini'}
                                 </span>
                             </div>
                             <p className="text-xs text-slate-500 dark:text-slate-400">
-                                Pantau ritme grinding fans harian agar target kuota bulanan tercapai tepat waktu
+                                {isHistorical
+                                    ? 'Rekapitulasi pencapaian target bulanan pada periode arsip yang telah selesai'
+                                    : 'Pantau ritme grinding fans harian agar target kuota bulanan tercapai tepat waktu'}
                             </p>
                         </div>
                     </div>
@@ -256,27 +280,47 @@ export default function CirclePaceWidget({
                         </div>
                         <div>
                             <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-200 flex items-center gap-1.5">
-                                <Flame className="w-3.5 h-3.5 text-amber-300" />
-                                <span>Beban Grinding Harian</span>
+                                {isHistorical ? (
+                                    <>
+                                        <Award className="w-3.5 h-3.5 text-amber-300" />
+                                        <span>Hasil Akhir Periode</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Flame className="w-3.5 h-3.5 text-amber-300" />
+                                        <span>Beban Grinding Harian</span>
+                                    </>
+                                )}
                             </span>
                             <div className="mt-2 text-3xl sm:text-4xl font-black font-mono tracking-tight flex items-baseline gap-1.5">
-                                <span>Target:</span>
-                                <span className="text-amber-300 text-4xl sm:text-5xl font-black">
-                                    {is_target_reached ? '0' : estimated_runs_per_day}
-                                </span>
-                                <span className="text-lg font-bold text-emerald-100">Run / Hari</span>
+                                {isHistorical ? (
+                                    <>
+                                        <span className="text-amber-300 text-3xl sm:text-4xl font-black">
+                                            {current_fans.toLocaleString('id-ID')}
+                                        </span>
+                                        <span className="text-lg font-bold text-emerald-100">Fans</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>Target:</span>
+                                        <span className="text-amber-300 text-4xl sm:text-5xl font-black">
+                                            {is_target_reached ? '0' : estimated_runs_per_day}
+                                        </span>
+                                        <span className="text-lg font-bold text-emerald-100">Run / Hari</span>
+                                    </>
+                                )}
                             </div>
                         </div>
 
                         <div className="mt-4 pt-3 border-t border-emerald-500/40 text-[11px] text-emerald-100/90 space-y-1">
                             <div className="flex justify-between">
-                                <span>Rata-rata Fans / Run:</span>
+                                <span>{isHistorical ? 'Target Kuota:' : 'Rata-rata Fans / Run:'}</span>
                                 <span className="font-mono font-bold text-amber-200">
-                                    ~{avg_fans_per_run.toLocaleString()}
+                                    {isHistorical ? `${monthly_circle_target.toLocaleString()} fans` : `~${avg_fans_per_run.toLocaleString()}`}
                                 </span>
                             </div>
                             <div className="text-[10px] text-emerald-200/80">
-                                *Dihitung dari riwayat 30 hari terakhir Career Run Anda
+                                {isHistorical ? '*Rekapitulasi total pencapaian bulan tersebut' : '*Dihitung dari riwayat 30 hari terakhir Career Run Anda'}
                             </div>
                         </div>
                     </div>
@@ -287,20 +331,24 @@ export default function CirclePaceWidget({
                         <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800 flex flex-col justify-between">
                             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
                                 <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-                                <span>Kebutuhan Ritme (Req. Pace)</span>
+                                <span>{isHistorical ? 'Rata-rata Harian Final' : 'Kebutuhan Ritme (Req. Pace)'}</span>
                             </span>
                             <div className="my-2">
                                 <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 dark:text-white">
-                                    {required_daily_pace.toLocaleString()}
+                                    {isHistorical 
+                                        ? Math.round(current_fans / Math.max(1, days_in_month)).toLocaleString('id-ID')
+                                        : required_daily_pace.toLocaleString()}
                                 </div>
                                 <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                                    Fans harus diraih per hari
+                                    {isHistorical ? `Fans/hari (${days_in_month} hari)` : 'Fans harus diraih per hari'}
                                 </span>
                             </div>
                             <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300 border-t border-slate-200/60 dark:border-slate-700/60 pt-1.5 flex justify-between">
-                                <span>Sisa Fans:</span>
+                                <span>{isHistorical ? 'Status Kuota:' : 'Sisa Fans:'}</span>
                                 <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                                    {remaining_fans.toLocaleString()}
+                                    {isHistorical 
+                                        ? (current_fans >= monthly_circle_target ? 'Terpenuhi ✓' : `${(monthly_circle_target - current_fans).toLocaleString('id-ID')} kurang`)
+                                        : remaining_fans.toLocaleString()}
                                 </span>
                             </div>
                         </div>
@@ -309,28 +357,30 @@ export default function CirclePaceWidget({
                         <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800 flex flex-col justify-between">
                             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
                                 <Zap className="w-3.5 h-3.5 text-amber-500" />
-                                <span>Ritme Riil Saat Ini (Current Pace)</span>
+                                <span>{isHistorical ? 'Pencapaian Kuota' : 'Ritme Riil Saat Ini (Current Pace)'}</span>
                             </span>
                             <div className="my-2">
                                 <div className={`text-xl sm:text-2xl font-black font-mono ${
-                                    current_daily_pace >= required_daily_pace
-                                        ? 'text-emerald-600 dark:text-emerald-400'
-                                        : 'text-amber-600 dark:text-amber-400'
+                                    isHistorical
+                                        ? (current_fans >= monthly_circle_target ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400')
+                                        : (current_daily_pace >= required_daily_pace ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400')
                                 }`}>
-                                    {current_daily_pace.toLocaleString()}
+                                    {isHistorical ? `${Math.round((current_fans / Math.max(1, monthly_circle_target)) * 100)}%` : current_daily_pace.toLocaleString()}
                                 </div>
                                 <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                                    Rata-rata fans riil / hari bulan ini
+                                    {isHistorical ? 'Dari target bulanan' : 'Rata-rata fans riil / hari bulan ini'}
                                 </span>
                             </div>
                             <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300 border-t border-slate-200/60 dark:border-slate-700/60 pt-1.5 flex justify-between">
                                 <span>Performa:</span>
                                 <span className={`font-bold ${
-                                    current_daily_pace >= required_daily_pace ? 'text-emerald-600' : 'text-amber-600'
+                                    isHistorical
+                                        ? (current_fans >= monthly_circle_target ? 'text-emerald-600' : 'text-amber-600')
+                                        : (current_daily_pace >= required_daily_pace ? 'text-emerald-600' : 'text-amber-600')
                                 }`}>
-                                    {required_daily_pace > 0 
-                                        ? `${Math.round((current_daily_pace / required_daily_pace) * 100)}% dari target harian`
-                                        : '100%'}
+                                    {isHistorical 
+                                        ? (current_fans >= monthly_circle_target ? 'Target Tercapai 🎉' : 'Di Bawah Target')
+                                        : (required_daily_pace > 0 ? `${Math.round((current_daily_pace / required_daily_pace) * 100)}% dari target harian` : '100%')}
                                 </span>
                             </div>
                         </div>
@@ -339,18 +389,22 @@ export default function CirclePaceWidget({
                         <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800 flex flex-col justify-between">
                             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
                                 <Calendar className="w-3.5 h-3.5 text-blue-500" />
-                                <span>Sisa Waktu Kalender</span>
+                                <span>{isHistorical ? 'Status Periode' : 'Sisa Waktu Kalender'}</span>
                             </span>
                             <div className="my-2">
                                 <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 dark:text-white">
-                                    {days_remaining} <span className="text-sm font-bold text-slate-500">Hari Lagi</span>
+                                    {isHistorical ? (
+                                        <span className="text-emerald-600 dark:text-emerald-400">Selesai</span>
+                                    ) : (
+                                        <>{days_remaining} <span className="text-sm font-bold text-slate-500">Hari Lagi</span></>
+                                    )}
                                 </div>
                                 <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                                    Hari ke-{current_day} dari {days_in_month} hari
+                                    {isHistorical ? `Total ${days_in_month} hari penuh` : `Hari ke-${current_day} dari ${days_in_month} hari`}
                                 </span>
                             </div>
                             <div className="text-[10px] text-slate-500 dark:text-slate-400 border-t border-slate-200/60 dark:border-slate-700/60 pt-1.5">
-                                Akhir periode bulan berjalan
+                                {isHistorical ? 'Periode ditutup & diarsipkan' : 'Akhir periode bulan berjalan'}
                             </div>
                         </div>
 
