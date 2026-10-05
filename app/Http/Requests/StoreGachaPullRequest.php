@@ -38,6 +38,20 @@ class StoreGachaPullRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        $bannerId = $this->input('gacha_banner_id');
+        if ($bannerId) {
+            $banner = GachaBanner::find($bannerId);
+            if ($banner && $banner->isTwinkle()) {
+                $this->merge(['is_rate_up' => false]);
+            }
+        }
+    }
+
+    /**
      * Configure the validator instance.
      */
     public function withValidator(Validator $validator): void

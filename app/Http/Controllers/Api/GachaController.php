@@ -117,11 +117,15 @@ class GachaController extends Controller
             if ($gachaBannerId) {
                 $banner = GachaBanner::find($gachaBannerId);
                 if ($banner) {
-                    $isFeatured = $banner->isItemRateUp($data['item_name']);
-                    if (! $isFeatured) {
+                    if ($banner->isTwinkle()) {
                         $isRateUp = false;
-                    } elseif (! $isRateUp && ! $banner->isSelectPickup()) {
-                        $isRateUp = true;
+                    } else {
+                        $isFeatured = $banner->isItemRateUp($data['item_name']);
+                        if (! $isFeatured) {
+                            $isRateUp = false;
+                        } elseif (! $isRateUp && ! $banner->isSelectPickup()) {
+                            $isRateUp = true;
+                        }
                     }
                 }
             }
@@ -168,11 +172,15 @@ class GachaController extends Controller
             foreach ($data['pulls'] as $item) {
                 $isRateUp = filter_var($item['is_rate_up'] ?? false, FILTER_VALIDATE_BOOLEAN);
                 if ($banner) {
-                    $isFeatured = $banner->isItemRateUp($item['item_name']);
-                    if (! $isFeatured) {
+                    if ($banner->isTwinkle()) {
                         $isRateUp = false;
-                    } elseif (! $isRateUp && ! $banner->isSelectPickup()) {
-                        $isRateUp = true;
+                    } else {
+                        $isFeatured = $banner->isItemRateUp($item['item_name']);
+                        if (! $isFeatured) {
+                            $isRateUp = false;
+                        } elseif (! $isRateUp && ! $banner->isSelectPickup()) {
+                            $isRateUp = true;
+                        }
                     }
                 }
 

@@ -50,16 +50,25 @@ export default function Quick10PullModal({
     }, [banners, selectedBannerId]);
 
     const bannerType = currentBanner?.banner_type || 'character';
+    const isTwinkle = useMemo(() => {
+        if (!currentBanner) return false;
+        return currentBanner.category === 'twinkle' ||
+            (typeof currentBanner.name === 'string' && currentBanner.name.toLowerCase().includes('twinkle collection'));
+    }, [currentBanner]);
+
     const featuredItems = useMemo(() => {
         if (!currentBanner || !Array.isArray(currentBanner.featured_items)) return [];
         return currentBanner.featured_items.map(item => typeof item === 'object' && item !== null ? item.name : item);
     }, [currentBanner]);
 
     const catalogPool = useMemo(() => {
+        if (isTwinkle && featuredItems.length > 0) {
+            return featuredItems;
+        }
         return bannerType === 'character'
             ? (gachaMeta.characters || [])
             : (gachaMeta.support_cards || []);
-    }, [bannerType, gachaMeta]);
+    }, [isTwinkle, featuredItems, bannerType, gachaMeta]);
 
     // Total count validation
     const totalCount = rCount + srCount + ssrCount;
@@ -75,7 +84,7 @@ export default function Quick10PullModal({
                     const defaultFeatured = featuredItems[i % (featuredItems.length || 1)] || '';
                     next.push({
                         item_name: defaultFeatured,
-                        is_rate_up: Boolean(defaultFeatured),
+                        is_rate_up: isTwinkle ? false : Boolean(defaultFeatured),
                     });
                 }
             } else if (next.length > ssrCount) {
@@ -83,12 +92,13 @@ export default function Quick10PullModal({
             }
             return next;
         });
-    }, [isOpen, ssrCount, featuredItems]);
+    }, [isOpen, ssrCount, featuredItems, isTwinkle]);
 
     if (!isOpen) return null;
 
     // Check if an item is considered rate-up
     const checkRateUp = (name) => {
+        if (isTwinkle) return false;
         if (!name || featuredItems.length === 0) return false;
         const norm = name.trim().toLowerCase();
         return featuredItems.some(f => norm.includes(f.toLowerCase()) || f.toLowerCase().includes(norm));
@@ -112,6 +122,7 @@ export default function Quick10PullModal({
     };
 
     const handleToggleRateUp = (idx) => {
+        if (isTwinkle) return;
         setSsrItems(prev => prev.map((item, i) => {
             if (i !== idx) return item;
             if (!item.is_rate_up) {
@@ -149,6 +160,18 @@ export default function Quick10PullModal({
             }
         }
 
+        // Validate Twinkle SSR characters
+        if (isTwinkle && featuredItems.length > 0) {
+            for (let i = 0; i < ssrItems.length; i++) {
+                const name = ssrItems[i].item_name.trim();
+                const matched = featuredItems.some(f => f.toLowerCase() === name.toLowerCase());
+                if (!matched) {
+                    onNotify?.(`SSR #${i + 1} ("${name}") bukan bagian dari 8 karakter Twinkle Collection pada banner ini. Harap pilih karakter dari lineup Twinkle!`, 'error');
+                    return;
+                }
+            }
+        }
+
         setSubmitting(true);
         try {
             // Build 10 pulls
@@ -159,7 +182,7 @@ export default function Quick10PullModal({
                 pulls.push({
                     item_name: ssr.item_name.trim(),
                     rarity: 'SSR',
-                    is_rate_up: Boolean(ssr.is_rate_up),
+                    is_rate_up: isTwinkle ? false : Boolean(ssr.is_rate_up),
                 });
             });
 
@@ -472,30 +495,62 @@ export default function Quick10PullModal({
                                 </span>
                             </div>
 
-                            {/* Featured Rate Up Chips */}
+                            {/* Featured Rate Up Chips or Twinkle Lineup */}
                             {featuredItems.length > 0 && (
-                                <div className="space-y-1">
-                                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200">
-                                        Item Featured Banner Ini (Klik untuk Isi Cepat):
-                                    </span>
-                                    <div className="flex flex-wrap gap-1">
-                                        {featuredItems.map((featName, idx) => (
-                                            <button
-                                                key={idx}
-                                                type="button"
-                                                onClick={() => {
-                                                    // Find first SSR with empty or non-featured name
-                                                    const targetIdx = ssrItems.findIndex(s => !s.item_name || s.item_name === featName);
-                                                    const slotToUse = targetIdx !== -1 ? targetIdx : 0;
-                                                    handleSsrNameChange(slotToUse, featName);
-                                                }}
-                                                className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-100 dark:bg-amber-950/90 text-amber-900 dark:text-amber-200 border border-amber-300/80 dark:border-amber-700 hover:bg-amber-200 dark:hover:bg-amber-900 transition-colors cursor-pointer shadow-2xs"
-                                            >
-                                                ⭐ {featName}
-                                            </button>
-                                        ))}
+                                isTwinkle ? (
+                                    <div className="p-3 bg-gradient-to-r from-sky-50 via-indigo-50 to-sky-50 dark:from-sky-950/40 dark:via-indigo-950/30 dark:to-sky-950/40 rounded-xl border border-sky-200 dark:border-sky-800 space-y-1.5">
+                                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                                            <span className="text-xs font-black text-sky-950 dark:text-sky-200">
+                                                Lineup Karakter B3 Twinkle Collection (8 Karakter • Rate Rata 0.375% per Karakter)
+                                            </span>
+                                            <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-sky-500 text-white">
+                                                Tanpa Rate-Up / Rate-Off
+                                            </span>
+                                        </div>
+                                        <p className="text-[11px] text-sky-900/80 dark:text-sky-300/80">
+                                            Seluruh 3% rate SSR terbagi rata ke 8 karakter B3 di bawah ini (tidak ada spook). Klik untuk mengisi slot SSR:
+                                        </p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {featuredItems.map((featName, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const targetIdx = ssrItems.findIndex(s => !s.item_name || s.item_name === featName);
+                                                        const slotToUse = targetIdx !== -1 ? targetIdx : 0;
+                                                        handleSsrNameChange(slotToUse, featName);
+                                                    }}
+                                                    className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white dark:bg-slate-800 text-sky-900 dark:text-sky-200 border border-sky-300 dark:border-sky-700 hover:bg-sky-500 hover:text-white dark:hover:bg-sky-500 transition-colors cursor-pointer shadow-2xs"
+                                                >
+                                                    + {featName}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div className="space-y-1">
+                                        <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200">
+                                            Item Featured Banner Ini (Klik untuk Isi Cepat):
+                                        </span>
+                                        <div className="flex flex-wrap gap-1">
+                                            {featuredItems.map((featName, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        // Find first SSR with empty or non-featured name
+                                                        const targetIdx = ssrItems.findIndex(s => !s.item_name || s.item_name === featName);
+                                                        const slotToUse = targetIdx !== -1 ? targetIdx : 0;
+                                                        handleSsrNameChange(slotToUse, featName);
+                                                    }}
+                                                    className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-100 dark:bg-amber-950/90 text-amber-900 dark:text-amber-200 border border-amber-300/80 dark:border-amber-700 hover:bg-amber-200 dark:hover:bg-amber-900 transition-colors cursor-pointer shadow-2xs"
+                                                >
+                                                    ⭐ {featName}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )
                             )}
 
                             {/* SSR Rows */}
@@ -519,22 +574,32 @@ export default function Quick10PullModal({
                                                 </div>
 
                                                 {/* Rate Up Toggle */}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleToggleRateUp(idx)}
-                                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                                                        ssr.is_rate_up
-                                                            ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-2xs'
-                                                            : 'bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600'
-                                                    }`}
-                                                >
-                                                    {ssr.is_rate_up ? (
-                                                        <ToggleRight className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                                                    ) : (
-                                                        <ToggleLeft className="w-4 h-4 text-slate-400" />
-                                                    )}
-                                                    <span>Rate-Up Hit: {ssr.is_rate_up ? 'YA' : 'TIDAK'}</span>
-                                                </button>
+                                                {isTwinkle ? (
+                                                    <div
+                                                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 select-none cursor-default"
+                                                        title="Twinkle Collection: 8 Karakter B3 memiliki rate sama rata (0.375% per karakter) tanpa rate-up."
+                                                    >
+                                                        <span className="font-extrabold text-[10px] uppercase">Pool B3</span>
+                                                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">(Tanpa Rate-Up)</span>
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleToggleRateUp(idx)}
+                                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                                            ssr.is_rate_up
+                                                                ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-2xs'
+                                                                : 'bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600'
+                                                        }`}
+                                                    >
+                                                        {ssr.is_rate_up ? (
+                                                            <ToggleRight className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                                                        ) : (
+                                                            <ToggleLeft className="w-4 h-4 text-slate-400" />
+                                                        )}
+                                                        <span>Rate-Up Hit: {ssr.is_rate_up ? 'YA' : 'TIDAK'}</span>
+                                                    </button>
+                                                )}
                                             </div>
 
                                             {/* Item Name Input with Suggestions Dropdown */}
@@ -548,7 +613,7 @@ export default function Quick10PullModal({
                                                             setOpenDropdownIdx(idx);
                                                         }}
                                                         onFocus={() => setOpenDropdownIdx(idx)}
-                                                        placeholder={`Ketik nama ${bannerType === 'character' ? 'Uma Musume' : 'Support Card'}...`}
+                                                        placeholder={isTwinkle ? 'Pilih salah satu dari 8 karakter B3 Twinkle...' : `Ketik nama ${bannerType === 'character' ? 'Uma Musume' : 'Support Card'}...`}
                                                         className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:outline-none"
                                                     />
                                                     <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />

@@ -2,6 +2,24 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.4.0] - 5 Oktober 2026
+
+### 🎰 Penyesuaian Mekanisme & Pool Banner Twinkle Collection (2026 JP Server)
+- **Pencabutan Status Featured Rate-Up Khusus Twinkle Collection**:
+  - Mengimplementasikan aturan resmi gacha *The Twinkle Collection Pretty Derby Gacha* di mana rate SSR 3.00% dibagi sama rata ke 8 karakter B3 terpilih (masing-masing 0.375% per karakter) tanpa adanya sistem *rate-up* maupun *spook* (*off-rate*).
+  - Method `GachaBanner::isTwinkle()` secara otomatis mengenali kategori `twinkle` dan nama banner bertema Twinkle Collection.
+  - Menetapkan `isItemRateUp()` selalu bernilai `false`, `getRateUpPerItem() = 0.0%`, dan `getTotalRateUpRate() = 0.0%` pada Twinkle banner.
+  - Backend Form Requests (`StoreGachaPullRequest`, `BatchGachaPullRequest`, `UpdateGachaPullRequest`) serta `GachaController` secara otomatis menjamin atribut `is_rate_up` tersimpan sebagai `false`.
+- **Eksklusivitas Pool Karakter B3 pada Input Tarikan (Autocomplete & Suggestions)**:
+  - Dropdown saran pencarian dan `<datalist>` native browser pada Single Pull, Multi-Pull (10x), Quick 10-Pull Modal, serta Edit Gacha Pull Modal dibatasi secara eksklusif hanya menampilkan 8 karakter B3 dari banner Twinkle yang sedang dipilih.
+  - Validasi submit memastikan seluruh tarikan SSR (B3) pada banner Twinkle wajib berasal dari 8 karakter lineup tersebut.
+- **Penyempurnaan Antarmuka & Visual (UI/UX)**:
+  - Kotak *"Featured Rate-Up"* pada form Single Pull, Multi-Pull, dan Quick 10-Pull digantikan dengan kartu gradien Sky/Indigo berlabel: `Lineup Karakter B3 Twinkle Collection (8 Karakter • Rate Rata 0.375% per Karakter)` dilengkapi tombol isi cepat `+ Karakter`.
+  - Tombol centang/toggle `UP` diganti dengan badge informatif `Pool B3 (Tanpa UP)`.
+  - Kartu ringkasan banner aktif pada Dashboard View menampilkan label `Lineup Karakter B3 (Rate Rata 0.375% • Tanpa Rate-Up):`.
+- **Pengujian & Otomasi (Feature Test)**:
+  - Penambahan rangkaian tes otomatis pada `tests/Feature/GachaTwinkleCollectionTest.php` untuk memverifikasi atribut model, kalkulasi distribusi rate, serta penegakan `is_rate_up: false` pada API single, batch, dan update pull.
+
 ## [Versi 2.3.0] - 3 Oktober 2026
 
 ### 🏛️ Penandaan Anggota Keluar (*Ex-Member*) & Statistik Historis Bulanan Fans Club Circle

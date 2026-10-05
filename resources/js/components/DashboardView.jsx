@@ -442,9 +442,11 @@ export default function DashboardView({
                                                 <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-amber-300">
                                                     <Sparkles className="w-3 h-3 text-amber-500 dark:text-amber-400 shrink-0" />
                                                     <span>
-                                                        {banner.category === 'select_rate_up' || /select\s*pick\s*up/i.test(banner.name || '')
-                                                            ? 'Featured Rate-Up (Pilihan 2 dari 10 SSR):'
-                                                            : 'Featured Rate-Up:'}
+                                                        {banner.category === 'twinkle' || /twinkle\s*collection/i.test(banner.name || '')
+                                                            ? 'Lineup Karakter B3 (Rate Rata 0.375% • Tanpa Rate-Up):'
+                                                            : banner.category === 'select_rate_up' || /select\s*pick\s*up/i.test(banner.name || '')
+                                                                ? 'Featured Rate-Up (Pilihan 2 dari 10 SSR):'
+                                                                : 'Featured Rate-Up:'}
                                                     </span>
                                                 </div>
                                                 <div className="flex flex-col gap-1.5 w-full">

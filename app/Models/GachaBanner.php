@@ -135,6 +135,11 @@ class GachaBanner extends Model
      */
     public function isItemRateUp(?string $itemName): bool
     {
+        // Twinkle Collection tidak memiliki rate-up (rate 3.0% terbagi rata ke 8 karakter B3)
+        if ($this->isTwinkle()) {
+            return false;
+        }
+
         if (! $itemName || empty($this->featured_items) || ! is_array($this->featured_items)) {
             return false;
         }
@@ -180,7 +185,7 @@ class GachaBanner extends Model
      */
     public function getRateUpPerItem(): float
     {
-        return self::DEFAULT_RATE_UP_PER_ITEM;
+        return $this->isTwinkle() ? 0.0 : self::DEFAULT_RATE_UP_PER_ITEM;
     }
 
     /**
@@ -188,6 +193,10 @@ class GachaBanner extends Model
      */
     public function getTotalRateUpRate(): float
     {
+        if ($this->isTwinkle()) {
+            return 0.0;
+        }
+
         $count = count($this->featured_items ?? []);
 
         return min((float) $this->base_rate, round($count * $this->getRateUpPerItem(), 4));
@@ -231,6 +240,14 @@ class GachaBanner extends Model
      */
     public function isSelectPickup(): bool
     {
-        return $this->category === 'select_rate_up' || str_contains(mb_strtolower($this->name), 'select pick up');
+        return $this->category === 'select_rate_up' || str_contains(mb_strtolower($this->name ?? ''), 'select pick up');
+    }
+
+    /**
+     * Determine if this banner is a Twinkle Collection category banner.
+     */
+    public function isTwinkle(): bool
+    {
+        return $this->category === 'twinkle' || str_contains(mb_strtolower($this->name ?? ''), 'twinkle collection');
     }
 }

@@ -383,6 +383,11 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
     const isItemRateUp = (itemName, banner) => {
         if (!itemName || !banner) return false;
 
+        // Twinkle Collection tidak memiliki status rate-up (rate 3.0% terbagi rata ke 8 karakter B3)
+        if (isTwinkleBanner(banner)) {
+            return false;
+        }
+
         const normalize = (str) => {
             if (!str || typeof str !== 'string') return '';
             return str
@@ -444,6 +449,13 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                /select\s*pick\s*up/i.test(banner.name || '');
     };
 
+    // Helper: Determine if a banner is a Twinkle Collection banner (exclusive 8 B3 characters with no rate-up)
+    const isTwinkleBanner = (banner) => {
+        if (!banner) return false;
+        return banner.category === 'twinkle' ||
+               /twinkle\s*collection/i.test(banner.name || '');
+    };
+
     // Helper: Select banner and auto-configure banner type & suggestions
     const handleBannerChange = (bId, mode = 'multi') => {
         const banner = banners.find(b => String(b.id) === String(bId));
@@ -488,12 +500,16 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
             autoRarity = 'R';
         }
 
+        const bannerIdToUse = (slotIndex !== null || pullMode !== 'single') ? selectedBannerId : singleBannerId;
+        const currentBanner = banners.find(b => String(b.id) === String(bannerIdToUse));
+        const autoRateUp = isItemRateUp(itemName, currentBanner);
+
         if (slotIndex !== null) {
             setMultiPulls(prev => prev.map((p, i) => i === slotIndex ? {
                 ...p,
                 item_name: itemName,
                 rarity: autoRarity,
-                is_rate_up: true,
+                is_rate_up: Boolean(autoRateUp),
             } : p));
             setValidationErrors(prev => prev.filter(num => num !== (slotIndex + 1)));
         } else {
@@ -506,7 +522,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                     ...p,
                     item_name: itemName,
                     rarity: autoRarity,
-                    is_rate_up: true,
+                    is_rate_up: Boolean(autoRateUp),
                 } : p);
             });
             if (fillIdx !== -1) {
@@ -558,10 +574,16 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
         setShowSuggestions(false);
     };
 
-    // Current Pool based on banner type
-    const currentPool = singleForm.banner_type === 'character'
-        ? (gachaMeta.characters || [])
-        : (gachaMeta.support_cards || []);
+    // Current Pool based on banner type & Twinkle Collection filter
+    const currentSingleBanner = banners.find(b => String(b.id) === String(singleBannerId));
+    const currentPool = useMemo(() => {
+        if (isTwinkleBanner(currentSingleBanner) && Array.isArray(currentSingleBanner?.featured_items) && currentSingleBanner.featured_items.length > 0) {
+            return currentSingleBanner.featured_items;
+        }
+        return singleForm.banner_type === 'character'
+            ? (gachaMeta.characters || [])
+            : (gachaMeta.support_cards || []);
+    }, [singleForm.banner_type, singleBannerId, banners, gachaMeta, currentSingleBanner]);
 
     // Handle Search with debounce or submit
     const handleSearch = (e) => {
@@ -580,8 +602,11 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
         }
 
         const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+        const isTwinkle = isTwinkleBanner(currentBanner);
         const featured = currentBanner && Array.isArray(currentBanner.featured_items) ? currentBanner.featured_items : [];
-        const pool = singleForm.banner_type === 'character' ? (gachaMeta.characters || []) : (gachaMeta.support_cards || []);
+        const pool = (isTwinkle && featured.length > 0)
+            ? featured
+            : (singleForm.banner_type === 'character' ? (gachaMeta.characters || []) : (gachaMeta.support_cards || []));
 
         const name = (singleForm.item_name || '').trim();
         if (!name || isPlaceholder(name)) {
@@ -589,12 +614,17 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
             return;
         }
 
-        if (!isItemInOptions(name, pool, featured)) {
+        if (isTwinkle && singleForm.rarity === 'SSR') {
+            if (!isItemInOptions(name, [], featured)) {
+                onNotify?.('Pada Twinkle Collection Gacha, karakter B3 (SSR) harus berasal dari 8 karakter lineup Twinkle Collection yang dipilih!', 'error');
+                return;
+            }
+        } else if (!isItemInOptions(name, pool, featured)) {
             onNotify?.(`"${name}" tidak ditemukan dalam pilihan karakter / kartu yang ada!`, 'error');
             return;
         }
 
-        if (singleForm.is_rate_up && !isItemRateUp(name, currentBanner)) {
+        if (!isTwinkle && singleForm.is_rate_up && !isItemRateUp(name, currentBanner)) {
             onNotify?.(`"${name}" bukan merupakan pilihan rate-up pada banner ini!`, 'error');
             return;
         }
@@ -605,6 +635,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                 ...singleForm,
                 item_name: name,
                 gacha_banner_id: parseInt(singleBannerId, 10),
+                is_rate_up: isTwinkle ? false : Boolean(singleForm.is_rate_up),
             };
             const res = await fetch('/api/gacha/pulls', {
                 method: 'POST',
@@ -637,32 +668,49 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
         }
 
         const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId));
+        const isTwinkle = isTwinkleBanner(currentBanner);
         const featured = currentBanner && Array.isArray(currentBanner.featured_items) ? currentBanner.featured_items : [];
-        const pool = multiBanner === 'character' ? (gachaMeta.characters || []) : (gachaMeta.support_cards || []);
+        const pool = (isTwinkle && featured.length > 0)
+            ? featured
+            : (multiBanner === 'character' ? (gachaMeta.characters || []) : (gachaMeta.support_cards || []));
 
         const invalidSlots = [];
         multiPulls.forEach((p, idx) => {
             const name = (p.item_name || '').trim();
-            if (!name || isPlaceholder(name) || !isItemInOptions(name, pool, featured)) {
+            if (!name || isPlaceholder(name)) {
                 invalidSlots.push(idx + 1);
+                return;
+            }
+            if (isTwinkle && p.rarity === 'SSR') {
+                if (!isItemInOptions(name, [], featured)) {
+                    invalidSlots.push(idx + 1);
+                    return;
+                }
+            } else if (!isItemInOptions(name, pool, featured)) {
+                invalidSlots.push(idx + 1);
+                return;
             }
         });
 
         if (invalidSlots.length > 0) {
             setValidationErrors(invalidSlots);
             onNotify?.(
-                `Karakter / kartu pada slot #${invalidSlots.join(', #')} harus dipilih dari pilihan yang ada!`,
+                isTwinkle
+                    ? `Karakter pada slot #${invalidSlots.join(', #')} harus dipilih dari 8 karakter lineup Twinkle Collection yang dipilih!`
+                    : `Karakter / kartu pada slot #${invalidSlots.join(', #')} harus dipilih dari pilihan yang ada!`,
                 'error'
             );
             return;
         }
 
         const invalidRateUpSlots = [];
-        multiPulls.forEach((p, idx) => {
-            if (p.is_rate_up && !isItemRateUp(p.item_name, currentBanner)) {
-                invalidRateUpSlots.push(idx + 1);
-            }
-        });
+        if (!isTwinkle) {
+            multiPulls.forEach((p, idx) => {
+                if (p.is_rate_up && !isItemRateUp(p.item_name, currentBanner)) {
+                    invalidRateUpSlots.push(idx + 1);
+                }
+            });
+        }
 
         if (invalidRateUpSlots.length > 0) {
             onNotify?.(
@@ -685,7 +733,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                 pulls: multiPulls.map(p => ({
                     item_name: p.item_name.trim(),
                     rarity: p.rarity,
-                    is_rate_up: Boolean(p.is_rate_up),
+                    is_rate_up: isTwinkle ? false : Boolean(p.is_rate_up),
                 })),
             };
 
@@ -834,7 +882,6 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
     const pityPercent = Math.min(100, Math.round((currentPity / 200) * 100));
 
     const currentMultiBanner = banners.find(b => String(b.id) === String(selectedBannerId));
-    const currentSingleBanner = banners.find(b => String(b.id) === String(singleBannerId));
 
     const renderBannerOptions = (typeFilter = null) => {
         const filtered = typeFilter ? banners.filter(b => b.banner_type === typeFilter) : banners;
@@ -1494,6 +1541,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                             const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId));
                             if (!currentBanner) return null;
                             const isSelect = isSelectPickupBanner(currentBanner);
+                            const isTwinkle = isTwinkleBanner(currentBanner);
                             const hasFeatured = currentBanner.featured_items && currentBanner.featured_items.length > 0;
 
                             return (
@@ -1519,7 +1567,39 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                         </div>
                                     )}
 
-                                    {hasFeatured && (
+                                    {isTwinkle && hasFeatured && (
+                                        <div className="p-3.5 bg-gradient-to-r from-sky-50/90 via-indigo-50/80 to-sky-50/90 dark:from-sky-950/40 dark:via-indigo-950/30 dark:to-sky-950/40 rounded-2xl border border-sky-300 dark:border-sky-800/80 shadow-2xs space-y-2">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2">
+                                                    <Sparkles className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+                                                    <span className="text-xs font-black text-sky-950 dark:text-sky-200">
+                                                        Lineup Karakter B3 Twinkle Collection (8 Karakter • Rate Rata 0.375% per Karakter)
+                                                    </span>
+                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-sky-200 dark:bg-sky-900/60 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-700">
+                                                        Tanpa Rate-Up / Rate-Off
+                                                    </span>
+                                                </div>
+                                                <span className="text-[11px] text-sky-800/80 dark:text-sky-300/80 italic">
+                                                    (Rate 3% terbagi rata ke 8 karakter • Bebas dari rate-off / spook)
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-sky-200/60 dark:border-sky-800/60">
+                                                {currentBanner.featured_items.map((item, fIdx) => (
+                                                    <button
+                                                        key={fIdx}
+                                                        type="button"
+                                                        onClick={() => handleApplyFeaturedToSlot(item)}
+                                                        className="px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-sky-500 hover:text-white dark:hover:bg-sky-600 text-sky-950 dark:text-sky-200 border border-sky-300 dark:border-sky-700 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs flex items-center gap-1"
+                                                        title="Klik untuk isi cepat ke slot pull (Otomatis B3 / SSR, tanpa Rate-Up)"
+                                                    >
+                                                        <span>+</span> {item}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {!isTwinkle && hasFeatured && (
                                         <div className="p-3 bg-amber-50/90 dark:bg-amber-950/40 rounded-2xl border border-amber-200 dark:border-amber-800/60 flex flex-wrap items-center gap-2">
                                             <span className="text-xs font-extrabold text-amber-900 dark:text-amber-300 flex items-center gap-1">
                                                 ⭐ {isSelect ? 'Kandidat Pick Up:' : 'Featured Rate-Up:'}
@@ -1547,6 +1627,8 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                         {/* 10 Items Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {multiPulls.map((item, idx) => {
+                                const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId));
+                                const isTwinkle = isTwinkleBanner(currentBanner);
                                 const isInvalid = validationErrors.includes(idx + 1);
                                 return (
                                     <div
@@ -1590,7 +1672,6 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                                     } else if (val.startsWith('R ')) {
                                                         autoRarity = 'R';
                                                     }
-                                                    const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId));
                                                     const autoRateUp = isItemRateUp(val, currentBanner);
                                                     setMultiPulls(prev => prev.map((p, i) => i === idx ? {
                                                         ...p,
@@ -1602,7 +1683,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                                         setValidationErrors(prev => prev.filter(n => n !== (idx + 1)));
                                                     }
                                                 }}
-                                                placeholder={`Pilih / ketik nama #${idx + 1}...`}
+                                                placeholder={isTwinkle ? `Pilih karakter B3 Twinkle #${idx + 1}...` : `Pilih / ketik nama #${idx + 1}...`}
                                                 className={`w-full px-3 py-1.5 pr-7 rounded-xl border text-xs font-medium focus:ring-2 focus:outline-none transition-colors ${
                                                     isInvalid
                                                         ? 'bg-white border-rose-400 text-rose-900 placeholder:text-rose-300 focus:ring-rose-500'
@@ -1653,9 +1734,19 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                             ))}
                                         </div>
 
-                                        {/* Rate Up Toggle: Interactive on Select Pick Up, read-only on standard banner */}
+                                        {/* Rate Up Toggle: Interactive on Select Pick Up, read-only on standard banner, revoked on Twinkle */}
                                         {(() => {
-                                            const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId));
+                                            if (isTwinkle) {
+                                                return (
+                                                    <div
+                                                        className="flex items-center justify-center text-[10px] font-bold px-2 py-1 rounded-lg select-none cursor-default shrink-0 bg-slate-100 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700/80"
+                                                        title="Tidak ada status Rate-Up pada Twinkle Collection (seluruh 8 karakter B3 memiliki rate sama 0.375% tanpa rate-off)"
+                                                    >
+                                                        <span>Pool B3</span>
+                                                    </div>
+                                                );
+                                            }
+
                                             const isSelect = isSelectPickupBanner(currentBanner);
                                             if (isSelect) {
                                                 return (
@@ -1725,6 +1816,11 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                         <datalist id="gacha-multi-suggestions">
                             {(() => {
                                 const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId));
+                                if (isTwinkleBanner(currentBanner) && Array.isArray(currentBanner?.featured_items) && currentBanner.featured_items.length > 0) {
+                                    return currentBanner.featured_items.map((opt) => (
+                                        <option key={opt} value={opt} />
+                                    ));
+                                }
                                 const featured = currentBanner && Array.isArray(currentBanner.featured_items) ? currentBanner.featured_items : [];
                                 const pool = multiBanner === 'character' ? (gachaMeta.characters || []) : (gachaMeta.support_cards || []);
                                 const combined = [...new Set([...featured, ...pool])];
@@ -1859,10 +1955,24 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                             </div>
 
                             <div className="flex items-center gap-2">
-                                {/* Rate Up Toggle: Interactive on Select Pick Up, read-only on standard banner */}
+                                {/* Rate Up Toggle: Interactive on Select Pick Up, read-only on standard banner, muted on Twinkle */}
                                 {(() => {
                                     const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+                                    const isTwinkle = isTwinkleBanner(currentBanner);
                                     const isSelect = isSelectPickupBanner(currentBanner);
+
+                                    if (isTwinkle) {
+                                        return (
+                                            <div
+                                                className="flex items-center gap-1.5 text-xs font-bold px-2 py-1.5 rounded-xl select-none cursor-default bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800"
+                                                title="Twinkle Collection: 8 Karakter B3 memiliki rate sama rata (0.375% per karakter) tanpa sistem rate-up/rate-off (spook)."
+                                            >
+                                                <span className="text-[10px] uppercase tracking-wider font-extrabold text-sky-600 dark:text-sky-400">Pool B3</span>
+                                                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">(Tanpa UP)</span>
+                                            </div>
+                                        );
+                                    }
+
                                     if (isSelect) {
                                         return (
                                             <button
@@ -1936,12 +2046,50 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                         {(() => {
                             const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
                             if (!currentBanner) return null;
+                            const isTwinkle = isTwinkleBanner(currentBanner);
                             const isSelect = isSelectPickupBanner(currentBanner);
                             const hasFeatured = currentBanner.featured_items && currentBanner.featured_items.length > 0;
 
                             return (
                                 <div className="space-y-2">
-                                    {isSelect && (
+                                    {isTwinkle && hasFeatured && (
+                                        <div className="p-3 bg-gradient-to-r from-sky-50 via-indigo-50 to-sky-50 dark:from-sky-950/40 dark:via-indigo-950/30 dark:to-sky-950/40 rounded-2xl border border-sky-200 dark:border-sky-800 shadow-2xs">
+                                            <div className="flex items-start gap-2.5">
+                                                <Sparkles className="w-4 h-4 text-sky-500 dark:text-sky-400 mt-0.5 shrink-0" />
+                                                <div className="space-y-1 w-full">
+                                                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                                                        <span className="text-xs font-black text-sky-950 dark:text-sky-200">
+                                                            Lineup Karakter B3 Twinkle Collection (8 Karakter • Rate Rata 0.375% per Karakter)
+                                                        </span>
+                                                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-sky-500 text-white">
+                                                            Tanpa Rate-Up / Rate-Off
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[11px] font-medium text-sky-900/80 dark:text-sky-300/80 leading-relaxed">
+                                                        Seluruh 3% rate SSR terbagi rata ke 8 karakter B3 di bawah ini (tidak ada spook/rate-off). Klik tombol di bawah untuk mengisi form secara instan:
+                                                    </p>
+                                                    <div className="pt-1.5 flex flex-wrap items-center gap-1.5">
+                                                        {currentBanner.featured_items.map((item, fIdx) => (
+                                                            <button
+                                                                key={fIdx}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    handleSelectItem(item);
+                                                                    setSingleForm(prev => ({ ...prev, is_rate_up: false }));
+                                                                }}
+                                                                className="px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-sky-500 hover:text-white dark:hover:bg-sky-500 dark:hover:text-white text-sky-900 dark:text-sky-200 border border-sky-300 dark:border-sky-700 rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                                                                title={`Pilih ${item} (Tarikan SSR Twinkle Collection)`}
+                                                            >
+                                                                + {item}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {!isTwinkle && isSelect && (
                                         <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 rounded-2xl border border-amber-300 dark:border-amber-700/80 shadow-2xs">
                                             <div className="flex items-start gap-2.5">
                                                 <Sparkles className="w-4 h-4 text-amber-500 dark:text-amber-400 mt-0.5 shrink-0" />
@@ -1962,7 +2110,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                         </div>
                                     )}
 
-                                    {hasFeatured && (
+                                    {!isTwinkle && hasFeatured && (
                                         <div className="p-2.5 bg-amber-50/80 rounded-xl border border-amber-200 flex flex-wrap items-center gap-1.5">
                                             <span className="text-xs font-extrabold text-amber-900">
                                                 ⭐ {isSelect ? 'Kandidat Pick Up:' : 'Featured Rate-Up:'}
@@ -1973,7 +2121,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                                     type="button"
                                                     onClick={() => {
                                                         handleSelectItem(item);
-                                                        setSingleForm(prev => ({ ...prev, is_rate_up: true }));
+                                                        setSingleForm(prev => ({ ...prev, is_rate_up: !isSelect }));
                                                     }}
                                                     className="px-2 py-0.5 bg-white hover:bg-amber-500 hover:text-white text-amber-900 border border-amber-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
                                                 >
@@ -1987,131 +2135,168 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                         })()}
 
                         {/* Item Name with Autocomplete, Directory modal, and Quick Chips */}
-                        <div className="relative pt-1">
-                            <div className="flex items-center justify-between mb-1">
-                                <label className="block text-xs font-bold text-slate-700">
-                                    {singleForm.banner_type === 'character' ? 'Uma Musume Name *' : 'Support Card Name *'}
-                                </label>
-                                <button
-                                    type="button"
-                                    onClick={() => { setShowModal(true); setModalSearch(''); fetchSyncStatus(); }}
-                                    className="text-[11px] font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1 cursor-pointer"
-                                >
-                                    <Search className="w-3 h-3" />
-                                    <span>Browse Game Database (Gametora / Kamigame) ({currentPool.length}+)</span>
-                                </button>
-                            </div>
+                        {(() => {
+                            const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+                            const isTwinkle = isTwinkleBanner(currentBanner);
 
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    value={singleForm.item_name}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        let autoRarity = singleForm.rarity;
-                                        if (gachaMeta.character_rarities && gachaMeta.character_rarities[val]) {
-                                            autoRarity = gachaMeta.character_rarities[val];
-                                        } else if (val.startsWith('SSR ')) {
-                                            autoRarity = 'SSR';
-                                        } else if (val.startsWith('SR ')) {
-                                            autoRarity = 'SR';
-                                        } else if (val.startsWith('R ')) {
-                                            autoRarity = 'R';
-                                        }
-                                        const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
-                                        const autoRateUp = isItemRateUp(val, currentBanner);
-                                        setSingleForm(prev => ({
-                                            ...prev,
-                                            item_name: val,
-                                            rarity: autoRarity,
-                                            is_rate_up: Boolean(autoRateUp),
-                                        }));
-                                        setShowSuggestions(true);
-                                    }}
-                                    onFocus={() => setShowSuggestions(true)}
-                                    placeholder={
-                                        singleForm.banner_type === 'character'
-                                            ? "Type or select Uma Musume (e.g. Epiphaneia, Phalaenopsis, Almond Eye, or manual name)..."
-                                            : "Type or select Support Card (e.g. SSR Kitasan Black, SSR Super Creek, or manual text)..."
-                                    }
-                                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                                />
+                            return (
+                                <div className="relative pt-1">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                                            {isTwinkle
+                                                ? 'Pilih Karakter B3 Twinkle Collection *'
+                                                : singleForm.banner_type === 'character'
+                                                    ? 'Uma Musume Name *'
+                                                    : 'Support Card Name *'}
+                                        </label>
+                                        {!isTwinkle && (
+                                            <button
+                                                type="button"
+                                                onClick={() => { setShowModal(true); setModalSearch(''); fetchSyncStatus(); }}
+                                                className="text-[11px] font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1 cursor-pointer"
+                                            >
+                                                <Search className="w-3 h-3" />
+                                                <span>Browse Game Database (Gametora / Kamigame) ({currentPool.length}+)</span>
+                                            </button>
+                                        )}
+                                        {isTwinkle && (
+                                            <span className="text-[11px] font-extrabold text-sky-700 dark:text-sky-400">
+                                                Pool Eksklusif 8 Karakter B3 (0.375% per Uma)
+                                            </span>
+                                        )}
+                                    </div>
 
-                                {/* Backdrop for outside click */}
-                                {showSuggestions && (
-                                    <div
-                                        className="fixed inset-0 z-30"
-                                        onClick={() => setShowSuggestions(false)}
-                                    />
-                                )}
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            value={singleForm.item_name}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                let autoRarity = singleForm.rarity;
+                                                if (isTwinkle) {
+                                                    autoRarity = 'SSR';
+                                                } else if (gachaMeta.character_rarities && gachaMeta.character_rarities[val]) {
+                                                    autoRarity = gachaMeta.character_rarities[val];
+                                                } else if (val.startsWith('SSR ')) {
+                                                    autoRarity = 'SSR';
+                                                } else if (val.startsWith('SR ')) {
+                                                    autoRarity = 'SR';
+                                                } else if (val.startsWith('R ')) {
+                                                    autoRarity = 'R';
+                                                }
+                                                const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+                                                const autoRateUp = isItemRateUp(val, currentBanner);
+                                                setSingleForm(prev => ({
+                                                    ...prev,
+                                                    item_name: val,
+                                                    rarity: autoRarity,
+                                                    is_rate_up: Boolean(autoRateUp),
+                                                }));
+                                                setShowSuggestions(true);
+                                            }}
+                                            onFocus={() => setShowSuggestions(true)}
+                                            placeholder={
+                                                isTwinkle
+                                                    ? "Pilih / ketik nama dari 8 karakter B3 Twinkle Collection..."
+                                                    : singleForm.banner_type === 'character'
+                                                        ? "Type or select Uma Musume (e.g. Epiphaneia, Phalaenopsis, Almond Eye, or manual name)..."
+                                                        : "Type or select Support Card (e.g. SSR Kitasan Black, SSR Super Creek, or manual text)..."
+                                            }
+                                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                                        />
 
-                                {/* Floating Suggestions Dropdown */}
-                                {showSuggestions && (
-                                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-40 max-h-56 overflow-y-auto py-1">
-                                        <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                                            <span>Database Suggestions ({singleForm.banner_type === 'character' ? 'Characters' : 'Support Cards'})</span>
-                                            <span className="text-amber-600 font-medium">Free manual text allowed</span>
-                                        </div>
+                                        {/* Backdrop for outside click */}
+                                        {showSuggestions && (
+                                            <div
+                                                className="fixed inset-0 z-30"
+                                                onClick={() => setShowSuggestions(false)}
+                                            />
+                                        )}
 
-                                        {currentPool
-                                            .filter(item => !singleForm.item_name || item.toLowerCase().includes(singleForm.item_name.toLowerCase()))
-                                            .slice(0, 15)
-                                            .map((item) => {
-                                                const itemRarity = (gachaMeta.character_rarities && gachaMeta.character_rarities[item])
-                                                    || (item.startsWith('SSR ') ? 'SSR' : item.startsWith('SR ') ? 'SR' : item.startsWith('R ') ? 'R' : null);
-                                                return (
-                                                    <button
-                                                        key={item}
-                                                        type="button"
-                                                        onClick={() => handleSelectItem(item)}
-                                                        className="w-full text-left px-3 py-2 text-xs font-bold text-slate-800 hover:bg-amber-50 hover:text-amber-900 cursor-pointer flex items-center justify-between transition-colors border-b border-slate-50 last:border-0"
-                                                    >
-                                                        <div className="flex items-center gap-2 truncate pr-2">
-                                                            {itemRarity && (
-                                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-black shrink-0 ${
-                                                                    itemRarity === 'SSR' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
-                                                                    itemRarity === 'SR' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
-                                                                    'bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600'
-                                                                }`}>
-                                                                    {itemRarity === 'SSR' && singleForm.banner_type === 'character' ? '3★' :
-                                                                     itemRarity === 'SR' && singleForm.banner_type === 'character' ? '2★' :
-                                                                     itemRarity === 'R' && singleForm.banner_type === 'character' ? '1★' :
-                                                                     itemRarity}
-                                                                </span>
-                                                            )}
-                                                            <span className="truncate">{item}</span>
-                                                        </div>
-                                                        <span className="text-[10px] text-amber-600 font-semibold shrink-0">Select</span>
-                                                    </button>
-                                                );
-                                            })}
-                                        {currentPool.filter(item => !singleForm.item_name || item.toLowerCase().includes(singleForm.item_name.toLowerCase())).length === 0 && (
-                                            <div className="px-3 py-3 text-xs text-slate-500 text-center">
-                                                No exact match in database — your manual text will be recorded as-is!
+                                        {/* Floating Suggestions Dropdown */}
+                                        {showSuggestions && (
+                                            <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-40 max-h-56 overflow-y-auto py-1">
+                                                <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                                                    <span>{isTwinkle ? 'Lineup 8 Karakter Twinkle Collection' : `Database Suggestions (${singleForm.banner_type === 'character' ? 'Characters' : 'Support Cards'})`}</span>
+                                                    {isTwinkle ? (
+                                                        <span className="text-sky-600 dark:text-sky-400 font-semibold">Khusus 8 Karakter B3</span>
+                                                    ) : (
+                                                        <span className="text-amber-600 font-medium">Free manual text allowed</span>
+                                                    )}
+                                                </div>
+
+                                                {currentPool
+                                                    .filter(item => !singleForm.item_name || item.toLowerCase().includes(singleForm.item_name.toLowerCase()))
+                                                    .slice(0, 15)
+                                                    .map((item) => {
+                                                        const itemRarity = isTwinkle ? 'SSR' : ((gachaMeta.character_rarities && gachaMeta.character_rarities[item])
+                                                            || (item.startsWith('SSR ') ? 'SSR' : item.startsWith('SR ') ? 'SR' : item.startsWith('R ') ? 'R' : null));
+                                                        return (
+                                                            <button
+                                                                key={item}
+                                                                type="button"
+                                                                onClick={() => handleSelectItem(item)}
+                                                                className="w-full text-left px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-slate-700 hover:text-amber-900 cursor-pointer flex items-center justify-between transition-colors border-b border-slate-50 dark:border-slate-700/50 last:border-0"
+                                                            >
+                                                                <div className="flex items-center gap-2 truncate pr-2">
+                                                                    {itemRarity && (
+                                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-black shrink-0 ${
+                                                                            itemRarity === 'SSR' ? 'bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700' :
+                                                                            itemRarity === 'SR' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-950/60 dark:text-yellow-300 dark:border-yellow-700' :
+                                                                            'bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600'
+                                                                        }`}>
+                                                                            {itemRarity === 'SSR' && singleForm.banner_type === 'character' ? '3★' :
+                                                                             itemRarity === 'SR' && singleForm.banner_type === 'character' ? '2★' :
+                                                                             itemRarity === 'R' && singleForm.banner_type === 'character' ? '1★' :
+                                                                             itemRarity}
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="truncate">{item}</span>
+                                                                </div>
+                                                                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold shrink-0">Pilih</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                {currentPool.filter(item => !singleForm.item_name || item.toLowerCase().includes(singleForm.item_name.toLowerCase())).length === 0 && (
+                                                    <div className="px-3 py-3 text-xs text-slate-500 text-center">
+                                                        {isTwinkle
+                                                            ? 'Tidak ditemukan dalam 8 karakter Twinkle Collection. Harap pilih karakter dari lineup Twinkle.'
+                                                            : 'No exact match in database — your manual text will be recorded as-is!'}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
-                                )}
-                            </div>
 
-                            {/* Quick Popular Chips */}
-                            <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase mr-1">Quick Picks:</span>
-                                {(singleForm.banner_type === 'character'
-                                    ? ['Epiphaneia [Fate\'s Chosen Star]', 'Phalaenopsis [絶佳の暁闇]', 'Almond Eye [The Changer]', 'Cesario [Twinbell Queen]', 'Duramente [Overclocking Soul]', 'Kitasan Black [Crane\'s Ambition]', 'Special Week', 'Oguri Cap']
-                                    : ['SSR [Fire at My Heels] Kitasan Black (Speed)', 'SSR [Piece of Mind] Super Creek (Stamina)', 'SSR [Tracen Reception] Tazuna Hayakawa (Friend)', 'SSR [Wave of Gratitude] Fine Motion (Intelligence)', 'SR [Tracen Academy] Sweep Tosho (Speed)']
-                                ).map((chip) => (
-                                    <button
-                                        key={chip}
-                                        type="button"
-                                        onClick={() => handleSelectItem(chip)}
-                                        className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-colors cursor-pointer"
-                                    >
-                                        {chip.length > 32 ? chip.slice(0, 30) + '...' : chip}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+                                    {/* Quick Popular Chips */}
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase mr-1">
+                                            {isTwinkle ? 'Lineup 8 Karakter Twinkle:' : 'Quick Picks:'}
+                                        </span>
+                                        {(isTwinkle && Array.isArray(currentBanner?.featured_items) && currentBanner.featured_items.length > 0
+                                            ? currentBanner.featured_items
+                                            : (singleForm.banner_type === 'character'
+                                                ? ['Epiphaneia [Fate\'s Chosen Star]', 'Phalaenopsis [絶佳の暁闇]', 'Almond Eye [The Changer]', 'Cesario [Twinbell Queen]', 'Duramente [Overclocking Soul]', 'Kitasan Black [Crane\'s Ambition]', 'Special Week', 'Oguri Cap']
+                                                : ['SSR [Fire at My Heels] Kitasan Black (Speed)', 'SSR [Piece of Mind] Super Creek (Stamina)', 'SSR [Tracen Reception] Tazuna Hayakawa (Friend)', 'SSR [Wave of Gratitude] Fine Motion (Intelligence)', 'SR [Tracen Academy] Sweep Tosho (Speed)']
+                                            )
+                                        ).map((chip) => (
+                                            <button
+                                                key={chip}
+                                                type="button"
+                                                onClick={() => handleSelectItem(chip)}
+                                                className={`text-[10px] font-bold px-2 py-0.5 rounded-lg transition-colors cursor-pointer border ${
+                                                    isTwinkle
+                                                        ? 'bg-sky-50 hover:bg-sky-100 text-sky-900 border-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800'
+                                                        : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
+                                                }`}
+                                            >
+                                                {chip.length > 32 ? chip.slice(0, 30) + '...' : chip}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </form>
                 )}
             </div>

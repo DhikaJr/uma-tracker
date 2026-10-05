@@ -57,9 +57,16 @@ export default function EditGachaPullModal({
 
     if (!isOpen || !pull) return null;
 
+    // Helper: Determine if banner is Twinkle Collection
+    const isTwinkleBanner = (banner) => {
+        if (!banner) return false;
+        return banner.category === 'twinkle' ||
+            (typeof banner.name === 'string' && banner.name.toLowerCase().includes('twinkle collection'));
+    };
+
     // Helper: Determine if item is rate-up on banner
     const isItemRateUp = (itemName, banner) => {
-        if (!itemName || !banner) return false;
+        if (!itemName || !banner || isTwinkleBanner(banner)) return false;
 
         const normalize = (str) => {
             if (!str || typeof str !== 'string') return '';
@@ -77,7 +84,8 @@ export default function EditGachaPullModal({
 
         const featuredList = Array.isArray(banner.featured_items) ? banner.featured_items : [];
         return featuredList.some(featured => {
-            const feat = normalize(featured);
+            const featStr = typeof featured === 'object' && featured !== null ? featured.name : featured;
+            const feat = normalize(featStr);
             if (!feat) return false;
             if (target === feat) return true;
             if (feat.length >= 5 && target.includes(feat)) return true;
@@ -89,17 +97,35 @@ export default function EditGachaPullModal({
     // Autocomplete filtering
     const handleItemNameChange = (val) => {
         const curBanner = banners.find(b => String(b.id) === String(form.gacha_banner_id));
+        const isTwinkle = isTwinkleBanner(curBanner);
         const autoUp = isItemRateUp(val, curBanner);
         setForm(prev => ({ 
             ...prev, 
             item_name: val,
-            is_rate_up: Boolean(autoUp),
+            is_rate_up: isTwinkle ? false : Boolean(autoUp),
         }));
         setErrorMsg('');
 
         if (!val || val.length < 1) {
             setSuggestions([]);
             setShowSuggestions(false);
+            return;
+        }
+
+        if (isTwinkle && Array.isArray(curBanner?.featured_items) && curBanner.featured_items.length > 0) {
+            const q = val.toLowerCase();
+            const matches = curBanner.featured_items
+                .filter(item => {
+                    const nameStr = typeof item === 'object' && item !== null ? item.name : item;
+                    return nameStr.toLowerCase().includes(q);
+                })
+                .map(item => {
+                    const nameStr = typeof item === 'object' && item !== null ? item.name : item;
+                    return { name: nameStr, rarity: 'SSR', base_stars: 3 };
+                })
+                .slice(0, 8);
+            setSuggestions(matches);
+            setShowSuggestions(matches.length > 0);
             return;
         }
 
@@ -121,13 +147,16 @@ export default function EditGachaPullModal({
 
     const handleSelectSuggestion = (item) => {
         const curBanner = banners.find(b => String(b.id) === String(form.gacha_banner_id));
+        const isTwinkle = isTwinkleBanner(curBanner);
         const autoUp = isItemRateUp(item.name, curBanner);
         const updates = {
             item_name: item.name,
-            is_rate_up: Boolean(autoUp),
+            is_rate_up: isTwinkle ? false : Boolean(autoUp),
         };
 
-        if (form.banner_type === 'support_card') {
+        if (isTwinkle) {
+            updates.rarity = 'SSR';
+        } else if (form.banner_type === 'support_card') {
             if (item.rarity) updates.rarity = item.rarity;
         } else {
             const baseStar = item.base_stars || item.raw_data?.rarity || 3;
@@ -149,7 +178,17 @@ export default function EditGachaPullModal({
         }
 
         const curBanner = banners.find(b => String(b.id) === String(form.gacha_banner_id));
-        if (form.is_rate_up && !isItemRateUp(form.item_name.trim(), curBanner)) {
+        const isTwinkle = isTwinkleBanner(curBanner);
+        if (isTwinkle && Array.isArray(curBanner?.featured_items) && curBanner.featured_items.length > 0) {
+            const matched = curBanner.featured_items.some(f => {
+                const fName = typeof f === 'object' && f !== null ? f.name : f;
+                return fName.toLowerCase() === form.item_name.trim().toLowerCase();
+            });
+            if (!matched) {
+                setErrorMsg(`Karakter "${form.item_name.trim()}" bukan bagian dari 8 karakter Twinkle Collection pada banner ini.`);
+                return;
+            }
+        } else if (form.is_rate_up && !isItemRateUp(form.item_name.trim(), curBanner)) {
             setErrorMsg(`Kartu "${form.item_name.trim()}" bukan merupakan pilihan rate-up pada banner yang dipilih.`);
             return;
         }
@@ -164,7 +203,7 @@ export default function EditGachaPullModal({
                 pull_type: form.pull_type,
                 item_name: form.item_name.trim(),
                 rarity: form.rarity,
-                is_rate_up: form.is_rate_up,
+                is_rate_up: isTwinkle ? false : form.is_rate_up,
                 pulled_at: form.pulled_at,
             };
 
@@ -282,10 +321,11 @@ export default function EditGachaPullModal({
                             onChange={(e) => {
                                 const newId = e.target.value;
                                 const b = banners.find(item => String(item.id) === String(newId));
+                                const isTwinkle = isTwinkleBanner(b);
                                 setForm(prev => ({
                                     ...prev,
                                     gacha_banner_id: newId,
-                                    is_rate_up: Boolean(isItemRateUp(prev.item_name, b)),
+                                    is_rate_up: isTwinkle ? false : Boolean(isItemRateUp(prev.item_name, b)),
                                 }));
                                 setErrorMsg('');
                             }}
@@ -391,30 +431,48 @@ export default function EditGachaPullModal({
                             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                                 Status Rate-Up
                             </label>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    const curBanner = banners.find(b => String(b.id) === String(form.gacha_banner_id));
-                                    if (!form.is_rate_up) {
-                                        if (!isItemRateUp(form.item_name, curBanner)) {
-                                            setErrorMsg(`Kartu "${form.item_name || 'ini'}" bukan merupakan pilihan rate-up pada banner yang dipilih.`);
-                                            return;
-                                        }
-                                        setForm(prev => ({ ...prev, is_rate_up: true }));
-                                        setErrorMsg('');
-                                    } else {
-                                        setForm(prev => ({ ...prev, is_rate_up: false }));
-                                    }
-                                }}
-                                className={`w-full py-1.5 px-3 rounded-xl text-xs font-black transition-all cursor-pointer border flex items-center justify-center gap-1.5 ${
-                                    form.is_rate_up
-                                        ? 'bg-rose-500 text-white border-rose-500 shadow-xs'
-                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-                                }`}
-                            >
-                                <Check className={`w-3.5 h-3.5 ${form.is_rate_up ? 'opacity-100' : 'opacity-30'}`} />
-                                <span>{form.is_rate_up ? 'Featured Rate-Up' : 'Biasa (Off-Rate)'}</span>
-                            </button>
+                            {(() => {
+                                const curBanner = banners.find(b => String(b.id) === String(form.gacha_banner_id));
+                                const isTwinkle = isTwinkleBanner(curBanner);
+
+                                if (isTwinkle) {
+                                    return (
+                                        <div
+                                            className="w-full py-1.5 px-3 rounded-xl text-xs font-black border flex items-center justify-center gap-1.5 bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800"
+                                            title="Twinkle Collection: Seluruh 8 karakter B3 memiliki rate sama rata (0.375% per karakter) tanpa sistem rate-up/rate-off."
+                                        >
+                                            <span>Pool B3 (Tanpa UP)</span>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const curBanner = banners.find(b => String(b.id) === String(form.gacha_banner_id));
+                                            if (!form.is_rate_up) {
+                                                if (!isItemRateUp(form.item_name, curBanner)) {
+                                                    setErrorMsg(`Kartu "${form.item_name || 'ini'}" bukan merupakan pilihan rate-up pada banner yang dipilih.`);
+                                                    return;
+                                                }
+                                                setForm(prev => ({ ...prev, is_rate_up: true }));
+                                                setErrorMsg('');
+                                            } else {
+                                                setForm(prev => ({ ...prev, is_rate_up: false }));
+                                            }
+                                        }}
+                                        className={`w-full py-1.5 px-3 rounded-xl text-xs font-black transition-all cursor-pointer border flex items-center justify-center gap-1.5 ${
+                                            form.is_rate_up
+                                                ? 'bg-rose-500 text-white border-rose-500 shadow-xs'
+                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                                        }`}
+                                    >
+                                        <Check className={`w-3.5 h-3.5 ${form.is_rate_up ? 'opacity-100' : 'opacity-30'}`} />
+                                        <span>{form.is_rate_up ? 'Featured Rate-Up' : 'Biasa (Off-Rate)'}</span>
+                                    </button>
+                                );
+                            })()}
                         </div>
                     </div>
 

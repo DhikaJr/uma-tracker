@@ -39,6 +39,27 @@ class BatchGachaPullRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        $bannerId = $this->input('gacha_banner_id');
+        if ($bannerId) {
+            $banner = GachaBanner::find($bannerId);
+            if ($banner && $banner->isTwinkle() && is_array($this->input('pulls'))) {
+                $pulls = array_map(function ($pull) {
+                    if (is_array($pull)) {
+                        $pull['is_rate_up'] = false;
+                    }
+
+                    return $pull;
+                }, $this->input('pulls'));
+                $this->merge(['pulls' => $pulls]);
+            }
+        }
+    }
+
+    /**
      * Configure the validator instance.
      */
     public function withValidator(Validator $validator): void
