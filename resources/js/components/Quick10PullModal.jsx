@@ -58,15 +58,17 @@ export default function Quick10PullModal({
 
     const featuredItems = useMemo(() => {
         if (!currentBanner || !Array.isArray(currentBanner.featured_items)) return [];
-        return currentBanner.featured_items.map(item => typeof item === 'object' && item !== null ? item.name : item);
-    }, [currentBanner]);
+        return currentBanner.featured_items
+            .map(item => typeof item === 'object' && item !== null ? item.name : item)
+            .filter(item => bannerType === 'character' ? (typeof item === 'string' ? item.includes('[') : true) : true);
+    }, [currentBanner, bannerType]);
 
     const catalogPool = useMemo(() => {
         if (isTwinkle && featuredItems.length > 0) {
             return featuredItems;
         }
         return bannerType === 'character'
-            ? (gachaMeta.characters || [])
+            ? (gachaMeta.characters || []).filter(c => typeof c === 'string' ? c.includes('[') : true)
             : (gachaMeta.support_cards || []);
     }, [isTwinkle, featuredItems, bannerType, gachaMeta]);
 

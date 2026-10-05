@@ -125,7 +125,7 @@ export default function EditGachaPullModal({
                 });
 
             const rawPool = form.banner_type === 'character' 
-                ? (gachaMeta.characters || []) 
+                ? (gachaMeta.characters || []).filter(c => typeof c === 'string' ? c.includes('[') : (c?.name?.includes('[') ?? true)) 
                 : (gachaMeta.support_cards || []);
             
             const b1AndB2Matches = rawPool
@@ -153,7 +153,7 @@ export default function EditGachaPullModal({
         }
 
         const pool = form.banner_type === 'character' 
-            ? (gachaMeta.characters || []) 
+            ? (gachaMeta.characters || []).filter(c => typeof c === 'string' ? c.includes('[') : (c?.name?.includes('[') ?? true)) 
             : (gachaMeta.support_cards || []);
         
         const q = val.toLowerCase();

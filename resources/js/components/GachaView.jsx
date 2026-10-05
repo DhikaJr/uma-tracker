@@ -583,8 +583,8 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
     const currentSingleBanner = banners.find(b => String(b.id) === String(singleBannerId));
     const currentPool = useMemo(() => {
         if (isTwinkleBanner(currentSingleBanner) && Array.isArray(currentSingleBanner?.featured_items) && currentSingleBanner.featured_items.length > 0) {
-            const twinkleFeatured = currentSingleBanner.featured_items;
-            const allChars = gachaMeta.characters || [];
+            const twinkleFeatured = currentSingleBanner.featured_items.filter(c => typeof c === 'string' ? c.includes('[') : true);
+            const allChars = (gachaMeta.characters || []).filter(c => typeof c === 'string' ? c.includes('[') : true);
             const b1AndB2Chars = allChars.filter(charName => {
                 const r = (gachaMeta.character_rarities && gachaMeta.character_rarities[charName])
                     || (charName.startsWith('SR ') ? 'SR' : charName.startsWith('R ') ? 'R' : null);
@@ -593,7 +593,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
             return Array.from(new Set([...twinkleFeatured, ...b1AndB2Chars]));
         }
         return singleForm.banner_type === 'character'
-            ? (gachaMeta.characters || [])
+            ? (gachaMeta.characters || []).filter(c => typeof c === 'string' ? c.includes('[') : true)
             : (gachaMeta.support_cards || []);
     }, [singleForm.banner_type, singleBannerId, banners, gachaMeta, currentSingleBanner]);
 
@@ -615,8 +615,11 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
 
         const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
         const isTwinkle = isTwinkleBanner(currentBanner);
-        const featured = currentBanner && Array.isArray(currentBanner.featured_items) ? currentBanner.featured_items : [];
-        const pool = singleForm.banner_type === 'character' ? (gachaMeta.characters || []) : (gachaMeta.support_cards || []);
+        const featured = (currentBanner && Array.isArray(currentBanner.featured_items) ? currentBanner.featured_items : [])
+            .filter(c => singleForm.banner_type === 'character' ? (typeof c === 'string' ? c.includes('[') : true) : true);
+        const pool = singleForm.banner_type === 'character' 
+            ? (gachaMeta.characters || []).filter(c => typeof c === 'string' ? c.includes('[') : true) 
+            : (gachaMeta.support_cards || []);
 
         const name = (singleForm.item_name || '').trim();
         if (!name || isPlaceholder(name)) {
@@ -679,8 +682,11 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
 
         const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId));
         const isTwinkle = isTwinkleBanner(currentBanner);
-        const featured = currentBanner && Array.isArray(currentBanner.featured_items) ? currentBanner.featured_items : [];
-        const pool = multiBanner === 'character' ? (gachaMeta.characters || []) : (gachaMeta.support_cards || []);
+        const featured = (currentBanner && Array.isArray(currentBanner.featured_items) ? currentBanner.featured_items : [])
+            .filter(c => multiBanner === 'character' ? (typeof c === 'string' ? c.includes('[') : true) : true);
+        const pool = multiBanner === 'character' 
+            ? (gachaMeta.characters || []).filter(c => typeof c === 'string' ? c.includes('[') : true) 
+            : (gachaMeta.support_cards || []);
 
         const invalidSlots = [];
         const invalidTwinkleSsrSlots = [];
@@ -1833,19 +1839,25 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                             {(() => {
                                 const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId));
                                 if (isTwinkleBanner(currentBanner)) {
-                                    const featured = Array.isArray(currentBanner?.featured_items) ? currentBanner.featured_items : [];
-                                    const b1AndB2Chars = (gachaMeta.characters || []).filter(charName => {
-                                        const r = (gachaMeta.character_rarities && gachaMeta.character_rarities[charName])
-                                            || (charName.startsWith('SR ') ? 'SR' : charName.startsWith('R ') ? 'R' : null);
-                                        return r === 'SR' || r === 'R';
-                                    });
+                                    const featured = (Array.isArray(currentBanner?.featured_items) ? currentBanner.featured_items : [])
+                                        .filter(c => typeof c === 'string' ? c.includes('[') : true);
+                                    const b1AndB2Chars = (gachaMeta.characters || [])
+                                        .filter(c => typeof c === 'string' ? c.includes('[') : true)
+                                        .filter(charName => {
+                                            const r = (gachaMeta.character_rarities && gachaMeta.character_rarities[charName])
+                                                || (charName.startsWith('SR ') ? 'SR' : charName.startsWith('R ') ? 'R' : null);
+                                            return r === 'SR' || r === 'R';
+                                        });
                                     const combined = Array.from(new Set([...featured, ...b1AndB2Chars]));
                                     return combined.map((opt) => (
                                         <option key={opt} value={opt} />
                                     ));
                                 }
-                                const featured = currentBanner && Array.isArray(currentBanner.featured_items) ? currentBanner.featured_items : [];
-                                const pool = multiBanner === 'character' ? (gachaMeta.characters || []) : (gachaMeta.support_cards || []);
+                                const featured = (currentBanner && Array.isArray(currentBanner.featured_items) ? currentBanner.featured_items : [])
+                                    .filter(c => multiBanner === 'character' ? (typeof c === 'string' ? c.includes('[') : true) : true);
+                                const pool = multiBanner === 'character' 
+                                    ? (gachaMeta.characters || []).filter(c => typeof c === 'string' ? c.includes('[') : true) 
+                                    : (gachaMeta.support_cards || []);
                                 const combined = [...new Set([...featured, ...pool])];
                                 return combined.map((opt) => (
                                     <option key={opt} value={opt} />
@@ -2316,9 +2328,9 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                             {isTwinkle ? 'Lineup 8 Karakter Twinkle:' : 'Quick Picks:'}
                                         </span>
                                         {(isTwinkle && Array.isArray(currentBanner?.featured_items) && currentBanner.featured_items.length > 0
-                                            ? currentBanner.featured_items
+                                            ? currentBanner.featured_items.filter(c => typeof c === 'string' ? c.includes('[') : true)
                                             : (singleForm.banner_type === 'character'
-                                                ? ['Epiphaneia [Fate\'s Chosen Star]', 'Phalaenopsis [絶佳の暁闇]', 'Almond Eye [The Changer]', 'Cesario [Twinbell Queen]', 'Duramente [Overclocking Soul]', 'Kitasan Black [Crane\'s Ambition]', 'Special Week', 'Oguri Cap']
+                                                ? ['Epiphaneia [Fate\'s Chosen Star]', 'Phalaenopsis [絶佳の暁闇]', 'Almond Eye [The Changer]', 'Cesario [Twinbell Queen]', 'Duramente [Overclocking Soul]', 'Kitasan Black [Crane\'s Ambition]', 'Special Week [Special Dreamer]', 'Oguri Cap [Starry Nocturne]']
                                                 : ['SSR [Fire at My Heels] Kitasan Black (Speed)', 'SSR [Piece of Mind] Super Creek (Stamina)', 'SSR [Tracen Reception] Tazuna Hayakawa (Friend)', 'SSR [Wave of Gratitude] Fine Motion (Intelligence)', 'SR [Tracen Academy] Sweep Tosho (Speed)']
                                             )
                                         ).map((chip) => (

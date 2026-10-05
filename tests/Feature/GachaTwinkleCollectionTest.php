@@ -176,7 +176,7 @@ class GachaTwinkleCollectionTest extends TestCase
             'banner_type' => 'character',
             'gacha_banner_id' => $twinkleBanner->id,
             'pull_type' => 'single',
-            'item_name' => 'Vodka',
+            'item_name' => 'Vodka [Wild Top Gear]',
             'rarity' => 'SR',
             'is_rate_up' => false,
             'pulled_at' => '2026-01-11',
@@ -190,7 +190,7 @@ class GachaTwinkleCollectionTest extends TestCase
             'banner_type' => 'character',
             'gacha_banner_id' => $twinkleBanner->id,
             'pull_type' => 'single',
-            'item_name' => 'Agnes Tachyon',
+            'item_name' => 'Agnes Tachyon [tach-nology]',
             'rarity' => 'R',
             'is_rate_up' => false,
             'pulled_at' => '2026-01-11',
@@ -207,9 +207,13 @@ class GachaTwinkleCollectionTest extends TestCase
 
         $rarities = $response->json('character_rarities');
         $this->assertIsArray($rarities);
-        $this->assertEquals('SR', $rarities['Vodka'] ?? null);
-        $this->assertEquals('SR', $rarities['Gold Ship'] ?? null);
-        $this->assertEquals('R', $rarities['Agnes Tachyon'] ?? null);
-        $this->assertEquals('R', $rarities['Sakura Bakushin O'] ?? null);
+        $this->assertEquals('SR', $rarities['Vodka [Wild Top Gear]'] ?? null);
+        $this->assertEquals('R', $rarities['Agnes Tachyon [tach-nology]'] ?? null);
+
+        $characters = $response->json('characters');
+        $this->assertIsArray($characters);
+        $this->assertNotEmpty($characters);
+        // Ensure no character exists without costume variant brackets
+        $this->assertTrue(collect($characters)->every(fn ($c) => str_contains($c, '[')));
     }
 }

@@ -490,10 +490,11 @@ class UmaTrackerApiTest extends TestCase
         $cards = $response->json('support_cards');
         $rarities = $response->json('character_rarities');
 
-        $this->assertContains('Phalaenopsis', $characters);
-        $this->assertContains('Epiphaneia', $characters);
+        $this->assertContains("Epiphaneia [Fate's Chosen Star]", $characters);
         $this->assertContains('Special Week [Special Dreamer]', $characters);
         $this->assertContains('Tokai Teio [Beyond the Horizon]', $characters);
+        $this->assertNotContains('Daiwa Scarlet', $characters);
+        $this->assertNotContains('Phalaenopsis', $characters);
         $this->assertContains('SSR [Fire at My Heels] Kitasan Black (Speed)', $cards);
         $this->assertContains('SSR [Piece of Mind] Super Creek (Stamina)', $cards);
         $this->assertSame('SSR', $rarities['Special Week [Special Dreamer]']);

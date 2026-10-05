@@ -124,19 +124,15 @@ class UmaCatalog
             if ($charCards->isNotEmpty()) {
                 $list = [];
                 foreach ($charCards as $card) {
-                    $list[$card->name] = true;
-                    $raw = $card->raw_data;
-                    $nameEn = trim((string) ($raw['name_en'] ?? ''));
-                    if ($nameEn === '') {
-                        $nameEn = trim(preg_replace('/\s*\[.*?\]$/', '', (string) $card->name));
-                    }
-                    if ($nameEn !== '' && ! in_array($nameEn, self::NON_PLAYABLE_NAMES, true)) {
-                        $list[$nameEn] = true;
+                    if (str_contains((string) $card->name, '[')) {
+                        $list[$card->name] = true;
                     }
                 }
                 ksort($list);
 
-                return self::$cachedCharacters = array_keys($list);
+                if (! empty($list)) {
+                    return self::$cachedCharacters = array_keys($list);
+                }
             }
         } catch (Throwable) {
             // Fallback if table does not exist
@@ -422,7 +418,7 @@ class UmaCatalog
             'Phalaenopsis [絶佳の暁闇]',
         ];
 
-        return array_values(array_unique(array_merge($cards, self::getStaticBaseUmaList())));
+        return array_values(array_unique(array_filter($cards, fn ($c) => str_contains($c, '['))));
     }
 
     /**
@@ -2162,7 +2158,7 @@ class UmaCatalog
                 'category' => 'anniversary',
                 'base_rate' => 4.50,
                 'name' => '3.5th Anniv. Premium Pretty Derby Gacha (Gentildonna)',
-                'featured_items' => ['Gentildonna [Regina dei fiori]', 'Gentildonna'],
+                'featured_items' => ['Gentildonna [Regina dei fiori]'],
                 'start_date' => '2024-08-24',
                 'end_date' => '2024-09-19',
                 'is_active' => true,
@@ -2173,7 +2169,7 @@ class UmaCatalog
                 'category' => 'anniversary',
                 'base_rate' => 4.50,
                 'name' => '4th Anniv. Premium Pretty Derby Gacha (Orfevre)',
-                'featured_items' => ['Orfevre [総攬]', 'Orfevre'],
+                'featured_items' => ['Orfevre [総攬]'],
                 'start_date' => '2025-02-24',
                 'end_date' => '2025-03-21',
                 'is_active' => true,
@@ -2184,7 +2180,7 @@ class UmaCatalog
                 'category' => 'anniversary',
                 'base_rate' => 4.50,
                 'name' => '4.5th Anniv. Premium Pretty Derby Gacha (Still in Love)',
-                'featured_items' => ['Still in Love'],
+                'featured_items' => ['Still in Love [Scarlet Vow Raiment]'],
                 'start_date' => '2025-08-24',
                 'end_date' => '2025-09-19',
                 'is_active' => true,
@@ -2206,7 +2202,16 @@ class UmaCatalog
                 'category' => 'twinkle',
                 'base_rate' => 3.00,
                 'name' => 'Twinkle Collection (Jan 2026)',
-                'featured_items' => ['Maruzensky', 'Symboli Rudolf', 'Air Groove', 'Mayano Top Gun'],
+                'featured_items' => [
+                    'Symboli Rudolf [Emperor\'s Path]',
+                    'Matikanefukukitaru [Lucky Tidings]',
+                    'Zenno Rob Roy [Inlaid Stories]',
+                    'Mayano Top Gun [ろっきん☆MewMeow]',
+                    'Biwa Hayahide [Engineered Victory]',
+                    'Win Variation [ドラマティック・チュチュ]',
+                    'Grass Wonder [蒼炎の誉]',
+                    'Mr. C.B. [絢爛花道歌舞く君]',
+                ],
                 'start_date' => '2026-01-05',
                 'end_date' => '2026-02-02',
                 'is_active' => true,

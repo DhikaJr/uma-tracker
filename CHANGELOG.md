@@ -4,6 +4,14 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
 
 ## [Versi 2.4.1] - 5 Oktober 2026
 
+### 👗 Standardisasi Varian Kostum Gacha & Pembersihan Karakter Tanpa Kostum
+- **Pembersihan & Eliminasi Karakter Tanpa Varian Kostum (*Bare Names*) pada Sistem Gacha**:
+  - Menghapus seluruh nama karakter dasar tanpa varian kostum / kurung siku `[...]` (seperti `Daiwa Scarlet`, `Vodka`, `Orfevre`, `Gentildonna`, dll.) dari katalog gacha (`UmaCatalog.php` & endpoint `/api/gacha/metadata`).
+  - Memastikan seluruh tarikan karakter gacha secara konsisten hanya menampilkan entri dengan epithet varian kostum resmi (misal: `Daiwa Scarlet [Peak Blue]`, `Daiwa Scarlet [Nuit Étoilée de Scarlet]`, `Vodka [Wild Top Gear]`, `Orfevre [総攬]`).
+  - Mengeliminasi duplikasi opsi pada autocomplete, suggestions dropdown, datalist native browser, dan chip featured banner di mana sebelumnya nama dasar tanpa kostum muncul ganda bersama varian berkostumnya.
+  - Memperbarui record database `gacha_banners` dan file migrasi agar kolom `featured_items` hanya menyimpan nama karakter bervarian kostum resmi.
+  - Menambahkan filter pengaman pada frontend (`GachaView.jsx`, `EditGachaPullModal.jsx`, `Quick10PullModal.jsx`) dan pengujian otomatis pada `GachaTwinkleCollectionTest.php` serta `UmaTrackerApiTest.php`.
+
 ### 📐 Penyelarasan Ketinggian Kontrol & Perbaikan Pool B1/B2 Banner Twinkle Collection
 - **Penyelarasan Ketinggian & Keseimbangan Kontrol Form Single Pull (`GachaView.jsx`)**:
   - Mengatasi masalah layout pada baris kontrol Single Pull di mana select box Banner terdorong naik saat belum ada banner yang dipilih.
