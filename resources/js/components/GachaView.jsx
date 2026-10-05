@@ -552,7 +552,13 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
     // Helper: Select an item from autocomplete or directory
     const handleSelectItem = (name) => {
         let rarity = singleForm.rarity;
-        if (gachaMeta.character_rarities && gachaMeta.character_rarities[name]) {
+        const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+        const isTwinkle = isTwinkleBanner(currentBanner);
+        const isFeaturedTwinkle = isTwinkle && Array.isArray(currentBanner?.featured_items) && currentBanner.featured_items.includes(name);
+
+        if (isFeaturedTwinkle) {
+            rarity = 'SSR';
+        } else if (gachaMeta.character_rarities && gachaMeta.character_rarities[name]) {
             rarity = gachaMeta.character_rarities[name];
         } else if (name.startsWith('SSR ')) {
             rarity = 'SSR';
@@ -562,8 +568,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
             rarity = 'R';
         }
 
-        const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
-        const autoRateUp = isItemRateUp(name, currentBanner);
+        const autoRateUp = isTwinkle ? false : isItemRateUp(name, currentBanner);
 
         setSingleForm(prev => ({
             ...prev,
@@ -578,7 +583,14 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
     const currentSingleBanner = banners.find(b => String(b.id) === String(singleBannerId));
     const currentPool = useMemo(() => {
         if (isTwinkleBanner(currentSingleBanner) && Array.isArray(currentSingleBanner?.featured_items) && currentSingleBanner.featured_items.length > 0) {
-            return currentSingleBanner.featured_items;
+            const twinkleFeatured = currentSingleBanner.featured_items;
+            const allChars = gachaMeta.characters || [];
+            const b1AndB2Chars = allChars.filter(charName => {
+                const r = (gachaMeta.character_rarities && gachaMeta.character_rarities[charName])
+                    || (charName.startsWith('SR ') ? 'SR' : charName.startsWith('R ') ? 'R' : null);
+                return r === 'SR' || r === 'R';
+            });
+            return Array.from(new Set([...twinkleFeatured, ...b1AndB2Chars]));
         }
         return singleForm.banner_type === 'character'
             ? (gachaMeta.characters || [])
@@ -604,9 +616,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
         const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
         const isTwinkle = isTwinkleBanner(currentBanner);
         const featured = currentBanner && Array.isArray(currentBanner.featured_items) ? currentBanner.featured_items : [];
-        const pool = (isTwinkle && featured.length > 0)
-            ? featured
-            : (singleForm.banner_type === 'character' ? (gachaMeta.characters || []) : (gachaMeta.support_cards || []));
+        const pool = singleForm.banner_type === 'character' ? (gachaMeta.characters || []) : (gachaMeta.support_cards || []);
 
         const name = (singleForm.item_name || '').trim();
         if (!name || isPlaceholder(name)) {
@@ -670,11 +680,10 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
         const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId));
         const isTwinkle = isTwinkleBanner(currentBanner);
         const featured = currentBanner && Array.isArray(currentBanner.featured_items) ? currentBanner.featured_items : [];
-        const pool = (isTwinkle && featured.length > 0)
-            ? featured
-            : (multiBanner === 'character' ? (gachaMeta.characters || []) : (gachaMeta.support_cards || []));
+        const pool = multiBanner === 'character' ? (gachaMeta.characters || []) : (gachaMeta.support_cards || []);
 
         const invalidSlots = [];
+        const invalidTwinkleSsrSlots = [];
         multiPulls.forEach((p, idx) => {
             const name = (p.item_name || '').trim();
             if (!name || isPlaceholder(name)) {
@@ -683,7 +692,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
             }
             if (isTwinkle && p.rarity === 'SSR') {
                 if (!isItemInOptions(name, [], featured)) {
-                    invalidSlots.push(idx + 1);
+                    invalidTwinkleSsrSlots.push(idx + 1);
                     return;
                 }
             } else if (!isItemInOptions(name, pool, featured)) {
@@ -692,12 +701,19 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
             }
         });
 
+        if (invalidTwinkleSsrSlots.length > 0) {
+            setValidationErrors(invalidTwinkleSsrSlots);
+            onNotify?.(
+                `Karakter B3 (SSR) pada slot #${invalidTwinkleSsrSlots.join(', #')} harus berasal dari 8 karakter lineup Twinkle Collection yang dipilih!`,
+                'error'
+            );
+            return;
+        }
+
         if (invalidSlots.length > 0) {
             setValidationErrors(invalidSlots);
             onNotify?.(
-                isTwinkle
-                    ? `Karakter pada slot #${invalidSlots.join(', #')} harus dipilih dari 8 karakter lineup Twinkle Collection yang dipilih!`
-                    : `Karakter / kartu pada slot #${invalidSlots.join(', #')} harus dipilih dari pilihan yang ada!`,
+                `Karakter / kartu pada slot #${invalidSlots.join(', #')} harus dipilih dari pilihan yang ada!`,
                 'error'
             );
             return;
@@ -1683,7 +1699,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                                         setValidationErrors(prev => prev.filter(n => n !== (idx + 1)));
                                                     }
                                                 }}
-                                                placeholder={isTwinkle ? `Pilih karakter B3 Twinkle #${idx + 1}...` : `Pilih / ketik nama #${idx + 1}...`}
+                                                placeholder={isTwinkle ? `Pilih / ketik nama (B1/B2/B3) #${idx + 1}...` : `Pilih / ketik nama #${idx + 1}...`}
                                                 className={`w-full px-3 py-1.5 pr-7 rounded-xl border text-xs font-medium focus:ring-2 focus:outline-none transition-colors ${
                                                     isInvalid
                                                         ? 'bg-white border-rose-400 text-rose-900 placeholder:text-rose-300 focus:ring-rose-500'
@@ -1816,8 +1832,15 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                         <datalist id="gacha-multi-suggestions">
                             {(() => {
                                 const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId));
-                                if (isTwinkleBanner(currentBanner) && Array.isArray(currentBanner?.featured_items) && currentBanner.featured_items.length > 0) {
-                                    return currentBanner.featured_items.map((opt) => (
+                                if (isTwinkleBanner(currentBanner)) {
+                                    const featured = Array.isArray(currentBanner?.featured_items) ? currentBanner.featured_items : [];
+                                    const b1AndB2Chars = (gachaMeta.characters || []).filter(charName => {
+                                        const r = (gachaMeta.character_rarities && gachaMeta.character_rarities[charName])
+                                            || (charName.startsWith('SR ') ? 'SR' : charName.startsWith('R ') ? 'R' : null);
+                                        return r === 'SR' || r === 'R';
+                                    });
+                                    const combined = Array.from(new Set([...featured, ...b1AndB2Chars]));
+                                    return combined.map((opt) => (
                                         <option key={opt} value={opt} />
                                     ));
                                 }
@@ -1858,14 +1881,14 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                     <form onSubmit={handleSingleSubmit} className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
                             <div>
-                                <label className="block text-xs font-bold text-slate-700 mb-1">Pool Type</label>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 h-4 leading-4">Pool Type</label>
                                 <select
                                     value={singleForm.banner_type}
                                     onChange={(e) => {
                                         setSingleForm({ ...singleForm, banner_type: e.target.value });
                                         setShowSuggestions(false);
                                     }}
-                                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                                    className="w-full h-10 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl px-3 text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none"
                                 >
                                     <option value="character">Uma Musume</option>
                                     <option value="support_card">Support Card</option>
@@ -1873,16 +1896,23 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                    Banner JP 2026 <span className="text-rose-500 font-black">*</span>
-                                </label>
+                                <div className="flex items-center justify-between mb-1.5 h-4 leading-4">
+                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
+                                        Banner JP 2026 <span className="text-rose-500 font-black">*</span>
+                                    </label>
+                                    {(!singleBannerId || singleBannerError) && (
+                                        <span className="text-[10px] font-extrabold text-rose-600 dark:text-rose-400 shrink-0">
+                                            * Wajib dipilih
+                                        </span>
+                                    )}
+                                </div>
                                 <select
                                     value={singleBannerId}
                                     onChange={(e) => {
                                         setSingleBannerError(false);
                                         handleBannerChange(e.target.value, 'single');
                                     }}
-                                    className={`w-full rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none truncate transition-all ${
+                                    className={`w-full h-10 rounded-xl px-3 text-xs font-semibold focus:outline-none truncate transition-all ${
                                         singleBannerError || !singleBannerId
                                             ? 'bg-rose-50/80 dark:bg-rose-950/40 border-2 border-rose-500 text-rose-800 dark:text-rose-300 focus:ring-2 focus:ring-rose-500'
                                             : 'bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500'
@@ -1890,19 +1920,14 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                 >
                                     {renderBannerOptions(singleForm.banner_type)}
                                 </select>
-                                {(!singleBannerId || singleBannerError) && (
-                                    <span className="text-[10px] font-extrabold text-rose-600 dark:text-rose-400 mt-1 block">
-                                        * Wajib dipilih
-                                    </span>
-                                )}
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-700 mb-1">Pull Type</label>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 h-4 leading-4">Pull Type</label>
                                 <select
                                     value={singleForm.pull_type}
                                     onChange={(e) => setSingleForm({ ...singleForm, pull_type: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                                    className="w-full h-10 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl px-3 text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none"
                                 >
                                     <option value="single">Single (150 Carrots)</option>
                                     <option value="ticket">Gacha Ticket</option>
@@ -1912,19 +1937,19 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Gacha</label>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 h-4 leading-4">Tanggal Gacha</label>
                                 <input
                                     type="date"
                                     max={todayDate}
                                     value={singleForm.pulled_at}
                                     onChange={(e) => setSingleForm({ ...singleForm, pulled_at: e.target.value })}
-                                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                                    className="w-full h-10 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl px-3 text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-700 mb-1">Rarity</label>
-                                <div className="flex rounded-xl overflow-hidden border border-slate-300">
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 h-4 leading-4">Rarity</label>
+                                <div className="h-10 flex rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700">
                                     {['R', 'SR', 'SSR'].map((r) => (
                                         <button
                                             key={r}
@@ -1938,14 +1963,14 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                                 }
                                                 setSingleForm(prev => ({ ...prev, rarity: r, is_rate_up: nextUp }));
                                             }}
-                                            className={`flex-1 py-2 text-xs font-bold cursor-pointer ${
+                                            className={`flex-1 h-full flex items-center justify-center text-xs font-bold cursor-pointer transition-colors ${
                                                 singleForm.rarity === r
                                                     ? r === 'SSR'
                                                         ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white'
                                                         : r === 'SR'
                                                             ? 'bg-yellow-500 text-white'
                                                             : 'bg-slate-700 text-white'
-                                                    : 'bg-white text-slate-600 hover:bg-slate-100'
+                                                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
                                             }`}
                                         >
                                             {r}
@@ -1954,91 +1979,99 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-2">
-                                {/* Rate Up Toggle: Interactive on Select Pick Up, read-only on standard banner, muted on Twinkle */}
-                                {(() => {
-                                    const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
-                                    const isTwinkle = isTwinkleBanner(currentBanner);
-                                    const isSelect = isSelectPickupBanner(currentBanner);
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 h-4 leading-4">
+                                    {(() => {
+                                        const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+                                        return isTwinkleBanner(currentBanner) ? 'Pool & Aksi' : 'Status & Aksi';
+                                    })()}
+                                </label>
+                                <div className="flex items-center gap-2 h-10">
+                                    {/* Rate Up Toggle: Interactive on Select Pick Up, read-only on standard banner, muted on Twinkle */}
+                                    {(() => {
+                                        const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+                                        const isTwinkle = isTwinkleBanner(currentBanner);
+                                        const isSelect = isSelectPickupBanner(currentBanner);
 
-                                    if (isTwinkle) {
+                                        if (isTwinkle) {
+                                            return (
+                                                <div
+                                                    className="h-10 px-2.5 rounded-xl select-none cursor-default bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 flex flex-col justify-center items-center leading-tight shrink-0"
+                                                    title="Twinkle Collection: 8 Karakter B3 memiliki rate sama rata (0.375% per karakter) tanpa sistem rate-up/rate-off (spook)."
+                                                >
+                                                    <span className="text-[10px] uppercase tracking-wider font-extrabold text-sky-600 dark:text-sky-400">Pool B3</span>
+                                                    <span className="text-[9px] text-slate-400 dark:text-slate-500 font-medium">(Tanpa UP)</span>
+                                                </div>
+                                            );
+                                        }
+
+                                        if (isSelect) {
+                                            return (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+                                                        if (!singleForm.is_rate_up) {
+                                                            if (!isItemRateUp(singleForm.item_name, currentBanner)) {
+                                                                onNotify?.(
+                                                                    `"${singleForm.item_name || 'Item ini'}" bukan merupakan pilihan kartu kandidat rate-up pada banner ${currentBanner?.name || ''}.`,
+                                                                    'warning'
+                                                                );
+                                                                return;
+                                                            }
+                                                            setSingleForm(prev => ({ ...prev, is_rate_up: true }));
+                                                        } else {
+                                                            setSingleForm(prev => ({ ...prev, is_rate_up: false }));
+                                                        }
+                                                    }}
+                                                    className={`h-10 px-3 rounded-xl select-none transition-all cursor-pointer border flex items-center gap-1.5 shrink-0 ${
+                                                        singleForm.is_rate_up
+                                                            ? 'bg-amber-500 text-slate-950 border-amber-400 font-black shadow-xs ring-1 ring-amber-300/50'
+                                                            : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700 hover:border-amber-400 hover:text-amber-600 dark:hover:text-amber-300'
+                                                    }`}
+                                                    title="Klik untuk mengubah status Rate-Up manual (Pilihan Anda pada Select Pick Up)"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={Boolean(singleForm.is_rate_up)}
+                                                        onChange={() => {}}
+                                                        className="rounded text-amber-600 focus:ring-0 cursor-pointer pointer-events-none"
+                                                    />
+                                                    <span className="text-xs font-bold">UP</span>
+                                                </button>
+                                            );
+                                        }
+
                                         return (
                                             <div
-                                                className="flex items-center gap-1.5 text-xs font-bold px-2 py-1.5 rounded-xl select-none cursor-default bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800"
-                                                title="Twinkle Collection: 8 Karakter B3 memiliki rate sama rata (0.375% per karakter) tanpa sistem rate-up/rate-off (spook)."
-                                            >
-                                                <span className="text-[10px] uppercase tracking-wider font-extrabold text-sky-600 dark:text-sky-400">Pool B3</span>
-                                                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">(Tanpa UP)</span>
-                                            </div>
-                                        );
-                                    }
-
-                                    if (isSelect) {
-                                        return (
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
-                                                    if (!singleForm.is_rate_up) {
-                                                        if (!isItemRateUp(singleForm.item_name, currentBanner)) {
-                                                            onNotify?.(
-                                                                `"${singleForm.item_name || 'Item ini'}" bukan merupakan pilihan kartu kandidat rate-up pada banner ${currentBanner?.name || ''}.`,
-                                                                'warning'
-                                                            );
-                                                            return;
-                                                        }
-                                                        setSingleForm(prev => ({ ...prev, is_rate_up: true }));
-                                                    } else {
-                                                        setSingleForm(prev => ({ ...prev, is_rate_up: false }));
-                                                    }
-                                                }}
-                                                className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-xl select-none transition-all cursor-pointer border ${
+                                                className={`h-10 px-3 rounded-xl select-none cursor-default border flex items-center gap-1.5 shrink-0 ${
                                                     singleForm.is_rate_up
-                                                        ? 'bg-amber-500 text-slate-950 border-amber-400 font-black shadow-xs ring-1 ring-amber-300/50'
-                                                        : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700 hover:border-amber-400 hover:text-amber-600 dark:hover:text-amber-300'
+                                                        ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700/60 shadow-2xs'
+                                                        : 'bg-slate-100 dark:bg-slate-800/60 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-700/60 opacity-60'
                                                 }`}
-                                                title="Klik untuk mengubah status Rate-Up manual (Pilihan Anda pada Select Pick Up)"
+                                                title="Status Rate-Up otomatis terdeteksi dari banner (Read-only)"
                                             >
                                                 <input
                                                     type="checkbox"
                                                     checked={Boolean(singleForm.is_rate_up)}
-                                                    onChange={() => {}}
-                                                    className="rounded text-amber-600 focus:ring-0 cursor-pointer pointer-events-none"
+                                                    readOnly
+                                                    disabled
+                                                    tabIndex={-1}
+                                                    className="rounded text-amber-600 focus:ring-0 cursor-default opacity-80 pointer-events-none"
                                                 />
-                                                <span>UP</span>
-                                            </button>
+                                                <span className={`text-xs ${singleForm.is_rate_up ? 'font-black text-amber-800 dark:text-amber-300' : 'font-bold'}`}>UP</span>
+                                            </div>
                                         );
-                                    }
+                                    })()}
 
-                                    return (
-                                        <div
-                                            className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1.5 rounded-xl select-none cursor-default ${
-                                                singleForm.is_rate_up
-                                                    ? 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700/60 shadow-2xs'
-                                                    : 'text-slate-400 dark:text-slate-600 opacity-60'
-                                            }`}
-                                            title="Status Rate-Up otomatis terdeteksi dari banner (Read-only)"
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={Boolean(singleForm.is_rate_up)}
-                                                readOnly
-                                                disabled
-                                                tabIndex={-1}
-                                                className="rounded text-amber-600 focus:ring-0 cursor-default opacity-80 pointer-events-none"
-                                            />
-                                            <span className={singleForm.is_rate_up ? 'font-black text-amber-800 dark:text-amber-300' : ''}>UP</span>
-                                        </div>
-                                    );
-                                })()}
-
-                                <button
-                                    type="submit"
-                                    disabled={submitting}
-                                    className="flex-1 py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition-all shadow-md shadow-amber-400/20 cursor-pointer disabled:opacity-50"
-                                >
-                                    {submitting ? 'Adding...' : 'Log Pull'}
-                                </button>
+                                    <button
+                                        type="submit"
+                                        disabled={submitting}
+                                        className="h-10 flex-1 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition-all shadow-md shadow-amber-400/20 cursor-pointer disabled:opacity-50 flex items-center justify-center"
+                                    >
+                                        {submitting ? 'Adding...' : 'Log Pull'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -2144,7 +2177,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                     <div className="flex items-center justify-between mb-1">
                                         <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                                             {isTwinkle
-                                                ? 'Pilih Karakter B3 Twinkle Collection *'
+                                                ? (singleForm.rarity === 'SSR' ? 'Karakter B3 Twinkle Collection *' : 'Nama Uma Musume (B1/B2/B3) *')
                                                 : singleForm.banner_type === 'character'
                                                     ? 'Uma Musume Name *'
                                                     : 'Support Card Name *'}
@@ -2161,7 +2194,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                         )}
                                         {isTwinkle && (
                                             <span className="text-[11px] font-extrabold text-sky-700 dark:text-sky-400">
-                                                Pool Eksklusif 8 Karakter B3 (0.375% per Uma)
+                                                Pool B3 Eksklusif 8 Karakter (0.375% per Uma) • Termasuk Pool B1/B2
                                             </span>
                                         )}
                                     </div>
@@ -2173,7 +2206,10 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                             onChange={(e) => {
                                                 const val = e.target.value;
                                                 let autoRarity = singleForm.rarity;
-                                                if (isTwinkle) {
+                                                const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+                                                const isFeaturedTwinkle = isTwinkle && Array.isArray(currentBanner?.featured_items) && currentBanner.featured_items.includes(val);
+
+                                                if (isFeaturedTwinkle) {
                                                     autoRarity = 'SSR';
                                                 } else if (gachaMeta.character_rarities && gachaMeta.character_rarities[val]) {
                                                     autoRarity = gachaMeta.character_rarities[val];
@@ -2184,8 +2220,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                                 } else if (val.startsWith('R ')) {
                                                     autoRarity = 'R';
                                                 }
-                                                const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
-                                                const autoRateUp = isItemRateUp(val, currentBanner);
+                                                const autoRateUp = isTwinkle ? false : isItemRateUp(val, currentBanner);
                                                 setSingleForm(prev => ({
                                                     ...prev,
                                                     item_name: val,
@@ -2197,7 +2232,9 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                             onFocus={() => setShowSuggestions(true)}
                                             placeholder={
                                                 isTwinkle
-                                                    ? "Pilih / ketik nama dari 8 karakter B3 Twinkle Collection..."
+                                                    ? (singleForm.rarity === 'SSR'
+                                                        ? "Pilih / ketik nama dari 8 karakter B3 Twinkle Collection..."
+                                                        : "Pilih / ketik nama Uma Musume (B1/B2/B3)...")
                                                     : singleForm.banner_type === 'character'
                                                         ? "Type or select Uma Musume (e.g. Epiphaneia, Phalaenopsis, Almond Eye, or manual name)..."
                                                         : "Type or select Support Card (e.g. SSR Kitasan Black, SSR Super Creek, or manual text)..."
@@ -2217,9 +2254,9 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                         {showSuggestions && (
                                             <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-40 max-h-56 overflow-y-auto py-1">
                                                 <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-                                                    <span>{isTwinkle ? 'Lineup 8 Karakter Twinkle Collection' : `Database Suggestions (${singleForm.banner_type === 'character' ? 'Characters' : 'Support Cards'})`}</span>
+                                                    <span>{isTwinkle ? 'Pool Twinkle Collection (8 B3 + B1 & B2)' : `Database Suggestions (${singleForm.banner_type === 'character' ? 'Characters' : 'Support Cards'})`}</span>
                                                     {isTwinkle ? (
-                                                        <span className="text-sky-600 dark:text-sky-400 font-semibold">Khusus 8 Karakter B3</span>
+                                                        <span className="text-sky-600 dark:text-sky-400 font-semibold">8 Karakter B3 + Pool B1 & B2</span>
                                                     ) : (
                                                         <span className="text-amber-600 font-medium">Free manual text allowed</span>
                                                     )}
@@ -2229,8 +2266,11 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                                     .filter(item => !singleForm.item_name || item.toLowerCase().includes(singleForm.item_name.toLowerCase()))
                                                     .slice(0, 15)
                                                     .map((item) => {
-                                                        const itemRarity = isTwinkle ? 'SSR' : ((gachaMeta.character_rarities && gachaMeta.character_rarities[item])
-                                                            || (item.startsWith('SSR ') ? 'SSR' : item.startsWith('SR ') ? 'SR' : item.startsWith('R ') ? 'R' : null));
+                                                        const isTwinkleFeatured = Array.isArray(currentBanner?.featured_items) && currentBanner.featured_items.includes(item);
+                                                        const itemRarity = isTwinkleFeatured
+                                                            ? 'SSR'
+                                                            : ((gachaMeta.character_rarities && gachaMeta.character_rarities[item])
+                                                                || (item.startsWith('SSR ') ? 'SSR' : item.startsWith('SR ') ? 'SR' : item.startsWith('R ') ? 'R' : null));
                                                         return (
                                                             <button
                                                                 key={item}
@@ -2260,7 +2300,9 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                                 {currentPool.filter(item => !singleForm.item_name || item.toLowerCase().includes(singleForm.item_name.toLowerCase())).length === 0 && (
                                                     <div className="px-3 py-3 text-xs text-slate-500 text-center">
                                                         {isTwinkle
-                                                            ? 'Tidak ditemukan dalam 8 karakter Twinkle Collection. Harap pilih karakter dari lineup Twinkle.'
+                                                            ? (singleForm.rarity === 'SSR'
+                                                                ? 'Tidak ditemukan dalam 8 karakter Twinkle Collection. Harap pilih karakter dari lineup Twinkle.'
+                                                                : 'Karakter tidak ditemukan dalam database Uma Musume.')
                                                             : 'No exact match in database — your manual text will be recorded as-is!'}
                                                     </div>
                                                 )}

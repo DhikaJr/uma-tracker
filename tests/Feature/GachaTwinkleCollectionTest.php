@@ -157,4 +157,59 @@ class GachaTwinkleCollectionTest extends TestCase
         $this->assertFalse($response->json('data.is_rate_up'));
         $this->assertFalse($pull->fresh()->is_rate_up);
     }
+
+    public function test_single_pull_on_twinkle_banner_supports_b1_and_b2_characters(): void
+    {
+        $twinkleBanner = GachaBanner::create([
+            'id' => 9995,
+            'name' => 'The Twinkle Collection Pretty Derby Gacha (2026)',
+            'banner_type' => 'character',
+            'category' => 'twinkle',
+            'base_rate' => 3.00,
+            'featured_items' => ['Satono Crown', 'Sweep Tosho', 'Chrono Genesis'],
+            'start_date' => '2026-01-10',
+            'is_active' => true,
+        ]);
+
+        // 2-star / SR pull (Vodka)
+        $srRes = $this->postJson('/api/gacha/pulls', [
+            'banner_type' => 'character',
+            'gacha_banner_id' => $twinkleBanner->id,
+            'pull_type' => 'single',
+            'item_name' => 'Vodka',
+            'rarity' => 'SR',
+            'is_rate_up' => false,
+            'pulled_at' => '2026-01-11',
+        ]);
+        $srRes->assertCreated();
+        $this->assertEquals('SR', $srRes->json('data.rarity'));
+        $this->assertFalse($srRes->json('data.is_rate_up'));
+
+        // 1-star / R pull (Agnes Tachyon)
+        $rRes = $this->postJson('/api/gacha/pulls', [
+            'banner_type' => 'character',
+            'gacha_banner_id' => $twinkleBanner->id,
+            'pull_type' => 'single',
+            'item_name' => 'Agnes Tachyon',
+            'rarity' => 'R',
+            'is_rate_up' => false,
+            'pulled_at' => '2026-01-11',
+        ]);
+        $rRes->assertCreated();
+        $this->assertEquals('R', $rRes->json('data.rarity'));
+        $this->assertFalse($rRes->json('data.is_rate_up'));
+    }
+
+    public function test_metadata_returns_correct_base_character_rarities(): void
+    {
+        $response = $this->getJson('/api/gacha/metadata');
+        $response->assertOk();
+
+        $rarities = $response->json('character_rarities');
+        $this->assertIsArray($rarities);
+        $this->assertEquals('SR', $rarities['Vodka'] ?? null);
+        $this->assertEquals('SR', $rarities['Gold Ship'] ?? null);
+        $this->assertEquals('R', $rarities['Agnes Tachyon'] ?? null);
+        $this->assertEquals('R', $rarities['Sakura Bakushin O'] ?? null);
+    }
 }

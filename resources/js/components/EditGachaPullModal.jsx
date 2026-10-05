@@ -98,11 +98,11 @@ export default function EditGachaPullModal({
     const handleItemNameChange = (val) => {
         const curBanner = banners.find(b => String(b.id) === String(form.gacha_banner_id));
         const isTwinkle = isTwinkleBanner(curBanner);
-        const autoUp = isItemRateUp(val, curBanner);
+        const autoUp = isTwinkle ? false : isItemRateUp(val, curBanner);
         setForm(prev => ({ 
             ...prev, 
             item_name: val,
-            is_rate_up: isTwinkle ? false : Boolean(autoUp),
+            is_rate_up: Boolean(autoUp),
         }));
         setErrorMsg('');
 
@@ -114,7 +114,7 @@ export default function EditGachaPullModal({
 
         if (isTwinkle && Array.isArray(curBanner?.featured_items) && curBanner.featured_items.length > 0) {
             const q = val.toLowerCase();
-            const matches = curBanner.featured_items
+            const featuredMatches = curBanner.featured_items
                 .filter(item => {
                     const nameStr = typeof item === 'object' && item !== null ? item.name : item;
                     return nameStr.toLowerCase().includes(q);
@@ -122,10 +122,33 @@ export default function EditGachaPullModal({
                 .map(item => {
                     const nameStr = typeof item === 'object' && item !== null ? item.name : item;
                     return { name: nameStr, rarity: 'SSR', base_stars: 3 };
+                });
+
+            const rawPool = form.banner_type === 'character' 
+                ? (gachaMeta.characters || []) 
+                : (gachaMeta.support_cards || []);
+            
+            const b1AndB2Matches = rawPool
+                .map(item => {
+                    const nameStr = typeof item === 'object' && item !== null ? item.name : item;
+                    const r = (gachaMeta.character_rarities && gachaMeta.character_rarities[nameStr])
+                        || (typeof item === 'object' && item !== null ? item.rarity : null)
+                        || (nameStr.startsWith('SR ') ? 'SR' : nameStr.startsWith('R ') ? 'R' : null);
+                    return {
+                        name: nameStr,
+                        rarity: r || 'SR',
+                        base_stars: r === 'R' ? 1 : 2,
+                    };
+                })
+                .filter(item => {
+                    if (item.rarity === 'SSR') return false;
+                    return item.name.toLowerCase().includes(q);
                 })
                 .slice(0, 8);
-            setSuggestions(matches);
-            setShowSuggestions(matches.length > 0);
+
+            const combined = [...featuredMatches, ...b1AndB2Matches].slice(0, 10);
+            setSuggestions(combined);
+            setShowSuggestions(combined.length > 0);
             return;
         }
 
@@ -134,12 +157,21 @@ export default function EditGachaPullModal({
             : (gachaMeta.support_cards || []);
         
         const q = val.toLowerCase();
-        const matches = pool.filter(item => {
+        const matches = pool.map(item => {
+            if (typeof item === 'object' && item !== null) return item;
+            const r = (gachaMeta.character_rarities && gachaMeta.character_rarities[item])
+                || (item.startsWith('SSR ') ? 'SSR' : item.startsWith('SR ') ? 'SR' : item.startsWith('R ') ? 'R' : 'SSR');
+            return {
+                name: item,
+                rarity: r,
+                base_stars: r === 'SSR' ? 3 : (r === 'SR' ? 2 : 1),
+            };
+        }).filter(item => {
             const nameMatch = item.name?.toLowerCase().includes(q);
             const jaMatch = item.raw_data?.name_jp?.toLowerCase().includes(q);
             const charMatch = item.raw_data?.character?.toLowerCase().includes(q);
             return nameMatch || jaMatch || charMatch;
-        }).slice(0, 6);
+        }).slice(0, 8);
 
         setSuggestions(matches);
         setShowSuggestions(matches.length > 0);
@@ -148,21 +180,18 @@ export default function EditGachaPullModal({
     const handleSelectSuggestion = (item) => {
         const curBanner = banners.find(b => String(b.id) === String(form.gacha_banner_id));
         const isTwinkle = isTwinkleBanner(curBanner);
-        const autoUp = isItemRateUp(item.name, curBanner);
+        const autoUp = isTwinkle ? false : isItemRateUp(item.name, curBanner);
         const updates = {
             item_name: item.name,
-            is_rate_up: isTwinkle ? false : Boolean(autoUp),
+            is_rate_up: Boolean(autoUp),
         };
 
-        if (isTwinkle) {
-            updates.rarity = 'SSR';
-        } else if (form.banner_type === 'support_card') {
-            if (item.rarity) updates.rarity = item.rarity;
-        } else {
-            const baseStar = item.base_stars || item.raw_data?.rarity || 3;
-            if (baseStar === 3) updates.rarity = 'SSR';
-            else if (baseStar === 2) updates.rarity = 'SR';
-            else updates.rarity = 'R';
+        if (item.rarity) {
+            updates.rarity = item.rarity;
+        } else if (item.base_stars) {
+            updates.rarity = item.base_stars === 3 ? 'SSR' : (item.base_stars === 2 ? 'SR' : 'R');
+        } else if (gachaMeta.character_rarities && gachaMeta.character_rarities[item.name]) {
+            updates.rarity = gachaMeta.character_rarities[item.name];
         }
 
         setForm(prev => ({ ...prev, ...updates }));
@@ -179,16 +208,16 @@ export default function EditGachaPullModal({
 
         const curBanner = banners.find(b => String(b.id) === String(form.gacha_banner_id));
         const isTwinkle = isTwinkleBanner(curBanner);
-        if (isTwinkle && Array.isArray(curBanner?.featured_items) && curBanner.featured_items.length > 0) {
+        if (isTwinkle && form.rarity === 'SSR' && Array.isArray(curBanner?.featured_items) && curBanner.featured_items.length > 0) {
             const matched = curBanner.featured_items.some(f => {
                 const fName = typeof f === 'object' && f !== null ? f.name : f;
                 return fName.toLowerCase() === form.item_name.trim().toLowerCase();
             });
             if (!matched) {
-                setErrorMsg(`Karakter "${form.item_name.trim()}" bukan bagian dari 8 karakter Twinkle Collection pada banner ini.`);
+                setErrorMsg(`Karakter B3 (SSR) "${form.item_name.trim()}" bukan bagian dari 8 karakter Twinkle Collection pada banner ini.`);
                 return;
             }
-        } else if (form.is_rate_up && !isItemRateUp(form.item_name.trim(), curBanner)) {
+        } else if (!isTwinkle && form.is_rate_up && !isItemRateUp(form.item_name.trim(), curBanner)) {
             setErrorMsg(`Kartu "${form.item_name.trim()}" bukan merupakan pilihan rate-up pada banner yang dipilih.`);
             return;
         }

@@ -2,6 +2,19 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.4.1] - 5 Oktober 2026
+
+### 📐 Penyelarasan Ketinggian Kontrol & Perbaikan Pool B1/B2 Banner Twinkle Collection
+- **Penyelarasan Ketinggian & Keseimbangan Kontrol Form Single Pull (`GachaView.jsx`)**:
+  - Mengatasi masalah layout pada baris kontrol Single Pull di mana select box Banner terdorong naik saat belum ada banner yang dipilih.
+  - Memindahkan teks error `* Wajib dipilih` dari bagian bawah select box ke baris label header (`flex items-center justify-between mb-1.5 h-4 leading-4`), menjaga ketinggian container tetap rata di semua kolom.
+  - Menyamakan ketinggian seluruh elemen interaktif kontrol (select box, input tanggal, tombol switch Rarity, badge Pool B3 / tombol UP, serta tombol `Log Pull`) secara konsisten menjadi `h-10` (40px).
+  - Menambahkan label header kolom yang selaras pada kolom terakhir (`Pool & Aksi` / `Status & Aksi`), sehingga tidak ada lagi ruang kosong di atas tombol dan badge.
+- **Dukungan Penuh Pool Karakter B1 (1★) & B2 (2★) pada Banner Twinkle Collection**:
+  - Memperbaiki batasan pool gacha Twinkle Collection agar hanya berlaku eksklusif untuk tarikan B3 (SSR, 3★) ke 8 karakter terpilih, sementara tarikan B1 (R, 1★) dan B2 (SR, 2★) tetap mencakup seluruh karakter catalog 1★ dan 2★ (Vodka, Daiwa Scarlet, Gold Ship, Agnes Tachyon, Sakura Bakushin O, dll.).
+  - Memperbaiki pemetaan rarity katalog dasar (`UmaCatalog.php`) sehingga karakter basis 1★ dan 2★ secara akurat mengembalikan rarity `R` dan `SR` alih-alih salah defaulting ke `SSR`.
+  - Memperbarui sistem autocomplete, suggestions dropdown, dan validasi submit pada Single Pull, Multi-Pull (10x), serta Edit Gacha Pull Modal agar karakter B1 dan B2 dapat diketik, disarankan, dan disimpan tanpa validasi error.
+
 ## [Versi 2.4.0] - 5 Oktober 2026
 
 ### 🎰 Penyesuaian Mekanisme & Pool Banner Twinkle Collection (2026 JP Server)
