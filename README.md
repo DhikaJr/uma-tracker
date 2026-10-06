@@ -13,6 +13,8 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
   - **Base Rate Standar (3,00%)**: SSR 3,00%, SR 18,00%, R 79,00%.
   - **Base Rate Boosted (4,50%)**: SSR 4,50%, SR 18,00%, R 77,50% pada banner khusus seperti Anniversary atau debut tertentu.
   - **Featured Rate-Up**: 0,75% per kartu rate-up terdaftar pada banner terkait.
+  - **Aturan Banner Twinkle Collection (JP Server 2026)**: Pada banner berkategori `twinkle` (*The Twinkle Collection Pretty Derby Gacha*), total rate SSR 3,00% dibagi sama rata ke 8 karakter B3 terpilih (masing-masing 0,375% per karakter) **tanpa status rate-up (`is_rate_up: false`) dan tanpa tarikan rate-off/spook**. Tarikan SSR (B3) dibatasi eksklusif pada 8 karakter lineup tersebut, sedangkan tarikan B1 (R, 1★) dan B2 (SR, 2★) tetap mencakup seluruh karakter basis 1★ dan 2★ dengan pemetaan kelangkaan resmi (`R` dan `SR`).
+  - **Eksklusivitas Varian Kostum Gacha (`[...]`)**: Seluruh karakter pada sistem gacha (input Single Pull, Multi-Pull, autocomplete, rekomendasi cepat, dan banner) wajib menggunakan format nama varian kostum resmi dalam tanda kurung siku (format: `Nama Uma [Nama Kostum]`, contoh: `Daiwa Scarlet [Peak Blue]`, `Daiwa Scarlet [Nuit Étoilée de Scarlet]`, `Vodka [Wild Top Gear]`, `Orfevre [総攬]`). Nama dasar tanpa kostum (*bare names* seperti `Daiwa Scarlet`, `Vodka`) sepenuhnya dieliminasi dari sistem gacha untuk mencegah entri duplikat dan ambigu. Nama karakter dasar tanpa kurung tetap dipertahankan secara terpisah khusus untuk modul Pelatihan / Career Run.
   - **Eksklusi Banner Berbayar**: Banner dengan penanda `scam_gacha = true` atau `restriction = premium` otomatis dikecualikan dari sinkronisasi katalog.
   - **Pity & Spark Target**: Target spark standar adalah 200 tarikan. Pity counter terisolasi per banner dan dihitung ulang secara otomatis.
   - **Aturan Multi-Pull (10-Pull)**: Modal Quick 10-Pull menyediakan preset praktis `9R + 1SR`, dan form batch input menggunakan kelangkaan `SR` sebagai nilai bawaan pada slot tarikan terakhir (ke-10). Pengguna tetap memiliki keleluasaan penuh untuk menyesuaikan kelangkaan dan nama kartu secara manual.
@@ -24,6 +26,12 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
 ### 1. Gacha Tracker & Pelacakan Banner JP 2026+
 - **Modal Input Cepat 10-Pull (Quick 10-Pull)**: Catat 10 tarikan dalam satu formulir dengan stepper kelangkaan, preset cepat (seperti 9R+1SR), dan autocomplete item SSR.
 - **Pencatatan Batch Tiket (1–10 Pulls)**: Dukungan pencatatan multi-pull fleksibel dengan slot terakhir otomatis terisi kelangkaan SR secara default.
+- **Mekanisme Khusus Banner Twinkle Collection (2026 JP Server)**:
+  - Pembagian rate 0,375% rata ke 8 karakter B3, penonaktifan otomatis tombol/toggle rate-up (`is_rate_up: false`), proteksi anti-spook/rate-off, serta kartu info lineup B3 interaktif dengan tombol isi cepat `+ Karakter`.
+  - Akses lengkap pool tarikan B1 (1★ / R) dan B2 (2★ / SR) di banner Twinkle dengan pemetaan kelangkaan resmi.
+- **Standardisasi Varian Kostum & Penyelarasan Antarmuka**:
+  - Autocomplete, suggestions dropdown, dan `<datalist>` native browser disaring ketat hanya untuk karakter bervarian kostum resmi `[...]`, mencegah munculnya pilihan duplikat atau ambigu.
+  - Penyelarasan tinggi kontrol formulir Single Pull (`h-10` konsisten di seluruh kolom) dan penempatan teks error banner pada header baris label.
 - **Penyaringan Lanjutan, Paginasi Dinamis, Bulk Delete & Edit Pull**:
   - Filter berdasarkan banner aktif JP 2026+, jenis pool (Karakter vs Support Card), kelangkaan (`SSR`, `SR`, `R`), status Rate-Up, rentang tanggal, dan pencarian teks.
   - Fitur edit catatan pull serta penghapusan massal (*bulk delete*) dengan konfirmasi modal.
@@ -37,11 +45,13 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
 - **Filter Riwayat Karir, Paginasi Dinamis, Bulk Delete & Edit Run**:
   - Filter berdasarkan skenario, rank evaluasi, nama Uma Musume, dan tanggal.
   - Paginasi dinamis, pemilihan massal checkbox, serta dialog penyuntingan run.
-- **Autorank Pintar (Hierarki E s.d. LG24)**: Skor evaluasi otomatis memetakan badge rank resmi dari Bronze E hingga Legendary Double-Crown LG24.
+- **Autorank Pintar & Auto-Lock pada Modal Edit (Hierarki E s.d. LG24)**: Skor evaluasi otomatis memetakan badge rank resmi dari Bronze E hingga Legendary Double-Crown LG24. Pada modal penyuntingan run, hasil rank evaluasi dikunci secara otomatis dari perolehan skor total sesi latihan (*auto rank*) tanpa tombol manual yang redundan, serta standarisasi notifikasi dalam Bahasa Indonesia.
 - **OCR Screenshot Import (Tesseract.js Client-Side)**:
   - Ekstraksi hasil evaluasi karir dari tangkapan layar langsung via clipboard (`Ctrl + V`) atau berkas gambar langsung di browser tanpa membebani server backend.
   - Pengenalan nama karakter, rank tier, skor evaluasi, dan perolehan fans secara otomatis.
-- **Ringkasan Rekor Skenario**: Statistik agregat per skenario mencakup rata-rata perolehan fans, rekor tertinggi (*Max*), dan performa terendah (*Min*).
+- **Ringkasan Rekor Skenario & Modal Rincian Karakter**:
+  - Statistik agregat per skenario mencakup rata-rata perolehan fans, rekor tertinggi (*Max*), dan performa terendah (*Min*).
+  - Setiap kartu skenario yang tercatat dapat diklik untuk memunculkan modal dialog rincian karakter apa saja yang karirnya pernah dicatat pada skenario tersebut serta total akumulasi fans yang diraih pada masing-masing skenario.
 
 ### 3. Visualisasi Data & Dashboard Analytics (Recharts)
 - **Tab Khusus "Analytics" pada Navigasi**: Dashboard analitik interaktif berbasis pustaka grafik **Recharts**:
@@ -50,11 +60,15 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
   - **Donut Chart Sebaran Kelangkaan Gacha**: Visualisasi proporsi aktual perolehan SSR, SR, dan R terhadap nilai ekspektasi resmi (3,00% atau 4,50%) disertai indikator deviasi (*Luck Delta*).
   - **Bar Chart Interval Pity**: Mengukur jarak jumlah tarikan antar perolehan kartu SSR berurutan.
 
-### 4. Pemantau Kuota & Ritme Circle (Circle Pace Widget)
+### 4. Pemantau Kuota, Ritme Circle & Arsip Historis Club
 - **Pemantauan Ritme Grinding Fans Bulanan**:
   - Mengambil target kuota bulanan circle (`monthly_circle_target`, default 30.000.000 fans) dan menghitung sisa fans serta sisa hari kalender bulan berjalan.
   - Menghitung kebutuhan ritme harian riil (`required_daily_pace`) dan estimasi jumlah run per hari (`estimated_runs_per_day`).
   - Indikator status ritme adaptif: `Ahead of Pace` (Hijau), `On Track` (Kuning), dan `Behind Schedule` (Merah).
+- **Penandaan Anggota yang Sudah Keluar (*Ex-Member / Out*)**:
+  - Deteksi dan visualisasi anggota circle yang telah keluar dari club dengan badge merah `Keluar (Out)`, indikator strip (`ー`) pada kolom rank dan delta fans harian/mingguan, serta penataan sorting otomatis di posisi terbawah.
+- **Filter & Penelusuran Statistik Historis Bulanan (Historical Archive)**:
+  - Menu dropdown popover pemilih periode bulan (`YYYY年 M月`) untuk memeriksa arsip data performa dan kontribusi fans anggota dari bulan-bulan sebelumnya via snapshot lokal `circle_snapshot_YYYY-MM.json`.
 - **Widget Visual Terpadu (`CirclePaceWidget`)**: Hadir di halaman Dashboard dan Circle Club dengan fasilitas inline update target kuota bulanan.
 
 ### 5. Jewel & Spark Planner (Server JP)
@@ -220,11 +234,12 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 ### Gacha Endpoints
 | Metode | Endpoint | Deskripsi |
 |---|---|---|
-| `GET` | `/api/gacha/banners` | Menampilkan daftar banner gacha JP 2026+ |
+| `GET` | `/api/gacha/banners` | Menampilkan daftar banner gacha JP 2026+ lengkap dengan kategori banner (`standard`, `twinkle`, `select_rate_up`, `premium`, `anniversary`) dan daftar `featured_items` bervarian kostum resmi |
+| `GET` | `/api/gacha/metadata` | Mengambil metadata katalog gacha: daftar karakter bervarian kostum resmi (`[...]`), kartu bantuan, serta pemetaan kelangkaan bawaan (`R`, `SR`, `SSR`) |
 | `GET` | `/api/gacha/pulls` | Menampilkan riwayat gacha (filter banner, rarity, pagination) |
-| `POST` | `/api/gacha/pulls` | Mencatat 1 tarikan gacha baru |
-| `POST` | `/api/gacha/pulls/batch` | Mencatat batch tarikan tiket (1–10 pull) |
-| `PUT` | `/api/gacha/pulls/{id}` | Memperbarui catatan gacha pull & rekalkulasi pity counter |
+| `POST` | `/api/gacha/pulls` | Mencatat 1 tarikan gacha baru (otomatis memaksakan `is_rate_up = false` pada banner Twinkle dan memvalidasi pool SSR) |
+| `POST` | `/api/gacha/pulls/batch` | Mencatat batch tarikan tiket (1–10 pull) dengan penegakan otomatis aturan banner Twinkle |
+| `PUT` | `/api/gacha/pulls/{id}` | Memperbarui catatan gacha pull, validasi pool banner Twinkle, & rekalkulasi pity counter |
 | `DELETE` | `/api/gacha/pulls/{id}` | Menghapus 1 catatan pull gacha & rekalkulasi pity |
 | `POST` | `/api/gacha/bulk-delete` | Menghapus catatan pull secara massal |
 | `GET` | `/api/gacha/stats` | Statistik gacha, breakdown per-pool (3,00% vs 4,50%), dan pity aktif |
@@ -242,7 +257,7 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 | `DELETE` | `/api/career/runs/{id}` | Menghapus catatan sesi karir |
 | `POST` | `/api/career/bulk-delete` | Menghapus riwayat karir secara massal |
 | `GET` | `/api/career/stats` | Statistik akumulasi fans, target kuota circle, dan rata-rata per run |
-| `GET` | `/api/career/metadata` | Metadata nama skenario resmi, rank E–LG24, nama Uma, dan OCR map |
+| `GET` | `/api/career/metadata` | Metadata nama skenario resmi, rank E–LG24, daftar nama dasar Uma (khusus modul karir tanpa kurung), dan OCR map |
 
 ### Affinity & Compatibility Endpoints
 | Metode | Endpoint | Deskripsi |
@@ -273,7 +288,7 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 ### Circle Tracker, Planner & Settings Endpoints
 | Metode | Endpoint | Deskripsi |
 |---|---|---|
-| `GET` | `/api/circle-tracker/status` | Mengambil data live circle dari API `muxueuma.com` |
+| `GET` | `/api/circle-tracker/status` | Mengambil data live circle dari API `muxueuma.com` atau arsip lokal. Mendukung query `?period=YYYY-MM` untuk penelusuran arsip statistik historis bulanan dan penanda anggota aktif vs yang telah keluar (*ex-member*) |
 | `POST` | `/api/circle-tracker/refresh` | Memperbarui data circle club (cooldown 3 jam) |
 | `POST` | `/api/circle-tracker/track-player` | Menyimpan nama trainer yang dipantau di dalam circle |
 | `GET` | `/api/planner/config` | Mengambil konfigurasi target tabungan Carat & tiket JP |
@@ -289,7 +304,7 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 Aplikasi dilengkapi rangkaian pengujian otomatis berbasis **PHPUnit** pada database memori terisolasi (`:memory:`):
 
 ```bash
-# Menjalankan seluruh pengujian (183 tests, 1.950 assertions)
+# Menjalankan seluruh pengujian (191 tests, 2.019 assertions)
 php artisan test --compact
 
 # Menjalankan pengujian spesifik
@@ -297,6 +312,7 @@ php artisan test --filter=AffinityCalculatorTest
 php artisan test --filter=BackupRoundTripTest
 php artisan test --filter=BackupIntegrityTest
 php artisan test --filter=GachaRateAuditTest
+php artisan test --filter=GachaTwinkleCollectionTest
 
 # Menjalankan pemformat kode PHP (Laravel Pint)
 vendor/bin/pint
@@ -305,7 +321,7 @@ vendor/bin/pint
 ### Cakupan Pengujian:
 - **Inheritance Affinity & Compatibility**: Pengujian kalkulasi kompatibilitas silsilah 7 slot lengkap, penambahan bonus kemenangan G1 bersama (+3 poin/balapan), ambang batas klasifikasi badge (△, ○, ◎), validasi ketat anti-duplikasi karakter silsilah lintas kostum, dan algoritma rekomendasi indukan terbaik dari koleksi user.
 - **Backup & Restore Integrity**: Pengujian pemulihan round-trip, kepatuhan skema v2.0, proteksi atomik rollback, penolakan versi tidak dikenal, integritas foreign key SQLite, dan pemulihan field JSON katalog.
-- **Gacha Logic & Rate Audit**: Verifikasi persistensi atribut `base_rate` (3,00% vs 4,50%), kalkulasi dinamis featured rate-up 0,75%, eksklusi banner berbayar (`scam_gacha = true` / `restriction = premium`), dan siklus hidup pity counter.
+- **Gacha Logic, Twinkle Collection & Rate Audit**: Verifikasi persistensi atribut `base_rate` (3,00% vs 4,50%), kalkulasi dinamis featured rate-up 0,75%, aturan khusus banner Twinkle Collection (pembagian rate 3% terbagi rata tanpa rate-up, isolasi pool B3 8 karakter, dan dukungan pool B1/B2), eksklusivitas karakter bervarian kostum resmi `[...]` pada katalog metadata gacha, eksklusi banner berbayar (`scam_gacha = true` / `restriction = premium`), dan siklus hidup pity counter.
 - **Koleksi & GameTora Sync**: Proteksi batas minimum bintang karakter bawaan, matriks efek status kartu bantuan 0LB–MLB, dan integritas hash pembaruan katalog.
 - **PWA & UI Routing**: Verifikasi manifest PWA, routing service worker, dan pengalihan build fallback.
 
