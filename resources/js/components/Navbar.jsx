@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Sparkles, Trophy, Users, Sun, Moon, Menu, X, Database, BarChart3, Calculator, Layers, ScrollText, GitFork } from 'lucide-react';
+import { LayoutDashboard, Sparkles, Trophy, Users, Sun, Moon, Menu, X, Database, BarChart3, Calculator, Layers, ScrollText, GitFork, CalendarDays } from 'lucide-react';
 
 export default function Navbar({ 
     activeTab, 
@@ -39,6 +39,7 @@ export default function Navbar({
         { id: 'collection', label: 'Koleksi', shortLabel: 'Koleksi', icon: Layers },
         { id: 'club', label: 'Circle Club', shortLabel: 'Circle', icon: Users },
         { id: 'planner', label: 'Perencana Jewel', shortLabel: 'Perencana', icon: Calculator },
+        { id: 'events', label: 'Event Planner', shortLabel: 'Event', icon: CalendarDays },
     ];
 
     const circlePercent = Math.min(100, Math.round((monthlyFans / (circleGoal || 1)) * 100));

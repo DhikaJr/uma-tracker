@@ -109,7 +109,21 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
 - **Sinkronisasi Balapan dari Riwayat Karier**:
   - Opsi impor nama karakter dari tabel `career_runs` ke slot silsilah untuk memudahkan konfigurasi silsilah dari hasil pelatihan sebelumnya.
 
-### 8. Sistem Pencadangan Data Teruji (Backup Schema v2.0)
+### 8. Upcoming CM/LoH Competition Planner (Official Cygames 2026–2027)
+- **Integritas Data Ketat & Nol Data Spekulatif (*Zero Speculative Data*)**:
+  - Sumber data resmi eksklusif dari pengumuman Cygames JP Portal ([https://umamusume.jp/news/detail?id=3483](https://umamusume.jp/news/detail?id=3483)).
+  - Mengeliminasi tebakan, asumsi komunitas, wiki, atau datamining untuk seluruh parameter lomba masa depan.
+  - Penanganan data tiga kondisi (*Tri-State Handling*): Terkonfirmasi (*Confirmed*), Acak (*Random*, contoh cuaca dan kondisi lintasan LoH Nov 2026), dan Belum Diumumkan (*Unknown / NULL*).
+- **Struktur Tanggal & Urutan Kronologis Robust**:
+  - Kolom tanggal granular: `year`, `month`, `period` (`exact`, `early`, `mid`, `late`), `date_label`, dan `start_date` (nullable, hanya diisi jika tanggal eksak diumumkan).
+  - Pengurutan kronologis terjamin tanpa bergantung pada `start_date` yang bernilai NULL.
+- **Antarmuka Event Planner Interaktif**:
+  - Linimasa dan kartu kompetisi informatif per event (badge Champions Meeting vs League of Heroes).
+  - Tampilan eksplisit "Belum diumumkan" untuk parameter yang belum dirilis dan badge kontras "Acak" untuk kondisi random resmi.
+  - Filter tipe kompetisi (Semua, CM, LoH) dan filter tahun pelaksanaan.
+  - Dialog modal rincian lengkap beserta tautan sumber resmi Cygames JP yang dapat diklik langsung.
+
+### 9. Sistem Pencadangan Data Teruji (Backup Schema v2.0)
 - **Integritas Data Transaksional**:
   - **Skema Versi 2.0**: Validasi whitelist versi ketat (`0.9`, `1.0`, `2.0`). Berkas cadangan tanpa versi atau versi tidak dikenal ditolak sebelum pemrosesan.
   - **Proteksi base_rate**: Atribut `base_rate` banner wajib bernilai numerik valid dan tidak boleh `NULL`.
@@ -120,7 +134,7 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
   - **Overwrite**: Mengosongkan 9 entitas database sebelum memulihkan seluruh data cadangan secara utuh.
 - **Antarmuka Operasional**: Dapat dijalankan via Web UI Modal atau Perintah CLI Artisan.
 
-### 9. Progressive Web App (PWA) & Mobile Navigation
+### 10. Progressive Web App (PWA) & Mobile Navigation
 - **PWA Siap Pasang (`vite-plugin-pwa`)**: Web App Manifest terkalibrasi dengan root path resmi, ikon 192x192 & 512x512, tema warna `#10b981`, serta mode standalone.
 - **Sticky Bottom Navigation**: Navigasi khusus layar ponsel dengan touch target ramah jari (&ge; 48px) dan layout tanpa scrollbar horizontal liar.
 
@@ -278,6 +292,12 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 | `POST` | `/api/collection/support-cards/toggle` | Mengubah status kepemilikan support card |
 | `POST` | `/api/collection/support-cards/limit-break` | Memperbarui tingkat limit break kartu |
 
+### Competition Planner Endpoints
+| Metode | Endpoint | Deskripsi |
+|---|---|---|
+| `GET` | `/api/competition-events` | Menampilkan seluruh event kompetisi Champions Meeting & League of Heroes berurutan kronologis resmi Cygames JP |
+| `GET` | `/api/competition-events/{id}` | Menampilkan detail spesifik kondisi event lomba kompetisi tertentu |
+
 ### Backup & Restore Endpoints
 | Metode | Endpoint | Deskripsi |
 |---|---|---|
@@ -304,10 +324,11 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 Aplikasi dilengkapi rangkaian pengujian otomatis berbasis **PHPUnit** pada database memori terisolasi (`:memory:`):
 
 ```bash
-# Menjalankan seluruh pengujian (191 tests, 2.019 assertions)
+# Menjalankan seluruh pengujian (199 tests, 2.119 assertions)
 php artisan test --compact
 
 # Menjalankan pengujian spesifik
+php artisan test --filter=CompetitionEventTest
 php artisan test --filter=AffinityCalculatorTest
 php artisan test --filter=BackupRoundTripTest
 php artisan test --filter=BackupIntegrityTest
@@ -319,6 +340,7 @@ vendor/bin/pint
 ```
 
 ### Cakupan Pengujian:
+- **Upcoming Competition Planner**: Integritas seeder tepat 6 event resmi Cygames 2026–2027, idempotensi seeder tanpa duplikasi, pengurutan kronologis presisi multi-prioritas (`year`, `month`, `period`, `start_date`), preservasi nilai `NULL` dan eksplisit `"random"`, isolasi aturan khusus `no_debuff` pada CM MILE Maret 2027, serta pengujian serialisasi API.
 - **Inheritance Affinity & Compatibility**: Pengujian kalkulasi kompatibilitas silsilah 7 slot lengkap, penambahan bonus kemenangan G1 bersama (+3 poin/balapan), ambang batas klasifikasi badge (△, ○, ◎), validasi ketat anti-duplikasi karakter silsilah lintas kostum, dan algoritma rekomendasi indukan terbaik dari koleksi user.
 - **Backup & Restore Integrity**: Pengujian pemulihan round-trip, kepatuhan skema v2.0, proteksi atomik rollback, penolakan versi tidak dikenal, integritas foreign key SQLite, dan pemulihan field JSON katalog.
 - **Gacha Logic, Twinkle Collection & Rate Audit**: Verifikasi persistensi atribut `base_rate` (3,00% vs 4,50%), kalkulasi dinamis featured rate-up 0,75%, aturan khusus banner Twinkle Collection (pembagian rate 3% terbagi rata tanpa rate-up, isolasi pool B3 8 karakter, dan dukungan pool B1/B2), eksklusivitas karakter bervarian kostum resmi `[...]` pada katalog metadata gacha, eksklusi banner berbayar (`scam_gacha = true` / `restriction = premium`), dan siklus hidup pity counter.

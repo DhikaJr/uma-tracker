@@ -8,6 +8,7 @@ import CircleClubView from './components/CircleClubView';
 import JewelPlannerView from './components/JewelPlannerView';
 import CollectionView from './components/CollectionView';
 import AffinityView from './components/AffinityView';
+import CompetitionEventsView from './components/CompetitionEventsView';
 import MobileBottomNav from './components/MobileBottomNav';
 import Toast from './components/Toast';
 import BackupRestoreModal from './components/BackupRestoreModal';
@@ -218,6 +219,12 @@ export default function AppMain() {
 
                 {activeTab === 'planner' && (
                     <JewelPlannerView 
+                        onNotify={notify}
+                    />
+                )}
+
+                {activeTab === 'events' && (
+                    <CompetitionEventsView 
                         onNotify={notify}
                     />
                 )}

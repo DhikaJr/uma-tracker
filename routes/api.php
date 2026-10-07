@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\CareerController;
 use App\Http\Controllers\Api\ChangelogController;
 use App\Http\Controllers\Api\CircleTrackerController;
 use App\Http\Controllers\Api\CollectionController;
+use App\Http\Controllers\Api\CompetitionEventController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\GachaController;
 use App\Http\Controllers\Api\PlannerController;
@@ -116,3 +117,9 @@ Route::prefix('affinity')->group(function () {
 
 // Changelog Endpoint
 Route::get('/changelog', [ChangelogController::class, 'index']);
+
+// Upcoming Competition Events (CM / LoH Planner)
+Route::prefix('competition-events')->group(function () {
+    Route::get('/', [CompetitionEventController::class, 'index']);
+    Route::get('/{id}', [CompetitionEventController::class, 'show']);
+});

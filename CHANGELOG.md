@@ -2,6 +2,34 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.5.0] - 7 Oktober 2026
+
+### 🏆 Modul Perencana Kompetisi CM/LoH Resmi (Upcoming Competition Planner V1)
+- **Integritas Data Ketat & Nol Data Spekulatif (*Zero Speculative Data*)**:
+  - Mengimplementasikan modul perencana kompetisi Champions Meeting (CM) dan League of Heroes (LoH) periode 2026–2027 bersumber langsung dari pengumuman resmi Cygames JP Portal (`https://umamusume.jp/news/detail?id=3483`).
+  - Menolak seluruh asumsi spekulatif dari wiki, GameWith, Kamigame, maupun datamining komunitas.
+  - Penanganan data tiga kondisi (*Tri-State Handling*):
+    - **Confirmed (Terkonfirmasi)**: Nilai resmi yang diumumkan Cygames.
+    - **Random (Acak)**: Nilai acak eksplisit seperti cuaca dan kondisi lintasan pada LoH November 2026.
+    - **Unknown / Not Announced (Belum Diumumkan)**: Tersimpan sebagai `NULL` di basis data dan ditampilkan jelas sebagai "Belum diumumkan" di antarmuka pengguna tanpa nilai default atau tebakan.
+- **Struktur Tanggal & Urutan Kronologis Multi-Prioritas**:
+  - Menggunakan skema granular: `year`, `month`, `period` (`exact`, `early`, `mid`, `late`), `date_label`, dan `start_date` (nullable).
+  - Pengurutan kronologis terjamin melalui query kustom: `year ASC, month ASC, CASE period WHEN 'exact' THEN 1 WHEN 'early' THEN 2 WHEN 'mid' THEN 3 WHEN 'late' THEN 4 ELSE 5 END, start_date ASC NULLS LAST, id ASC`.
+- **Basis Data & Seeder Idempoten**:
+  - Migrasi `create_competition_events_table.php` dengan indeks teroptimasi pada urutan kronologis.
+  - Seeder `CompetitionEventSeeder.php` yang bersifat idempoten (`updateOrCreate`) memuat tepat 6 event resmi Cygames (Okt 2026 s.d. Mar 2027) tanpa duplikasi saat dijalankan berulang.
+  - Aturan khusus `no_debuff` dipastikan terikat secara presisi hanya pada Champions Meeting MILE Akhir Maret 2027.
+- **Backend REST API**:
+  - Endpoint `GET /api/competition-events`: Mengembalikan daftar event mendatang berurutan kronologis dengan nilai `null` dan `"random"` terpreservasi murni.
+  - Endpoint `GET /api/competition-events/{id}`: Mengembalikan detail satu event kompetisi.
+- **Antarmuka Pengguna & Navigasi (Event Planner)**:
+  - Tab navigasi baru **"Event Planner"** (`CalendarDays` icon) pada `Navbar.jsx` dan routing tampilan utama di `AppMain.jsx`.
+  - Komponen `CompetitionEventsView.jsx` dengan linimasa kartu responsif, filter tipe event (Semua, Champions Meeting, League of Heroes), filter tahun, dan kartu statistik ringkasan.
+  - Badge visual berstatus tegas: "Acak" (*amber badge*) yang kontras dengan "Belum diumumkan" (*slate neutral badge*), serta tautan sumber resmi Cygames JP yang dapat diklik langsung.
+  - Modal rincian lengkap (`CompetitionEventDetailModal`) untuk penelusuran seluruh parameter kondisi lomba.
+- **Otomasi Pengujian (PHPUnit Feature Tests)**:
+  - Rangkaian pengujian komprehensif pada `tests/Feature/CompetitionEventTest.php` (8 skenario tes, 92 assertion) mencakup integritas seeder, idempotensi, pengurutan kronologis, preservasi nilai `null` dan `random`, isolasi aturan khusus `no_debuff`, serta penanganan respon 404.
+
 ## [Versi 2.4.1] - 5 Oktober 2026
 
 ### 👗 Standardisasi Varian Kostum Gacha & Pembersihan Karakter Tanpa Kostum
