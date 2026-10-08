@@ -70,8 +70,10 @@ class GameToraSyncService
             $specialHash = $manifest['gacha/special'] ?? '';
             $charBannersHash = $manifest['gacha/char_banners'] ?? '';
             $suppBannersHash = $manifest['gacha/support_banners'] ?? '';
+            $racetracksHash = $manifest['racetracks'] ?? '';
+            $racetracksExtHash = $manifest['racetracks_extended'] ?? '';
 
-            $combinedHash = "{$charBaseHash}|{$charCardHash}|{$supportHash}|{$skillsHash}|{$objHash}|{$charStdHash}|{$suppStdHash}|{$specialHash}|{$charBannersHash}|{$suppBannersHash}";
+            $combinedHash = "{$charBaseHash}|{$charCardHash}|{$supportHash}|{$skillsHash}|{$objHash}|{$charStdHash}|{$suppStdHash}|{$specialHash}|{$charBannersHash}|{$suppBannersHash}|{$racetracksHash}|{$racetracksExtHash}";
             $savedHash = (string) AppSetting::getValue('gametora_manifest_hash', '');
 
             if (! $force && $savedHash === $combinedHash && UmaCatalogItem::count() > 0 && GachaBanner::count() > 0) {
@@ -270,6 +272,9 @@ class GameToraSyncService
             // 5. Synchronize 2026 Gacha Banners
             $newBannerCount = $this->sync2026Banners($manifest, $rawCharCards, $rawSupportCards);
 
+            // 6. Synchronize Racetracks & Courses Catalog
+            $this->syncRacetracks($manifest);
+
             // Save sync hashes and timestamp
             AppSetting::setValue('gametora_manifest_hash', $combinedHash);
             AppSetting::setValue('gametora_last_synced_at', now()->toIso8601String());
@@ -292,6 +297,113 @@ class GameToraSyncService
                 'message' => 'Gagal menyinkronkan data dari GameTora: '.$e->getMessage(),
                 'stats' => $this->getStatus(),
             ];
+        }
+    }
+
+    /**
+     * Synchronize racetracks and course metadata from GameTora datasets.
+     *
+     * @param  array<string, mixed>  $manifest
+     */
+    protected function syncRacetracks(array $manifest): void
+    {
+        try {
+            $tracksHash = $manifest['racetracks'] ?? null;
+            $tracksExtHash = $manifest['racetracks_extended'] ?? null;
+            if (! $tracksHash || ! $tracksExtHash) {
+                return;
+            }
+
+            $tracksUrl = self::DATA_BASE_URL."/racetracks.{$tracksHash}.json";
+            $tracksExtUrl = self::DATA_BASE_URL."/racetracks_extended.{$tracksExtHash}.json";
+
+            $tracksRes = Http::withoutVerifying()->timeout(25)->get($tracksUrl);
+            $tracksExtRes = Http::withoutVerifying()->timeout(25)->get($tracksExtUrl);
+
+            if (! $tracksRes->successful() || ! $tracksExtRes->successful()) {
+                return;
+            }
+
+            $rawTracks = $tracksRes->json() ?? [];
+            $rawExtTracks = $tracksExtRes->json() ?? [];
+
+            $extMap = [];
+            foreach ($rawExtTracks as $et) {
+                $extMap[$et['id']] = $et;
+            }
+
+            $catalog = [];
+            foreach ($rawTracks as $t) {
+                $tId = $t['id'];
+                $info = $extMap[$tId] ?? [];
+                $nameEn = $info['name_en'] ?? '';
+                $nameJa = $info['name_ja'] ?? '';
+                $slug = strtolower(str_replace(' ', '-', $nameEn));
+
+                $processedCourses = [];
+                foreach ($t['courses'] ?? [] as $c) {
+                    $inoutStr = '';
+                    if (($c['inout'] ?? 0) === 2) {
+                        $inoutStr = 'inner';
+                    } elseif (($c['inout'] ?? 0) === 3) {
+                        $inoutStr = 'outer';
+                    } elseif (($c['inout'] ?? 0) === 4) {
+                        $inoutStr = 'outer-to-inner';
+                    } elseif (($c['inout'] ?? 0) === 99999) {
+                        $inoutStr = 'varies';
+                    }
+
+                    $surfaceStr = ($c['terrain'] ?? 1) === 1 ? 'turf' : 'dirt';
+                    $gametoraHash = ($c['length'] ?? 0).'-'.$surfaceStr.($inoutStr !== '' ? '-'.$inoutStr : '');
+
+                    $processedCourses[] = [
+                        'id' => $c['id'],
+                        'length' => $c['length'],
+                        'terrain' => $c['terrain'],
+                        'surface' => $surfaceStr,
+                        'inout' => $c['inout'],
+                        'inout_str' => $inoutStr,
+                        'turn' => $c['turn'] ?? 1,
+                        'laps' => $c['laps'] ?? [],
+                        'phases' => $c['phases'] ?? [],
+                        'corners' => $c['corners'] ?? [],
+                        'straights' => $c['straights'] ?? [],
+                        'slopes' => $c['slopes'] ?? [],
+                        'positionKeepEnd' => $c['positionKeepEnd'] ?? 0,
+                        'spurtStart' => $c['spurtStart'] ?? ['meters' => 0, 'location' => []],
+                        'statThresholds' => $c['statThresholds'] ?? [],
+                        'overlaps' => $c['overlaps'] ?? [],
+                        'noMansLand' => $c['noMansLand'] ?? [],
+                        'gametora_hash' => $gametoraHash,
+                        'gametora_url' => "https://gametora.com/umamusume/racetracks/{$slug}#{$gametoraHash}",
+                        'image_urls' => [
+                            'simple' => "https://media.gametora.com/umamusume/racetrack/simple/en/{$tId}/{$c['id']}.png",
+                            'full' => "https://media.gametora.com/umamusume/racetrack/full/en/{$tId}/{$c['id']}.png",
+                            'laps' => array_map(function ($lap) use ($tId, $c) {
+                                return [
+                                    'lap' => $lap['lap'],
+                                    'url' => "https://media.gametora.com/umamusume/racetrack/simple/en/{$tId}/{$c['id']}_lap{$lap['lap']}.png",
+                                    'full_url' => "https://media.gametora.com/umamusume/racetrack/full/en/{$tId}/{$c['id']}_lap{$lap['lap']}.png",
+                                ];
+                            }, $c['laps'] ?? []),
+                        ],
+                    ];
+                }
+
+                $catalog[] = [
+                    'id' => $tId,
+                    'name_en' => $nameEn,
+                    'name_ja' => $nameJa,
+                    'slug' => $slug,
+                    'country' => $info['country'] ?? 'jp',
+                    'courses' => $processedCourses,
+                ];
+            }
+
+            $outPath = resource_path('js/data/racetracksCatalog.json');
+            file_put_contents($outPath, json_encode($catalog, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        } catch (Exception $e) {
+            Log::warning('Gagal menyinkronkan racetracks GameTora: '.$e->getMessage());
         }
     }
 

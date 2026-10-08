@@ -33,6 +33,8 @@ import {
     getEventStatus 
 } from '../utils/competitionEventHelper';
 import { getRecommendedGreenSkills } from '../utils/greenSkillHelper';
+import { findRacetrackCourse } from '../utils/racetrackHelper';
+import RacetrackCourseDetail from './RacetrackCourseDetail';
 import SkillDetailModal from './SkillDetailModal';
 import NoDebuffSkillsModal from './NoDebuffSkillsModal';
 
@@ -163,6 +165,9 @@ export default function CompetitionEventDetailView({ event, onBack, activeDate }
 
     // Green Skills recommendation result
     const greenSkillResult = getRecommendedGreenSkills(event);
+
+    // Official Racetrack Course Layout result (null if unconfirmed or unknown)
+    const racetrackData = findRacetrackCourse(event);
 
     return (
         <div className="space-y-6 pb-12 animate-fadeIn">
@@ -328,6 +333,11 @@ export default function CompetitionEventDetailView({ event, onBack, activeDate }
                     ))}
                 </div>
             </div>
+
+            {/* Official Racetrack Course Layout & Phases (Only shown if officially confirmed) */}
+            {racetrackData && (
+                <RacetrackCourseDetail racetrackData={racetrackData} event={event} />
+            )}
 
             {/* GREEN SKILLS SECTION */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">

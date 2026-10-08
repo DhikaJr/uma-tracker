@@ -455,4 +455,78 @@ class CompetitionEventTest extends TestCase
         $this->assertArrayHasKey('200162', $json); // Bad Track Condition ○
         $this->assertArrayHasKey('200212', $json); // Sunny Days ○
     }
+
+    /**
+     * Test racetracksCatalog.json integrity and course details.
+     */
+    public function test_racetracks_catalog_json_integrity(): void
+    {
+        $path = resource_path('js/data/racetracksCatalog.json');
+        $this->assertFileExists($path);
+
+        $catalog = json_decode((string) file_get_contents($path), true);
+        $this->assertIsArray($catalog);
+        $this->assertCount(17, $catalog);
+
+        $tracksBySlug = collect($catalog)->keyBy('slug');
+        $this->assertTrue($tracksBySlug->has('kyoto'));
+        $this->assertTrue($tracksBySlug->has('nakayama'));
+
+        $kyoto = $tracksBySlug->get('kyoto');
+        $this->assertSame('Kyoto', $kyoto['name_en']);
+        $this->assertSame('京都', $kyoto['name_ja']);
+        $this->assertNotEmpty($kyoto['courses']);
+
+        // Spot check Kyoto 2200m turf outer (Course ID 10808)
+        $course2200 = collect($kyoto['courses'])->firstWhere('id', 10808);
+        $this->assertNotNull($course2200);
+        $this->assertSame(2200, $course2200['length']);
+        $this->assertSame('turf', $course2200['surface']);
+        $this->assertSame('outer', $course2200['inout_str']);
+        $this->assertSame('https://gametora.com/umamusume/racetracks/kyoto#2200-turf-outer', $course2200['gametora_url']);
+        $this->assertCount(4, $course2200['phases']);
+        $this->assertArrayHasKey('simple', $course2200['image_urls']);
+        $this->assertArrayHasKey('full', $course2200['image_urls']);
+    }
+
+    /**
+     * Test that API /api/competition-events attaches official GameTora racetrack course details
+     * for fully confirmed events (#1, #2, #3), and leaves it NULL for unconfirmed events (#4, #5, #6).
+     */
+    public function test_racetrack_course_attachment_on_events_api(): void
+    {
+        $this->seed(CompetitionEventSeeder::class);
+
+        $response = $this->getJson('/api/competition-events');
+        $response->assertOk();
+
+        $events = $response->json('data');
+        $this->assertCount(6, $events);
+
+        // Event #1: Oct 2026 CM Classic (Kyoto 2200m Turf Outer)
+        $this->assertNotNull($events[0]['racetrack_course']);
+        $this->assertSame('kyoto', $events[0]['racetrack_course']['track_slug']);
+        $this->assertSame(10808, $events[0]['racetrack_course']['course']['id']);
+        $this->assertSame('https://gametora.com/umamusume/racetracks/kyoto#2200-turf-outer', $events[0]['racetrack_course']['gametora_url']);
+        $this->assertSame(2200, $events[0]['racetrack_course']['course']['length']);
+
+        // Event #2: Nov 2026 LoH (Kyoto 3000m Turf Outer)
+        $this->assertNotNull($events[1]['racetrack_course']);
+        $this->assertSame('kyoto', $events[1]['racetrack_course']['track_slug']);
+        $this->assertSame(10810, $events[1]['racetrack_course']['course']['id']);
+        $this->assertSame('https://gametora.com/umamusume/racetracks/kyoto#3000-turf-outer', $events[1]['racetrack_course']['gametora_url']);
+        $this->assertSame(3000, $events[1]['racetrack_course']['course']['length']);
+
+        // Event #3: Dec 2026 CM Long (Nakayama 2500m Turf Inner)
+        $this->assertNotNull($events[2]['racetrack_course']);
+        $this->assertSame('nakayama', $events[2]['racetrack_course']['track_slug']);
+        $this->assertSame(10506, $events[2]['racetrack_course']['course']['id']);
+        $this->assertSame('https://gametora.com/umamusume/racetracks/nakayama#2500-turf-inner', $events[2]['racetrack_course']['gametora_url']);
+        $this->assertSame(2500, $events[2]['racetrack_course']['course']['length']);
+
+        // Events #4, #5, #6: Unannounced events must strictly have NULL racetrack_course
+        $this->assertNull($events[3]['racetrack_course']);
+        $this->assertNull($events[4]['racetrack_course']);
+        $this->assertNull($events[5]['racetrack_course']);
+    }
 }

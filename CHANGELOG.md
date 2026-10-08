@@ -2,6 +2,30 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.6.3] - 8 Oktober 2026
+
+### 🏁 Layout Sirkuit & Fase Balapan Resmi (Official Racetrack Layout & Phases)
+- **Integrasi Diagram Sirkuit & Fase Balapan GameTora**:
+  - Menampilkan layout diagram sirkuit resmi dan pembagian fase perlombaan pada halaman rincian detail event ([`CompetitionEventDetailView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CompetitionEventDetailView.jsx)) untuk gelaran balap yang kondisinya telah terkonfirmasi resmi:
+    - **Event #1 (CM Classic Oktober 2026)**: Kyoto 2200m Turf Outer (`https://gametora.com/umamusume/racetracks/kyoto#2200-turf-outer`, Course ID `10808`).
+    - **Event #2 (LoH November 2026)**: Kyoto 3000m Turf Outer (`https://gametora.com/umamusume/racetracks/kyoto#3000-turf-outer`, Course ID `10810`).
+    - **Event #3 (CM Long Desember 2026)**: Nakayama 2500m Turf Inner (`https://gametora.com/umamusume/racetracks/nakayama#2500-turf-inner`, Course ID `10506`).
+- **Prinsip Bebas Spekulasi (Zero Speculative Data)**:
+  - Event masa depan yang informasi resminya belum diumumkan oleh Cygames (seperti Event #4, #5, dan #6) secara ketat dikecualikan dan tidak menampilkan layout lintasan hingga data resmi diumumkan.
+- **Lokalisasi Lengkap Bahasa Indonesia**:
+  - Seluruh fase lomba, label legenda, dan penanda sirkuit diterjemahkan ke Bahasa Indonesia dengan terminologi resmi:
+    - **Fase Balapan**: *Fase Awal (Early-Race)*, *Fase Tengah (Mid-Race)*, *Fase Akhir (Late-Race)*, dan *Spurt Terakhir (Last Spurt)*.
+    - **Legenda & Simbol Lintasan**: *Trek Lurus (Straights)*, *Tikungan (Corners)*, *Tanjakan (Slope Up)*, *Turunan (Slope Down)*, *Datar (Flat)*, *Posisi Tetap Berakhir (Position Keep End)*, dan *Mulai Memacu (Spurt Start)*.
+    - **Tabel Metrik**: Rincian jarak dan elevasi per fase, tikungan, kemiringan, trek lurus, penanda khusus (seperti batas akselerasi dan threshold stat lintasan).
+- **Interaktivitas Visual & Navigasi**:
+  - **Tab Pilihan Putaran (Laps)**: Menampilkan tab *Semua Putaran (All Laps)*, *Putaran 1*, dan *Putaran 2* untuk sirkuit multi-lap dengan diagram khusus tiap lap.
+  - **Modal Pratinjau & Unduh Resolusi Tinggi**: Tombol buka modal zoom resolusi tinggi dan tautan langsung untuk mengunduh diagram penuh dari GameTora.
+  - **Tautan Resmi GameTora**: Tautan langsung ke halaman sirkuit terkait dengan format standar `https://gametora.com/umamusume/racetracks/{region}#{jarak}-{turf/dirt}-{inner/outer}`.
+- **Dataset & Sinkronisasi Otomatis**:
+  - Membuat basis data sirkuit lokal di [`racetracksCatalog.json`](file:///c:/Projects/uma-tracker/resources/js/data/racetracksCatalog.json) mencakup 17 sirkuit pacuan kuda Jepang.
+  - Mengintegrasikan sinkronisasi berkala dataset `racetracks` dan `racetracks_extended` pada [`GameToraSyncService.php`](file:///c:/Projects/uma-tracker/app/Services/GameToraSyncService.php) dan [`CompetitionRacetrackHelper.php`](file:///c:/Projects/uma-tracker/app/Support/CompetitionRacetrackHelper.php).
+  - Melengkapi rangkaian uji otomatis di [`CompetitionEventTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CompetitionEventTest.php) (seluruh 210 tests lolos dengan 2.846 assertions).
+
 ## [Versi 2.6.2] - 8 Oktober 2026
 
 ### 🔍 Indikator Tingkat Keyakinan OCR & Validasi Input Visual
