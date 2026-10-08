@@ -1,0 +1,1757 @@
+{
+    "rule_id": "no_debuff",
+    "title_id": "Aturan Khusus: No Debuff (Tanpa Debuff)",
+    "title_jp": "特殊ルール：デバフなし",
+    "target_event": "Champions Meeting MILE (Akhir Maret 2027)",
+    "original_rule_jp": "「特殊ルール：デバフなし」では、以下のスキルが発動しません。\n※固有スキルおよび進化スキルは対象外となり、他のウマ娘の速度を下げたり、疲れやすくさせたりするデバフ効果を含んでいても発動します。",
+    "translated_rule_id": "Pada \"Aturan Khusus: No Debuff (Tanpa Debuff)\", seluruh skill dalam daftar berikut ini TIDAK AKAN AKTIF\/TERPICU selama balapan.\n※ Catatan Pengecualian: Skill Unik (Unique Skills) dan Skill Evolusi (Evolved Skills) dikecualikan dari larangan ini, sehingga tetap akan aktif meskipun memiliki efek debuff yang mengurangi kecepatan atau membuat lelah (menguras stamina) Uma Musume lawan.",
+    "total_skills": 55,
+    "skills": [
+        {
+            "id": 200691,
+            "target_query": "慧眼",
+            "name_jp": "慧眼",
+            "original_name_jp": "慧眼",
+            "name_en": "Keen Eye",
+            "desc_en": "Decrease fatigue, then moderately decrease velocity of runners ahead when positioned toward the back upon approaching mid-race. (Mile)",
+            "desc_jp": "レース中盤が迫ったどこかで後方だと持久力を回復し前のウマ娘の速度を少し下げる＜マイル＞",
+            "icon_id": 20022,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20022.png",
+            "rarity": 2,
+            "rarity_type": "gold",
+            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "distance_type==2&phase_laterhalf_random==0&order_rate>50",
+                    "effects": [
+                        {
+                            "type": 9,
+                            "value": 550
+                        },
+                        {
+                            "target": 9,
+                            "target_details": 18,
+                            "type": 21,
+                            "value": -2000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200692,
+            "target_query": "展開窺い",
+            "name_jp": "展開窺い",
+            "original_name_jp": "展開窺い",
+            "name_en": "Watchful Eye",
+            "desc_en": "Slightly decrease fatigue, then very slightly decrease velocity of runners ahead when positioned toward the back upon approaching mid-race. (Mile)",
+            "desc_jp": "レース中盤が迫ったどこかで後方だと持久力をわずかに回復し前のウマ娘の速度をちょっと下げる＜マイル＞",
+            "icon_id": 20021,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20021.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "distance_type==2&phase_laterhalf_random==0&order_rate>50",
+                    "effects": [
+                        {
+                            "type": 9,
+                            "value": 150
+                        },
+                        {
+                            "target": 9,
+                            "target_details": 18,
+                            "type": 21,
+                            "value": -500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200772,
+            "target_query": "見惚れるトリック",
+            "name_jp": "見惚れるトリック",
+            "original_name_jp": "見惚れるトリック",
+            "name_en": "Tantalizing Trick",
+            "desc_en": "Increase fatigue for rushed runners behind when positioned toward the front mid-race.",
+            "desc_jp": "レース中盤に前方にいるとき後ろのウマ娘が掛かるとその持久力を減少させる",
+            "icon_id": 30052,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30052.png",
+            "rarity": 2,
+            "rarity_type": "gold",
+            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "phase==1&order_rate<=50&temptation_opponent_count_behind>=1",
+                    "effects": [
+                        {
+                            "target": 20,
+                            "target_details": 10,
+                            "type": 9,
+                            "value": -300
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200771,
+            "target_query": "トリック（前）",
+            "name_jp": "トリック（前）",
+            "original_name_jp": "トリック（前）",
+            "name_en": "Trick (Front)",
+            "desc_en": "Slightly increase fatigue for rushed runners behind when positioned toward the front mid-race.",
+            "desc_jp": "レース中盤に前方にいるとき後ろのウマ娘が掛かるとその持久力をわずかに減少させる",
+            "icon_id": 30051,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "phase==1&order_rate<=50&temptation_opponent_count_behind>=1",
+                    "effects": [
+                        {
+                            "target": 20,
+                            "target_details": 10,
+                            "type": 9,
+                            "value": -100
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200781,
+            "target_query": "トリック（後）",
+            "name_jp": "トリック（後）",
+            "original_name_jp": "トリック（後）",
+            "name_en": "Trick (Rear)",
+            "desc_en": "Slightly increase fatigue for rushed runners ahead when positioned toward the back mid-race.",
+            "desc_jp": "レース中盤に後方にいるとき前のウマ娘が掛かるとその持久力をわずかに減少させる",
+            "icon_id": 30051,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "phase==1&order_rate>50&temptation_opponent_count_infront>=1",
+                    "effects": [
+                        {
+                            "target": 19,
+                            "target_details": 10,
+                            "type": 9,
+                            "value": -100
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200791,
+            "target_query": "逃げ駆け引き",
+            "name_jp": "逃げ駆け引き",
+            "original_name_jp": "逃げ駆け引き",
+            "name_en": "Frenzied Front Runners",
+            "desc_en": "Increase time needed for front runners to calm down when they become rushed.",
+            "desc_jp": "作戦が逃げのウマ娘が掛かると落ち着くまで時間がかかる",
+            "icon_id": 30041,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30041.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "debuff",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "running_style_temptation_opponent_count_nige>=1&is_temptation==0",
+                    "effects": [
+                        {
+                            "target": 21,
+                            "target_details": 1,
+                            "type": 13,
+                            "value": 50000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200801,
+            "target_query": "先行駆け引き",
+            "name_jp": "先行駆け引き",
+            "original_name_jp": "先行駆け引き",
+            "name_en": "Frenzied Pace Chasers",
+            "desc_en": "Increase time needed for pace chasers to calm down when they become rushed.",
+            "desc_jp": "作戦が先行のウマ娘が掛かると落ち着くまで時間がかかる",
+            "icon_id": 30041,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30041.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "debuff",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "running_style_temptation_opponent_count_senko>=1&is_temptation==0",
+                    "effects": [
+                        {
+                            "target": 21,
+                            "target_details": 2,
+                            "type": 13,
+                            "value": 50000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200811,
+            "target_query": "差し駆け引き",
+            "name_jp": "差し駆け引き",
+            "original_name_jp": "差し駆け引き",
+            "name_en": "Frenzied Late Surgers",
+            "desc_en": "Increase time needed for late surgers to calm down when they become rushed.",
+            "desc_jp": "作戦が差しのウマ娘が掛かると落ち着くまで時間がかかる",
+            "icon_id": 30041,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30041.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "debuff",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "running_style_temptation_opponent_count_sashi>=1&is_temptation==0",
+                    "effects": [
+                        {
+                            "target": 21,
+                            "target_details": 3,
+                            "type": 13,
+                            "value": 50000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200821,
+            "target_query": "追込駆け引き",
+            "name_jp": "追込駆け引き",
+            "original_name_jp": "追込駆け引き",
+            "name_en": "Frenzied End Closers",
+            "desc_en": "Increase time needed for end closers to calm down when they become rushed.",
+            "desc_jp": "作戦が追込のウマ娘が掛かると落ち着くまで時間がかかる",
+            "icon_id": 30041,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30041.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "debuff",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "running_style_temptation_opponent_count_oikomi>=1&is_temptation==0",
+                    "effects": [
+                        {
+                            "target": 21,
+                            "target_details": 4,
+                            "type": 13,
+                            "value": 50000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200831,
+            "target_query": "逃げけん制",
+            "name_jp": "逃げけん制",
+            "original_name_jp": "逃げけん制",
+            "name_en": "Subdued Front Runners",
+            "desc_en": "Slightly increase fatigue for front runners early-race.",
+            "desc_jp": "レース序盤のどこかで作戦が逃げのウマ娘をけん制して持久力をわずかに減少させる",
+            "icon_id": 30051,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "running_style_count_nige_otherself>=1&phase_random==0&accumulatetime>=5",
+                    "effects": [
+                        {
+                            "target": 18,
+                            "target_details": 1,
+                            "type": 9,
+                            "value": -100
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200841,
+            "target_query": "逃げ焦り",
+            "name_jp": "逃げ焦り",
+            "original_name_jp": "逃げ焦り",
+            "name_en": "Flustered Front Runners",
+            "desc_en": "Slightly increase fatigue for front runners mid-race.",
+            "desc_jp": "レース中盤のどこかで作戦が逃げのウマ娘を焦らせて持久力をわずかに減少させる",
+            "icon_id": 30051,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "running_style_count_nige_otherself>=1&phase_random==1",
+                    "effects": [
+                        {
+                            "target": 18,
+                            "target_details": 1,
+                            "type": 9,
+                            "value": -100
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200851,
+            "target_query": "逃げためらい",
+            "name_jp": "逃げためらい",
+            "original_name_jp": "逃げためらい",
+            "name_en": "Hesitant Front Runners",
+            "desc_en": "Slightly decrease velocity of front runners late-race.",
+            "desc_jp": "レース終盤のどこかで作戦が逃げのウマ娘をためらわせて速度をわずかに下げる",
+            "icon_id": 30011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "running_style_count_nige_otherself>=1&phase_random==2",
+                    "effects": [
+                        {
+                            "target": 18,
+                            "target_details": 1,
+                            "type": 21,
+                            "value": -1500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200861,
+            "target_query": "先行けん制",
+            "name_jp": "先行けん制",
+            "original_name_jp": "先行けん制",
+            "name_en": "Subdued Pace Chasers",
+            "desc_en": "Slightly increase fatigue for pace chasers early-race.",
+            "desc_jp": "レース序盤のどこかで作戦が先行のウマ娘をけん制して持久力をわずかに減少させる",
+            "icon_id": 30051,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "running_style_count_senko_otherself>=1&phase_random==0&accumulatetime>=5",
+                    "effects": [
+                        {
+                            "target": 18,
+                            "target_details": 2,
+                            "type": 9,
+                            "value": -100
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200871,
+            "target_query": "先行焦り",
+            "name_jp": "先行焦り",
+            "original_name_jp": "先行焦り",
+            "name_en": "Flustered Pace Chasers",
+            "desc_en": "Slightly increase fatigue for pace chasers mid-race.",
+            "desc_jp": "レース中盤のどこかで作戦が先行のウマ娘を焦らせて持久力をわずかに減少させる",
+            "icon_id": 30051,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "running_style_count_senko_otherself>=1&phase_random==1",
+                    "effects": [
+                        {
+                            "target": 18,
+                            "target_details": 2,
+                            "type": 9,
+                            "value": -100
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200881,
+            "target_query": "先行ためらい",
+            "name_jp": "先行ためらい",
+            "original_name_jp": "先行ためらい",
+            "name_en": "Hesitant Pace Chasers",
+            "desc_en": "Slightly decrease velocity of pace chasers late-race.",
+            "desc_jp": "レース終盤のどこかで作戦が先行のウマ娘をためらわせて速度をわずかに下げる",
+            "icon_id": 30011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "running_style_count_senko_otherself>=1&phase_random==2",
+                    "effects": [
+                        {
+                            "target": 18,
+                            "target_details": 2,
+                            "type": 21,
+                            "value": -1500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200891,
+            "target_query": "差しけん制",
+            "name_jp": "差しけん制",
+            "original_name_jp": "差しけん制",
+            "name_en": "Subdued Late Surgers",
+            "desc_en": "Slightly increase fatigue for late surgers early-race.",
+            "desc_jp": "レース序盤のどこかで作戦が差しのウマ娘をけん制して持久力をわずかに減少させる",
+            "icon_id": 30051,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "running_style_count_sashi_otherself>=1&phase_random==0&accumulatetime>=5",
+                    "effects": [
+                        {
+                            "target": 18,
+                            "target_details": 3,
+                            "type": 9,
+                            "value": -100
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200901,
+            "target_query": "差し焦り",
+            "name_jp": "差し焦り",
+            "original_name_jp": "差し焦り",
+            "name_en": "Flustered Late Surgers",
+            "desc_en": "Slightly increase fatigue for late surgers mid-race.",
+            "desc_jp": "レース中盤のどこかで作戦が差しのウマ娘を焦らせて持久力をわずかに減少させる",
+            "icon_id": 30051,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "running_style_count_sashi_otherself>=1&phase_random==1",
+                    "effects": [
+                        {
+                            "target": 18,
+                            "target_details": 3,
+                            "type": 9,
+                            "value": -100
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200911,
+            "target_query": "差しためらい",
+            "name_jp": "差しためらい",
+            "original_name_jp": "差しためらい",
+            "name_en": "Hesitant Late Surgers",
+            "desc_en": "Slightly decrease velocity of late surgers late-race.",
+            "desc_jp": "レース終盤のどこかで作戦が差しのウマ娘をためらわせて速度をわずかに下げる",
+            "icon_id": 30011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "running_style_count_sashi_otherself>=1&phase_random==2",
+                    "effects": [
+                        {
+                            "target": 18,
+                            "target_details": 3,
+                            "type": 21,
+                            "value": -1500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200921,
+            "target_query": "追込けん制",
+            "name_jp": "追込けん制",
+            "original_name_jp": "追込けん制",
+            "name_en": "Subdued End Closers",
+            "desc_en": "Slightly increase fatigue for end closers early-race.",
+            "desc_jp": "レース序盤のどこかで作戦が追込のウマ娘をけん制して持久力をわずかに減少させる",
+            "icon_id": 30051,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "running_style_count_oikomi_otherself>=1&phase_random==0&accumulatetime>=5",
+                    "effects": [
+                        {
+                            "target": 18,
+                            "target_details": 4,
+                            "type": 9,
+                            "value": -100
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200931,
+            "target_query": "追込焦り",
+            "name_jp": "追込焦り",
+            "original_name_jp": "追込焦り",
+            "name_en": "Flustered End Closers",
+            "desc_en": "Slightly increase fatigue for end closers mid-race.",
+            "desc_jp": "レース中盤のどこかで作戦が追込のウマ娘を焦らせて持久力をわずかに減少させる",
+            "icon_id": 30051,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "running_style_count_oikomi_otherself>=1&phase_random==1",
+                    "effects": [
+                        {
+                            "target": 18,
+                            "target_details": 4,
+                            "type": 9,
+                            "value": -100
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 200941,
+            "target_query": "追込ためらい",
+            "name_jp": "追込ためらい",
+            "original_name_jp": "追込ためらい",
+            "name_en": "Hesitant End Closers",
+            "desc_en": "Slightly decrease velocity of end closers late-race.",
+            "desc_jp": "レース終盤のどこかで作戦が追込のウマ娘をためらわせて速度をわずかに下げる",
+            "icon_id": 30011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "running_style_count_oikomi_otherself>=1&phase_random==2",
+                    "effects": [
+                        {
+                            "target": 18,
+                            "target_details": 4,
+                            "type": 21,
+                            "value": -1500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201011,
+            "target_query": "悩殺術",
+            "name_jp": "悩殺術",
+            "original_name_jp": "悩殺術",
+            "name_en": "Adored by All",
+            "desc_en": "Intimidate runners behind when positioned toward the front early-race. (Sprint)",
+            "desc_jp": "レース序盤のどこかで前方だと後ろのウマ娘の速度を下げる＜短距離＞",
+            "icon_id": 30012,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30012.png",
+            "rarity": 2,
+            "rarity_type": "gold",
+            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "distance_type==1&phase_random==0&order_rate<=50&accumulatetime>=5",
+                    "effects": [
+                        {
+                            "target": 10,
+                            "target_details": 18,
+                            "type": 21,
+                            "value": -2500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201012,
+            "target_query": "後方釘付",
+            "name_jp": "後方釘付",
+            "original_name_jp": "後方釘付",
+            "name_en": "Intimidate",
+            "desc_en": "Moderately intimidate runners behind when positioned toward the front early-race. (Sprint)",
+            "desc_jp": "レース序盤のどこかで前方だと後ろのウマ娘の速度を少し下げる＜短距離＞",
+            "icon_id": 30011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "distance_type==1&phase_random==0&order_rate<=50&accumulatetime>=5",
+                    "effects": [
+                        {
+                            "target": 10,
+                            "target_details": 18,
+                            "type": 21,
+                            "value": -2000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201022,
+            "target_query": "抜け駆け禁止",
+            "name_jp": "抜け駆け禁止",
+            "original_name_jp": "抜け駆け禁止",
+            "name_en": "Stop Right There!",
+            "desc_en": "Slightly cause panic in and very slightly dull movement for runners ahead when positioned toward the back early-race. (Sprint)",
+            "desc_jp": "レース序盤のどこかで後方だと前のウマ娘の持久力をわずかに減少させ加速力をちょっと下げる＜短距離＞",
+            "icon_id": 30051,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 12000,
+                    "condition": "distance_type==1&phase_random==0&order_rate>50&accumulatetime>=5",
+                    "effects": [
+                        {
+                            "target": 9,
+                            "target_details": 18,
+                            "type": 9,
+                            "value": -100
+                        },
+                        {
+                            "target": 9,
+                            "target_details": 18,
+                            "type": 31,
+                            "value": -500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201082,
+            "target_query": "スピードイーター",
+            "name_jp": "スピードイーター",
+            "original_name_jp": "スピードイーター",
+            "name_en": "Speed Eater",
+            "desc_en": "Slightly steal velocity from runners behind when positioned toward the front mid-race. (Mile)",
+            "desc_jp": "レース中盤のどこかで3番手以内だと後ろのウマ娘の速度をわずかに下げ自分の速度がわずかに上がる＜マイル＞",
+            "icon_id": 30011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "distance_type==2&phase_random==1&order<=3",
+                    "effects": [
+                        {
+                            "target": 10,
+                            "target_details": 5,
+                            "type": 21,
+                            "value": -1500
+                        },
+                        {
+                            "type": 27,
+                            "value": 1500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201091,
+            "target_query": "布陣",
+            "name_jp": "布陣",
+            "original_name_jp": "布陣",
+            "name_en": "Battle Formation",
+            "desc_en": "Dull movement for runners ahead when positioned toward the back early-race. (Mile)",
+            "desc_jp": "レース序盤のどこかで後方だと前のウマ娘の加速力を下げる＜マイル＞",
+            "icon_id": 30022,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30022.png",
+            "rarity": 2,
+            "rarity_type": "gold",
+            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "is_inherited": false,
+            "category": "debuff",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "distance_type==2&phase_random==0&order_rate>50&accumulatetime>=3",
+                    "effects": [
+                        {
+                            "target": 9,
+                            "target_details": 18,
+                            "type": 31,
+                            "value": -3000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201092,
+            "target_query": "布石",
+            "name_jp": "布石",
+            "original_name_jp": "布石",
+            "name_en": "Opening Gambit",
+            "desc_en": "Slightly dull movement for runners ahead when positioned toward the back early-race. (Mile)",
+            "desc_jp": "レース序盤のどこかで後方だと前のウマ娘の加速力をわずかに下げる＜マイル＞",
+            "icon_id": 30021,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30021.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "debuff",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "distance_type==2&phase_random==0&order_rate>50&accumulatetime>=3",
+                    "effects": [
+                        {
+                            "target": 9,
+                            "target_details": 18,
+                            "type": 31,
+                            "value": -1000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201151,
+            "target_query": "独占力",
+            "name_jp": "独占力",
+            "original_name_jp": "独占力",
+            "name_en": "Dominator",
+            "desc_en": "Decrease velocity of runners ahead when positioned toward the back late-race. (Medium)",
+            "desc_jp": "レース終盤のどこかで後方だと前のウマ娘の速度を下げる＜中距離＞",
+            "icon_id": 30012,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30012.png",
+            "rarity": 2,
+            "rarity_type": "gold",
+            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "distance_type==3&phase_random==2&order_rate>50",
+                    "effects": [
+                        {
+                            "target": 9,
+                            "target_details": 18,
+                            "type": 21,
+                            "value": -2500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201152,
+            "target_query": "束縛",
+            "name_jp": "束縛",
+            "original_name_jp": "束縛",
+            "name_en": "Tether",
+            "desc_en": "Slightly decrease velocity of runners ahead when positioned toward the back late-race. (Medium)",
+            "desc_jp": "レース終盤のどこかで後方だと前のウマ娘の速度をわずかに下げる＜中距離＞",
+            "icon_id": 30011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "distance_type==3&phase_random==2&order_rate>50",
+                    "effects": [
+                        {
+                            "target": 9,
+                            "target_details": 18,
+                            "type": 21,
+                            "value": -1500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201161,
+            "target_query": "魅惑のささやき",
+            "name_jp": "魅惑のささやき",
+            "original_name_jp": "魅惑のささやき",
+            "name_en": "Mystifying Murmur",
+            "desc_en": "Disturb runners directly ahead mid-race. (Medium)",
+            "desc_jp": "レース中盤に前が詰まると前のウマ娘の持久力を減少させる＜中距離＞",
+            "icon_id": 30052,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30052.png",
+            "rarity": 2,
+            "rarity_type": "gold",
+            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "distance_type==3&phase==1&blocked_front_continuetime>=1",
+                    "effects": [
+                        {
+                            "target": 9,
+                            "target_details": 18,
+                            "type": 9,
+                            "value": -300
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201162,
+            "target_query": "ささやき",
+            "name_jp": "ささやき",
+            "original_name_jp": "ささやき",
+            "name_en": "Murmur",
+            "desc_en": "Slightly disturb runners directly ahead mid-race. (Medium)",
+            "desc_jp": "レース中盤に前が詰まると前のウマ娘の持久力をわずかに減少させる＜中距離＞",
+            "icon_id": 30051,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "distance_type==3&phase==1&blocked_front_continuetime>=1",
+                    "effects": [
+                        {
+                            "target": 9,
+                            "target_details": 18,
+                            "type": 9,
+                            "value": -100
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201221,
+            "target_query": "スタミナグリード",
+            "name_jp": "スタミナグリード",
+            "original_name_jp": "スタミナグリード",
+            "name_en": "Stamina Siphon",
+            "desc_en": "Slightly steal endurance from runners ahead when positioned toward the back mid-race. (Long)",
+            "desc_jp": "レース中盤のどこかで5番手以降だと前5人までのウマ娘の持久力をわずかに減少させ自分の持久力を少し回復する＜長距離＞",
+            "icon_id": 30052,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30052.png",
+            "rarity": 2,
+            "rarity_type": "gold",
+            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "distance_type==4&phase_random==1&order>=5",
+                    "effects": [
+                        {
+                            "target": 9,
+                            "target_details": 5,
+                            "type": 9,
+                            "value": -100
+                        },
+                        {
+                            "type": 9,
+                            "value": 350
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201222,
+            "target_query": "スタミナイーター",
+            "name_jp": "スタミナイーター",
+            "original_name_jp": "スタミナイーター",
+            "name_en": "Stamina Eater",
+            "desc_en": "Very slightly steal endurance from runners ahead when positioned toward the back mid-race. (Long)",
+            "desc_jp": "レース中盤のどこかで5番手以降だと前5人までのウマ娘の持久力をちょっと減少させ自分の持久力をわずかに回復する＜長距離＞",
+            "icon_id": 30051,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "distance_type==4&phase_random==1&order>=5",
+                    "effects": [
+                        {
+                            "target": 9,
+                            "target_details": 5,
+                            "type": 9,
+                            "value": -50
+                        },
+                        {
+                            "type": 9,
+                            "value": 150
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201231,
+            "target_query": "奇術師",
+            "name_jp": "奇術師",
+            "original_name_jp": "奇術師",
+            "name_en": "Illusionist",
+            "desc_en": "Narrow the field of view for runners ahead late-race. (Long)",
+            "desc_jp": "レース終盤のどこかで前のウマ娘の視野が狭くなる＜長距離＞",
+            "icon_id": 30072,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30072.png",
+            "rarity": 2,
+            "rarity_type": "gold",
+            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "is_inherited": false,
+            "category": "vision",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "distance_type==4&phase_random==2",
+                    "effects": [
+                        {
+                            "target": 9,
+                            "target_details": 18,
+                            "type": 8,
+                            "value": -100000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201232,
+            "target_query": "目くらまし",
+            "name_jp": "目くらまし",
+            "original_name_jp": "目くらまし",
+            "name_en": "Smoke Screen",
+            "desc_en": "Moderately narrow the field of view for runners ahead late-race. (Long)",
+            "desc_jp": "レース終盤のどこかで前のウマ娘の視野が少し狭くなる＜長距離＞",
+            "icon_id": 30071,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30071.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "vision",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "distance_type==4&phase_random==2",
+                    "effects": [
+                        {
+                            "target": 9,
+                            "target_details": 18,
+                            "type": 8,
+                            "value": -50000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201302,
+            "target_query": "リスタート",
+            "name_jp": "リスタート",
+            "original_name_jp": "リスタート",
+            "name_en": "Restart",
+            "desc_en": "Slightly dull movement for runners ahead when not in the lead early-race. (Front Runner)",
+            "desc_jp": "レース序盤のどこかで2番手以降だと前のウマ娘の加速力をわずかに下げる＜作戦・逃げ＞",
+            "icon_id": 30021,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30021.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "debuff",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "running_style==1&phase_random==0&order>=2&accumulatetime>=5",
+                    "effects": [
+                        {
+                            "target": 9,
+                            "target_details": 18,
+                            "type": 31,
+                            "value": -1000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201371,
+            "target_query": "幻惑のかく乱",
+            "name_jp": "幻惑のかく乱",
+            "original_name_jp": "幻惑のかく乱",
+            "name_en": "Dazzling Disorientation",
+            "desc_en": "Moderately narrow the field of view for runners behind when positioned toward the front late-race. (Pace Chaser)",
+            "desc_jp": "レース終盤のどこかで前方だと後ろのウマ娘の視野が少し狭くなる＜作戦・先行＞",
+            "icon_id": 30072,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30072.png",
+            "rarity": 2,
+            "rarity_type": "gold",
+            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "is_inherited": false,
+            "category": "vision",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "running_style==2&phase_random==2&order_rate<=50",
+                    "effects": [
+                        {
+                            "target": 10,
+                            "target_details": 18,
+                            "type": 8,
+                            "value": -50000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201372,
+            "target_query": "かく乱",
+            "name_jp": "かく乱",
+            "original_name_jp": "かく乱",
+            "name_en": "Disorient",
+            "desc_en": "Slightly narrow the field of view for runners behind when positioned toward the front late-race. (Pace Chaser)",
+            "desc_jp": "レース終盤のどこかで前方だと後ろのウマ娘の視野がわずかに狭くなる＜作戦・先行＞",
+            "icon_id": 30071,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30071.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "vision",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "running_style==2&phase_random==2&order_rate<=50",
+                    "effects": [
+                        {
+                            "target": 10,
+                            "target_details": 18,
+                            "type": 8,
+                            "value": -30000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201441,
+            "target_query": "八方にらみ",
+            "name_jp": "八方にらみ",
+            "original_name_jp": "八方にらみ",
+            "name_en": "All-Seeing Eyes",
+            "desc_en": "Startle other runners late-race. (Late Surger)",
+            "desc_jp": "レース終盤のどこかで後方だと目を付けたウマ娘の持久力を減少させる＜作戦・差し＞",
+            "icon_id": 30052,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30052.png",
+            "rarity": 2,
+            "rarity_type": "gold",
+            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "running_style==3&phase_random==2&order_rate>50",
+                    "effects": [
+                        {
+                            "target": 4,
+                            "target_details": 18,
+                            "type": 9,
+                            "value": -300
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201442,
+            "target_query": "鋭い眼光",
+            "name_jp": "鋭い眼光",
+            "original_name_jp": "鋭い眼光",
+            "name_en": "Sharp Gaze",
+            "desc_en": "Slightly startle other runners late-race. (Late Surger)",
+            "desc_jp": "レース終盤のどこかで後方だと目を付けたウマ娘の持久力をわずかに減少させる＜作戦・差し＞",
+            "icon_id": 30051,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 0,
+                    "condition": "running_style==3&phase_random==2&order_rate>50",
+                    "effects": [
+                        {
+                            "target": 4,
+                            "target_details": 18,
+                            "type": 9,
+                            "value": -100
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201511,
+            "target_query": "熱いまなざし",
+            "name_jp": "熱いまなざし",
+            "original_name_jp": "熱いまなざし",
+            "name_en": "Petrifying Gaze",
+            "desc_en": "Unnerve runners in focus late-race. (End Closer)",
+            "desc_jp": "レース終盤のどこかで2番手以降だと目を付けたウマ娘の速度を下げる＜作戦・追込＞",
+            "icon_id": 30012,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30012.png",
+            "rarity": 2,
+            "rarity_type": "gold",
+            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "running_style==4&phase_random==2&order>=2",
+                    "effects": [
+                        {
+                            "target": 4,
+                            "target_details": 18,
+                            "type": 21,
+                            "value": -2500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 201512,
+            "target_query": "まなざし",
+            "name_jp": "まなざし",
+            "original_name_jp": "まなざし",
+            "name_en": "Intense Gaze",
+            "desc_en": "Slightly unnerve runners in focus late-race. (End Closer)",
+            "desc_jp": "レース終盤のどこかで2番手以降だと目を付けたウマ娘の速度をわずかに下げる＜作戦・追込＞",
+            "icon_id": 30011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "running_style==4&phase_random==2&order>=2",
+                    "effects": [
+                        {
+                            "target": 4,
+                            "target_details": 18,
+                            "type": 21,
+                            "value": -1500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 202131,
+            "target_query": "荒ぶる旋風",
+            "name_jp": "荒ぶる旋風",
+            "original_name_jp": "荒ぶる旋風",
+            "name_en": "Wild Wind",
+            "desc_en": "When positioned toward the front mid-race, increase velocity and slightly decrease the velocity of runners behind the user. (Medium)",
+            "desc_jp": "レース中盤のどこかで3番手以内だと後ろのウマ娘の速度をわずかに下げ自分の速度が上がる＜中距離＞",
+            "icon_id": 20012,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20012.png",
+            "rarity": 2,
+            "rarity_type": "gold",
+            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 18000,
+                    "condition": "distance_type==3&phase_random==1&order<=3",
+                    "effects": [
+                        {
+                            "type": 27,
+                            "value": 3500
+                        },
+                        {
+                            "target": 10,
+                            "target_details": 5,
+                            "type": 21,
+                            "value": -1500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 202132,
+            "target_query": "気迫を込めて",
+            "name_jp": "気迫を込めて",
+            "original_name_jp": "気迫を込めて",
+            "name_en": "With All My Soul",
+            "desc_en": "When positioned toward the front mid-race, slightly increase velocity and minimally decrease the velocity of runners behind the user. (Medium)",
+            "desc_jp": "レース中盤のどこかで3番手以内だと後ろのウマ娘の速度をほんのわずかに下げ自分の速度がわずかに上がる＜中距離＞",
+            "icon_id": 20011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20011.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 18000,
+                    "condition": "distance_type==3&phase_random==1&order<=3",
+                    "effects": [
+                        {
+                            "type": 27,
+                            "value": 1500
+                        },
+                        {
+                            "target": 10,
+                            "target_details": 5,
+                            "type": 21,
+                            "value": -350
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 202352,
+            "target_query": "土煙",
+            "name_jp": "土煙",
+            "original_name_jp": "土煙",
+            "name_en": "Dust Cloud",
+            "desc_en": "Slightly decrease the velocity of a runner directly behind the skill user when leading early-race. (Dirt)",
+            "desc_jp": "レース序盤に先頭で後ろのウマ娘との差が1バ身以内だとすぐ後ろのウマ娘の速度をわずかに下げる＜ダート＞",
+            "icon_id": 30011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "ground_type==2&accumulatetime>=10&phase==0&order<=1&bashin_diff_behind<=1",
+                    "effects": [
+                        {
+                            "target": 10,
+                            "target_details": 1,
+                            "type": 21,
+                            "value": -1500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 202362,
+            "target_query": "圧迫感",
+            "name_jp": "圧迫感",
+            "original_name_jp": "圧迫感",
+            "name_en": "Oppression",
+            "desc_en": "Slightly intimidate a runner who used a recovery skill in the second half of the race. (Dirt)",
+            "desc_jp": "レース後半にスキルで持久力を回復したライバルのウマ娘1人の速度をわずかに下げる＜ダート＞",
+            "icon_id": 30011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "stamina",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "ground_type==2&distance_rate>=50&is_other_character_activate_advantage_skill==9",
+                    "effects": [
+                        {
+                            "target": 23,
+                            "target_details": 1,
+                            "type": 21,
+                            "value": -1500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 202541,
+            "target_query": "威風堂々",
+            "name_jp": "威風堂々",
+            "original_name_jp": "威風堂々",
+            "name_en": "Vying for the Throne",
+            "desc_en": "When positioned midpack or further back on the final corner, slightly decrease the velocity of 3 runners ahead and 3 behind. Increase skill user's velocity. (Late Surger)",
+            "desc_jp": "最終コーナーのどこかで中団以降だと前後3人ずつのウマ娘の速度をわずかに下げ自分の速度が上がる＜作戦・差し＞",
+            "icon_id": 20012,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20012.png",
+            "rarity": 2,
+            "rarity_type": "gold",
+            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 18000,
+                    "condition": "running_style==3&order_rate>=40&is_finalcorner_random==1",
+                    "effects": [
+                        {
+                            "type": 27,
+                            "value": 3500
+                        },
+                        {
+                            "target": 9,
+                            "target_details": 3,
+                            "type": 21,
+                            "value": -1500
+                        },
+                        {
+                            "target": 10,
+                            "target_details": 3,
+                            "type": 21,
+                            "value": -1500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 202542,
+            "target_query": "プレッシャー",
+            "name_jp": "プレッシャー",
+            "original_name_jp": "プレッシャー",
+            "name_en": "Pressure",
+            "desc_en": "When positioned midpack or further back on the final corner, minimally decrease the velocity of 3 runners ahead and 3 behind. Slightly increase skill user's velocity. (Late Surger)",
+            "desc_jp": "最終コーナーのどこかで中団以降だと前後3人ずつのウマ娘の速度をほんのわずかに下げ自分の速度がわずかに上がる＜作戦・差し＞",
+            "icon_id": 20011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20011.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 18000,
+                    "condition": "running_style==3&order_rate>=40&is_finalcorner_random==1",
+                    "effects": [
+                        {
+                            "type": 27,
+                            "value": 1500
+                        },
+                        {
+                            "target": 9,
+                            "target_details": 3,
+                            "type": 21,
+                            "value": -350
+                        },
+                        {
+                            "target": 10,
+                            "target_details": 3,
+                            "type": 21,
+                            "value": -350
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 202912,
+            "target_query": "切り崩し",
+            "name_jp": "切り崩し",
+            "original_name_jp": "切り崩し",
+            "name_en": "Cleave",
+            "desc_en": "Chaser・If you're not in the front at a random point during the Final Corner, your speed will slightly increase, and the speed of the closest three girls in front and three girls behind you will slightly decrease",
+            "desc_jp": "最終コーナーのどこかで中団以降だと前後3人ずつのウマ娘の速度をほんのわずかに下げ自分の速度がわずかに上がる＜作戦・追込＞",
+            "icon_id": 20011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20011.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 18000,
+                    "condition": "running_style==4&order_rate>=40&is_finalcorner_random==1",
+                    "effects": [
+                        {
+                            "type": 27,
+                            "value": 1500
+                        },
+                        {
+                            "target": 9,
+                            "target_details": 3,
+                            "type": 21,
+                            "value": -350
+                        },
+                        {
+                            "target": 10,
+                            "target_details": 3,
+                            "type": 21,
+                            "value": -350
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 202942,
+            "target_query": "鬼気迫って",
+            "name_jp": "鬼気迫って",
+            "original_name_jp": "鬼気迫って",
+            "name_en": "Ghastly",
+            "desc_en": "Chaser・Medium・If you're not in the front at a random point during the Middle Leg, your speed will slightly increase, and you will slightly lower speed of the five closest girls in front of you",
+            "desc_jp": "レース中盤のどこかで中団以降だと前のウマ娘の速度をほんのわずかに下げ自分の速度がわずかに上がる＜追込・中距離＞",
+            "icon_id": 20011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20011.png",
+            "rarity": 1,
+            "rarity_type": "white",
+            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "is_inherited": false,
+            "category": "speed",
+            "condition_groups": [
+                {
+                    "base_time": 18000,
+                    "condition": "distance_type==3&running_style==4&phase_random==1&order_rate>=40",
+                    "effects": [
+                        {
+                            "type": 27,
+                            "value": 1500
+                        },
+                        {
+                            "target": 9,
+                            "target_details": 5,
+                            "type": 21,
+                            "value": -350
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 900251,
+            "target_query": "アナタヲ・オイカケテ(継承スキル)",
+            "name_jp": "アナタヲ・オイカケテ（継承）",
+            "original_name_jp": "アナタヲ・オイカケテ",
+            "name_en": "Chasing After You",
+            "desc_en": "When positioned midpack in the second half of the race, very slightly increase velocity steadily and very minimally intimidate runners ahead.",
+            "desc_jp": "レース後半に中団から『お友達』を追って速度を少し上げ続け前のウマ娘の速度をちょっと下げ続ける",
+            "icon_id": 20011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20011.png",
+            "rarity": 1,
+            "rarity_type": "inherited",
+            "rarity_label": "Skill Unik (Warisan \/ 継承)",
+            "is_inherited": true,
+            "category": "inherited",
+            "condition_groups": [
+                {
+                    "base_time": 36000,
+                    "condition": "distance_rate>=50&order_rate>=40&order_rate<=70",
+                    "effects": [
+                        {
+                            "type": 27,
+                            "value": 500
+                        },
+                        {
+                            "target": 9,
+                            "target_details": 5,
+                            "type": 21,
+                            "value": -250
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 900851,
+            "target_query": "至上であれ(継承スキル)",
+            "name_jp": "至上であれ（継承）",
+            "original_name_jp": "至上であれ",
+            "name_en": "Ever Supreme",
+            "desc_en": "If the skill user ran calmly, very slightly surge ahead and very minimally intimidate the first 4 runners when positioned toward the back at the start of late-race.",
+            "desc_jp": "掛からず終盤突入時に後方だと少し前に出て先頭から4人までのウマ娘の速度をちょっと下げる",
+            "icon_id": 20011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20011.png",
+            "rarity": 1,
+            "rarity_type": "inherited",
+            "rarity_label": "Skill Unik (Warisan \/ 継承)",
+            "is_inherited": true,
+            "category": "inherited",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "distance_rate>=66&distance_rate<=68&order_rate>=60&order_rate<=90&temptation_count==0",
+                    "effects": [
+                        {
+                            "type": 22,
+                            "value": 500
+                        },
+                        {
+                            "target": 7,
+                            "target_details": 5,
+                            "type": 21,
+                            "value": -250
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 910071,
+            "target_query": "Adventure of 564(継承スキル)",
+            "name_jp": "Adventure of 564（継承）",
+            "original_name_jp": "Adventure of 564",
+            "name_en": "564 Escapades",
+            "desc_en": "Minimally increase velocity sometime in the second half of the race and activate 1 rare skill regardless of its conditions.",
+            "desc_jp": "レース後半どっかで速度がわずかに上がりついでに使えそうなレアスキルを2つ条件を無視して発動させる",
+            "icon_id": 20011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20011.png",
+            "rarity": 1,
+            "rarity_type": "inherited",
+            "rarity_label": "Skill Unik (Warisan \/ 継承)",
+            "is_inherited": true,
+            "category": "inherited",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "distance_rate_after_random==50",
+                    "effects": [
+                        {
+                            "type": 27,
+                            "value": 350
+                        },
+                        {
+                            "type": 37,
+                            "value": 10000
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 910301,
+            "target_query": "Drain for Rose(継承スキル)",
+            "name_jp": "Drain for rose（継承）",
+            "original_name_jp": "Drain for rose",
+            "name_en": "Every Rose Has Its Fangs",
+            "desc_en": "Slightly drain endurance from runners in front and very slightly increase velocity when well-positioned mid-race.",
+            "desc_jp": "レース中盤で好位置だと前のウマ娘の持久力をちょっと減少させ自分の持久力を回復し速度が少し上がる",
+            "icon_id": 20021,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20021.png",
+            "rarity": 1,
+            "rarity_type": "inherited",
+            "rarity_label": "Skill Unik (Warisan \/ 継承)",
+            "is_inherited": true,
+            "category": "inherited",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "phase==1&order>=2&order_rate<=50",
+                    "effects": [
+                        {
+                            "type": 9,
+                            "value": 150
+                        },
+                        {
+                            "target": 9,
+                            "target_details": 18,
+                            "type": 9,
+                            "value": -25
+                        },
+                        {
+                            "type": 27,
+                            "value": 500
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 910581,
+            "target_query": "Spooky-Scary-Happy(継承スキル)",
+            "name_jp": "Spooky-Scary-Happy（継承）",
+            "original_name_jp": "Spooky-Scary-Happy",
+            "name_en": "Spooky, Scary, Happy",
+            "desc_en": "Slightly increase velocity and very minimally intimidate up to 2 runners ahead and up to 2 runners behind when positioned toward the front upon entering the final straight.",
+            "desc_jp": "最終直線に入ったとき先団だと速度が上がり前2人後ろ2人までのウマ娘の速度をちょっと下げる",
+            "icon_id": 20011,
+            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20011.png",
+            "rarity": 1,
+            "rarity_type": "inherited",
+            "rarity_label": "Skill Unik (Warisan \/ 継承)",
+            "is_inherited": true,
+            "category": "inherited",
+            "condition_groups": [
+                {
+                    "base_time": 30000,
+                    "condition": "is_last_straight_onetime==1&order_rate<=40",
+                    "effects": [
+                        {
+                            "type": 27,
+                            "value": 1500
+                        },
+                        {
+                            "target": 9,
+                            "target_details": 2,
+                            "type": 21,
+                            "value": -250
+                        },
+                        {
+                            "target": 10,
+                            "target_details": 2,
+                            "type": 21,
+                            "value": -250
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

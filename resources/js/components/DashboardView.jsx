@@ -10,7 +10,13 @@ import {
     ChevronRight,
     Award,
     Calendar,
-    RefreshCw
+    RefreshCw,
+    CalendarDays,
+    Shield,
+    MapPin,
+    Route,
+    Clock,
+    PlayCircle
 } from 'lucide-react';
 import { 
     ResponsiveContainer, 
@@ -32,6 +38,13 @@ import RarityBadge from './RarityBadge';
 import RankBadge from './RankBadge';
 import CirclePaceWidget from './CirclePaceWidget';
 import { formatIndonesianDate } from '../utils/dateHelper';
+import NoDebuffSkillsModal from './NoDebuffSkillsModal';
+import { 
+    getEventScheduleRange, 
+    getEventStatus, 
+    SURFACE_MAP, 
+    DISTANCE_CATEGORY_MAP 
+} from '../utils/competitionEventHelper';
 
 export default function DashboardView({ 
     summaryData, 
@@ -49,6 +62,43 @@ export default function DashboardView({
     const [careerStats, setCareerStats] = useState(null);
     const [loadingCareerTrends, setLoadingCareerTrends] = useState(false);
     const [hoveredPie, setHoveredPie] = useState(null);
+    const [featuredEvent, setFeaturedEvent] = useState(null);
+    const [loadingFeaturedEvent, setLoadingFeaturedEvent] = useState(true);
+    const [showNoDebuffModal, setShowNoDebuffModal] = useState(false);
+
+    useEffect(() => {
+        let isMounted = true;
+        const fetchUpcomingCompetition = async () => {
+            try {
+                const res = await fetch('/api/competition-events');
+                if (res.ok) {
+                    const json = await res.json();
+                    const list = Array.isArray(json) ? json : (json.data || []);
+                    if (list.length > 0 && isMounted) {
+                        const todayStr = new Date().toISOString().slice(0, 10);
+                        // Priority 1: Event that is currently ongoing
+                        let target = list.find(e => getEventStatus(e, todayStr).status === 'ongoing');
+                        // Priority 2: First upcoming event
+                        if (!target) {
+                            target = list.find(e => getEventStatus(e, todayStr).status === 'upcoming');
+                        }
+                        // Priority 3: First event in chronological order
+                        if (!target) {
+                            target = list[0];
+                        }
+                        setFeaturedEvent(target);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load upcoming competition for dashboard:', err);
+            } finally {
+                if (isMounted) setLoadingFeaturedEvent(false);
+            }
+        };
+
+        fetchUpcomingCompetition();
+        return () => { isMounted = false; };
+    }, []);
 
     useEffect(() => {
         let isMounted = true;
@@ -511,6 +561,148 @@ export default function DashboardView({
                 )}
             </div>
 
+            {/* Featured Upcoming / Ongoing Competition Event */}
+            {featuredEvent && (() => {
+                const isCM = featuredEvent.event_type === 'champions_meeting';
+                const todayStr = new Date().toISOString().slice(0, 10);
+                const featuredEventStatus = getEventStatus(featuredEvent, todayStr);
+                const isOngoing = featuredEventStatus?.status === 'ongoing';
+
+                return (
+                    <div className={`rounded-3xl p-5 sm:p-6 border transition-all duration-200 shadow-sm ${
+                        isOngoing
+                            ? isCM
+                                ? 'bg-gradient-to-br from-amber-500/10 via-white to-amber-500/5 dark:from-amber-950/40 dark:via-slate-900 dark:to-slate-900 border-amber-400 dark:border-amber-400 shadow-md ring-2 ring-amber-400/50'
+                                : 'bg-gradient-to-br from-indigo-500/10 via-white to-indigo-500/5 dark:from-indigo-950/40 dark:via-slate-900 dark:to-slate-900 border-indigo-400 dark:border-indigo-400 shadow-md ring-2 ring-indigo-400/50'
+                            : isCM
+                                ? 'bg-white dark:bg-slate-900 border-amber-200/90 dark:border-amber-800/60 hover:border-amber-400 hover:shadow-md'
+                                : 'bg-white dark:bg-slate-900 border-indigo-200/90 dark:border-indigo-800/60 hover:border-indigo-400 hover:shadow-md'
+                    }`}>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+                            <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <div className={`p-1.5 rounded-xl ${isCM ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-slate-950' : 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white'} shadow-xs`}>
+                                        {isCM ? <Trophy className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+                                    </div>
+                                    <h2 className="text-base font-black text-slate-900 dark:text-white">
+                                        Event Kompetisi Terdekat (Upcoming CM / LoH)
+                                    </h2>
+
+                                    {/* Status Badge */}
+                                    {isOngoing ? (
+                                        <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-600 text-white flex items-center gap-1.5 shadow-xs ring-1 ring-emerald-400/30">
+                                            <span className="relative flex h-2 w-2">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-200 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                                            </span>
+                                            <span>Event Sedang Berlangsung</span>
+                                        </span>
+                                    ) : (
+                                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 flex items-center gap-1">
+                                            <Clock className="w-3.5 h-3.5" />
+                                            <span>Berlangsung Nanti{featuredEventStatus?.diffDays ? ` (${featuredEventStatus.diffDays} hari lagi)` : ''}</span>
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    Jadwal resmi kompetisi {isCM ? 'Champions Meeting' : 'League of Heroes'} terdekat dari pengumuman portal Cygames JP
+                                </p>
+                            </div>
+
+                            {/* Direct Button to Event Planner */}
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('events')}
+                                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs self-start sm:self-center shrink-0"
+                                title="Buka dan lihat event ini langsung pada halaman Event Planner"
+                            >
+                                <CalendarDays className="w-3.5 h-3.5" />
+                                <span>Lihat di Event Planner</span>
+                                <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+                            </button>
+                        </div>
+
+                        {/* Featured Event Card Content */}
+                        <div className="pt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black ${
+                                        isCM 
+                                            ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/70 dark:text-amber-200 border border-amber-300/80 dark:border-amber-800' 
+                                            : 'bg-indigo-100 text-indigo-900 dark:bg-indigo-950/70 dark:text-indigo-200 border border-indigo-300/80 dark:border-indigo-800'
+                                    }`}>
+                                        {isCM ? 'Champions Meeting' : 'League of Heroes'}
+                                    </span>
+                                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                                        {featuredEvent.event_name}
+                                    </h3>
+
+                                    {featuredEvent.special_rule === 'no_debuff' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowNoDebuffModal(true)}
+                                            className="px-2.5 py-0.5 rounded-lg text-xs font-black bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/70 dark:hover:bg-rose-900/80 border border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-300 flex items-center gap-1 shadow-2xs animate-pulse cursor-pointer transition-all"
+                                            title="Klik untuk melihat aturan resmi dan daftar 55 skill debuff nonaktif"
+                                        >
+                                            <Zap className="w-3.5 h-3.5" />
+                                            <span>Aturan Khusus: No Debuff (デバフなし)</span>
+                                            <ChevronRight className="w-3.5 h-3.5 opacity-70" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Details Chips */}
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-300 font-medium">
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 font-bold text-slate-800 dark:text-slate-200">
+                                        <Calendar className="w-3.5 h-3.5 text-emerald-500" />
+                                        <span>{featuredEvent.date_label}</span>
+                                    </span>
+
+                                    {featuredEvent.venue && (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+                                            <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                                            <span>{featuredEvent.venue}</span>
+                                        </span>
+                                    )}
+
+                                    {featuredEvent.surface && (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+                                            <Route className="w-3.5 h-3.5 text-emerald-500" />
+                                            <span>{SURFACE_MAP[featuredEvent.surface]?.label || featuredEvent.surface}</span>
+                                        </span>
+                                    )}
+
+                                    {featuredEvent.distance ? (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                            <span>{featuredEvent.distance}m</span>
+                                            {featuredEvent.distance_category && (
+                                                <span className="font-sans font-normal text-slate-500">
+                                                    ({DISTANCE_CATEGORY_MAP[featuredEvent.distance_category]?.label || featuredEvent.distance_category})
+                                                </span>
+                                            )}
+                                        </span>
+                                    ) : featuredEvent.distance_category && (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+                                            <span>{DISTANCE_CATEGORY_MAP[featuredEvent.distance_category]?.label || featuredEvent.distance_category}</span>
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Quick View Button */}
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('events')}
+                                className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs self-stretch md:self-auto shrink-0"
+                            >
+                                <span>Lihat di Halaman Event</span>
+                                <ChevronRight className="w-4 h-4 text-emerald-500" />
+                            </button>
+                        </div>
+                    </div>
+                );
+            })()}
+
             {/* Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Line/Area Chart: Akumulasi Fans Harian vs Target Kuota Circle (2 columns) */}
@@ -823,6 +1015,11 @@ export default function DashboardView({
                     </div>
                 </div>
             </div>
+
+            {/* No Debuff Skills Modal */}
+            {showNoDebuffModal && (
+                <NoDebuffSkillsModal onClose={() => setShowNoDebuffModal(false)} />
+            )}
         </div>
     );
 }

@@ -51,6 +51,18 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
     - *Uji Akhir Des 2026*: Menguji aktivasi periode Champions Meeting LONG Nakayama 2500m.
     - *Reset Hari Ini*: Mengembalikan tanggal acuan ke waktu asli secara instan.
 
+### ⚡ Widget Event Terdekat pada Dasbor & Modal Khusus "Aturan Khusus: No Debuff"
+- **Widget Event Kompetisi Terdekat pada Halaman Dasbor (`DashboardView.jsx`)**:
+  - Menampilkan satu event kompetisi terdekat (memprioritaskan event berstatus *Sedang Berlangsung*, atau event *Berlangsung Nanti* paling awal) yang diletakkan tepat di bawah kartu *Banner Gacha Berlangsung Hari Ini*.
+  - Menyajikan informasi komprehensif: badge tipe kompetisi (Champions Meeting vs League of Heroes), nama event, status aktif berkedip / hitung mundur hari, tanggal pelaksanaan, serta cuplikan kondisi lintasan (venue, tipe lintasan, jarak, arah putaran).
+  - Dilengkapi tombol interaktif **"Lihat di Event Planner"** untuk navigasi langsung ke halaman jadwal kompetisi.
+- **Modal Interaktif Aturan Khusus No Debuff (`NoDebuffSkillsModal.jsx`)**:
+  - Badge *Aturan Khusus: No Debuff (デバフなし)* pada kartu event dan modal rincian kompetisi kini interaktif dan dapat diklik.
+  - Membuka modal dialog komprehensif berisi terjemahan resmi aturan Cygames dalam Bahasa Indonesia lengkap dengan opsi melihat teks asli bahasa Jepang:
+    - Terjemahan: *"Pada Aturan Khusus: No Debuff (Tanpa Debuff), seluruh skill dalam daftar berikut ini TIDAK AKAN AKTIF/TERPICU selama balapan. ※ Catatan Pengecualian: Skill Unik (Unique Skills) dan Skill Evolusi (Evolved Skills) dikecualikan dari larangan ini, sehingga tetap akan aktif meskipun memiliki efek debuff yang mengurangi kecepatan atau membuat lelah (menguras stamina) Uma Musume lawan."*
+  - Menampilkan daftar 55 skill yang terpengaruh dan dicocokkan 100% dengan katalog GameTora lokal (15 Skill Gold/Rare, 35 Skill Normal/White, dan 5 Skill Unik Warisan/Inherited).
+  - Dilengkapi ikon resmi GameTora, label kelangkaan, deskripsi efek debuff, filter kategori (Semua, Gold, Normal, Warisan), fitur pencarian instan nama skill (JP/EN), serta integrasi langsung ke modal rincian formula (`SkillDetailModal`).
+
 ## [Versi 2.4.1] - 5 Oktober 2026
 
 ### 👗 Standardisasi Varian Kostum Gacha & Pembersihan Karakter Tanpa Kostum

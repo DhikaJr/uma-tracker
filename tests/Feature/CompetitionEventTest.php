@@ -239,4 +239,42 @@ class CompetitionEventTest extends TestCase
         $res404 = $this->getJson('/api/competition-events/999999');
         $res404->assertNotFound();
     }
+
+    /**
+     * Test the No Debuff Special Rule skill catalog integrity and 100% matched skills.
+     */
+    public function test_no_debuff_skill_catalog_file_integrity_and_all_skills_matched(): void
+    {
+        $filePath = resource_path('js/data/noDebuffSkills.json');
+        $this->assertFileExists($filePath);
+
+        $json = json_decode(file_get_contents($filePath), true);
+        $this->assertIsArray($json);
+        $this->assertSame('no_debuff', $json['rule_id']);
+        $this->assertSame(55, $json['total_skills']);
+        $this->assertCount(55, $json['skills']);
+        $this->assertStringContainsString('TIDAK AKAN AKTIF/TERPICU', $json['translated_rule_id']);
+        $this->assertStringContainsString('固有スキルおよび進化スキルは対象外', $json['original_rule_jp']);
+
+        // Check required specific skills exist
+        $skillNamesJp = array_column($json['skills'], 'original_name_jp');
+        $this->assertContains('慧眼', $skillNamesJp);
+        $this->assertContains('独占力', $skillNamesJp);
+        $this->assertContains('八方にらみ', $skillNamesJp);
+        $this->assertContains('アナタヲ・オイカケテ', $skillNamesJp);
+        $this->assertContains('至上であれ', $skillNamesJp);
+        $this->assertContains('Adventure of 564', $skillNamesJp);
+        $this->assertTrue(collect($skillNamesJp)->contains(fn ($name) => strcasecmp($name, 'Drain for Rose') === 0));
+        $this->assertContains('Spooky-Scary-Happy', $skillNamesJp);
+
+        // Check each skill has an ID, English name, and icon URL
+        foreach ($json['skills'] as $skill) {
+            $this->assertArrayHasKey('id', $skill);
+            $this->assertArrayHasKey('name_jp', $skill);
+            $this->assertArrayHasKey('name_en', $skill);
+            $this->assertArrayHasKey('icon_url', $skill);
+            $this->assertNotEmpty($skill['name_en']);
+            $this->assertStringStartsWith('https://gametora.com/images/umamusume/skill_icons/', $skill['icon_url']);
+        }
+    }
 }

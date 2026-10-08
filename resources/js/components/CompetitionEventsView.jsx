@@ -30,6 +30,7 @@ import {
     History
 } from 'lucide-react';
 import { formatIndonesianDate } from '../utils/dateHelper';
+import NoDebuffSkillsModal from './NoDebuffSkillsModal';
 
 // Formatters and label dictionaries (Bilingual ID & JP)
 const SURFACE_MAP = {
@@ -167,6 +168,7 @@ export default function CompetitionEventsView({ onNotify }) {
     const [yearFilter, setYearFilter] = useState('all'); // 'all' | '2026' | '2027'
     const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'ongoing' | 'upcoming' | 'past'
     const [selectedEvent, setSelectedEvent] = useState(null);
+    const [showNoDebuffModal, setShowNoDebuffModal] = useState(false);
 
     // Today's real date and simulation state
     const todayRealStr = new Date().toISOString().slice(0, 10);
@@ -551,6 +553,7 @@ export default function CompetitionEventsView({ onNotify }) {
                             index={idx + 1}
                             activeDate={activeDate}
                             onOpenDetail={() => setSelectedEvent(event)}
+                            onOpenNoDebuff={() => setShowNoDebuffModal(true)}
                         />
                     ))}
                 </div>
@@ -562,6 +565,14 @@ export default function CompetitionEventsView({ onNotify }) {
                     event={selectedEvent}
                     activeDate={activeDate}
                     onClose={() => setSelectedEvent(null)}
+                    onOpenNoDebuff={() => setShowNoDebuffModal(true)}
+                />
+            )}
+
+            {/* Special Rule: No Debuff Skills Modal */}
+            {showNoDebuffModal && (
+                <NoDebuffSkillsModal
+                    onClose={() => setShowNoDebuffModal(false)}
                 />
             )}
         </div>
@@ -569,7 +580,7 @@ export default function CompetitionEventsView({ onNotify }) {
 }
 
 // Subcomponent: Event Card
-function EventCard({ event, index, onOpenDetail, activeDate }) {
+function EventCard({ event, index, onOpenDetail, activeDate, onOpenNoDebuff }) {
     const isCM = event.event_type === 'champions_meeting';
     const isLoH = event.event_type === 'league_of_heroes';
 
@@ -653,12 +664,21 @@ function EventCard({ event, index, onOpenDetail, activeDate }) {
                         {event.event_name}
                     </h3>
 
-                    {/* Special Rule Badge */}
+                    {/* Special Rule Badge (Clickable to open NoDebuffSkillsModal) */}
                     {hasNoDebuff && (
-                        <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-rose-100 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-300 flex items-center gap-1 shadow-2xs animate-pulse">
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenNoDebuff?.();
+                            }}
+                            className="px-2.5 py-1 rounded-xl text-xs font-black bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/70 dark:hover:bg-rose-900/80 border border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-300 flex items-center gap-1.5 shadow-2xs animate-pulse cursor-pointer transition-all"
+                            title="Klik untuk melihat aturan resmi dan daftar 55 skill debuff nonaktif"
+                        >
                             <Zap className="w-3.5 h-3.5" />
                             <span>Aturan Khusus: No Debuff (デバフなし)</span>
-                        </span>
+                            <ChevronRight className="w-3 h-3 opacity-70" />
+                        </button>
                     )}
                 </div>
 
@@ -854,7 +874,7 @@ function RandomBadge() {
 }
 
 // Modal Dialog: Full Event Details
-function CompetitionEventDetailModal({ event, onClose, activeDate }) {
+function CompetitionEventDetailModal({ event, onClose, activeDate, onOpenNoDebuff }) {
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.key === 'Escape') onClose();
@@ -968,16 +988,27 @@ function CompetitionEventDetailModal({ event, onClose, activeDate }) {
                 <div className="p-5 sm:p-6 overflow-y-auto space-y-5">
                     {/* Special Rule Alert Box if present */}
                     {hasNoDebuff && (
-                        <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/80 flex items-start gap-3">
-                            <Zap className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-                            <div className="space-y-0.5 text-xs">
-                                <span className="font-black text-rose-950 dark:text-rose-200 text-sm">
-                                    Aturan Khusus: No Debuff (デバフなし)
-                                </span>
-                                <p className="text-rose-800/90 dark:text-rose-300/90 leading-relaxed">
-                                    Pada gelaran Champions Meeting MILE Akhir Maret 2027 ini, seluruh skill debuff (pengurang stamina / pengganggu lawan) dinonaktifkan secara resmi sesuai aturan Cygames.
-                                </p>
+                        <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div className="flex items-start gap-3">
+                                <Zap className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                                <div className="space-y-0.5 text-xs">
+                                    <span className="font-black text-rose-950 dark:text-rose-200 text-sm">
+                                        Aturan Khusus: No Debuff (デバフなし)
+                                    </span>
+                                    <p className="text-rose-800/90 dark:text-rose-300/90 leading-relaxed">
+                                        Pada gelaran Champions Meeting MILE Akhir Maret 2027 ini, seluruh 55 skill debuff dinonaktifkan secara resmi sesuai aturan Cygames.
+                                    </p>
+                                </div>
                             </div>
+                            <button
+                                type="button"
+                                onClick={onOpenNoDebuff}
+                                className="shrink-0 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
+                            >
+                                <Zap className="w-3.5 h-3.5" />
+                                <span>Lihat 55 Skill</span>
+                                <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
                         </div>
                     )}
 

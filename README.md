@@ -131,6 +131,10 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
   - Menampilkan tanggal acuan saat ini (*active reference date*) dan mendeteksi secara dinamis apakah event berstatus sedang berlangsung, berlangsung nanti (disertai hitung mundur hari), atau telah selesai.
   - Event yang berstatus aktif/sedang berlangsung secara otomatis disorot dengan warna bingkai dan bayangan persis seperti saat kartu di-hover (`border-amber-400 shadow-md` untuk Champions Meeting dan `border-indigo-400 shadow-md` untuk League of Heroes) serta badge berkedip *"Event Sedang Berlangsung"*.
   - Bar simulasi tanggal interaktif dengan pemilih tanggal native (`<input type="date">`) dan preset uji instan (misal: simulasi tanggal *20 Oktober 2026* untuk Champions Meeting Classic) guna memverifikasi perilaku antarmuka secara visual dan langsung.
+- **Widget Kompetisi Terdekat pada Dasbor & Navigasi Cepat**:
+  - Kartu ringkasan interaktif yang disematkan langsung di bawah bagian *Banner Gacha Berlangsung Hari Ini* pada Dasbor, menampilkan kompetisi terdekat yang sedang berjalan atau akan datang, dilengkapi tombol langsung untuk membuka halaman Event Planner.
+- **Modal Interaktif Aturan Khusus "No Debuff (デバフなし)"**:
+  - Penanda aturan khusus dapat diklik untuk membuka modal dialog komprehensif yang memuat terjemahan resmi aturan Cygames dalam Bahasa Indonesia, penjelasan pengecualian skill unik & evolusi bawaan karakter, serta katalog 55 skill debuff (Gold, Normal, Warisan) yang dicocokkan langsung dari GameTora lengkap dengan fitur pencarian dan penelusuran formula.
 
 ### 9. Sistem Pencadangan Data Teruji (Backup Schema v2.0)
 - **Integritas Data Transaksional**:
