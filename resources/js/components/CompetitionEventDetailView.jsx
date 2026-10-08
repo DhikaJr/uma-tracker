@@ -343,7 +343,7 @@ export default function CompetitionEventDetailView({ event, onBack, activeDate }
                             </h3>
                         </div>
                         <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                            Knowing the parameters, you can take advantage of them when preparing your characters and aim for specific green skills (e.g. for Groundwork activation or just for the stats).
+                            Dengan mengetahui parameter lintasan, Anda dapat memanfaatkannya saat mempersiapkan Uma Musume untuk mengincar green skill spesifik (contoh: untuk syarat aktivasi Groundwork / 地固め maupun tambahan stat murni).
                         </p>
                     </div>
 

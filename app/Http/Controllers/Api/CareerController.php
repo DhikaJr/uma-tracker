@@ -283,6 +283,63 @@ class CareerController extends Controller
         $manualRuns = CareerRun::where('training_type', 'manual')->count();
         $independentRuns = CareerRun::where('training_type', 'independent')->count();
 
+        // Historical / previous months accumulation tracks
+        $currentMonthStart = Carbon::now()->startOfMonth()->format('Y-m-d');
+        $pastDailyData = CareerRun::where('run_date', '<', $currentMonthStart)
+            ->select(
+                'run_date',
+                DB::raw('SUM(fans_gained) as fans_gained'),
+                DB::raw('COUNT(*) as runs_count')
+            )
+            ->groupBy('run_date')
+            ->orderBy('run_date', 'asc')
+            ->get();
+
+        $historicalMonths = [];
+        $groupedPastByMonth = $pastDailyData->groupBy(function ($item) {
+            return Carbon::parse($item->run_date)->format('Y-m');
+        })->sortKeysDesc();
+
+        foreach ($groupedPastByMonth as $ym => $dailyItems) {
+            $monthCarbon = Carbon::parse($ym.'-01');
+            $monthCumulative = 0;
+            $monthTrends = [];
+            $totalMonthFans = 0;
+            $monthRunsCount = 0;
+
+            foreach ($dailyItems as $md) {
+                $fans = (int) $md->fans_gained;
+                $runs = (int) $md->runs_count;
+                $monthCumulative += $fans;
+                $totalMonthFans += $fans;
+                $monthRunsCount += $runs;
+
+                $monthTrends[] = [
+                    'run_date' => Carbon::parse($md->run_date)->format('Y-m-d'),
+                    'date' => Carbon::parse($md->run_date)->format('d M'),
+                    'fans_gained' => $fans,
+                    'cumulative_fans' => $monthCumulative,
+                    'runs_count' => $runs,
+                ];
+            }
+
+            $avgMonthFans = $monthRunsCount > 0 ? (int) round($totalMonthFans / $monthRunsCount) : 0;
+            $quotaAchieved = $totalMonthFans >= $circleGoal;
+            $quotaPercentage = $circleGoal > 0 ? round(($totalMonthFans / $circleGoal) * 100, 1) : 0;
+
+            $historicalMonths[] = [
+                'month_key' => $ym,
+                'month_name' => $monthCarbon->translatedFormat('F Y') ?: $monthCarbon->format('F Y'),
+                'total_fans' => $totalMonthFans,
+                'runs_count' => $monthRunsCount,
+                'avg_fans' => $avgMonthFans,
+                'target_quota' => $circleGoal,
+                'quota_achieved' => $quotaAchieved,
+                'quota_percentage' => $quotaPercentage,
+                'daily_trends' => $monthTrends,
+            ];
+        }
+
         return response()->json([
             'total_runs' => $totalRuns,
             'total_fans' => $totalFans,
@@ -297,6 +354,7 @@ class CareerController extends Controller
             'character_stats' => $characterStats,
             'daily_trends' => $dailyTrends,
             'top_umas' => $topUmas,
+            'historical_months' => $historicalMonths,
         ]);
     }
 

@@ -1819,6 +1819,7 @@ class UmaTrackerApiTest extends TestCase
                 'monthly_circle_target',
                 'scenario_stats',
                 'character_stats',
+                'historical_months',
             ]);
 
         $this->assertNotEmpty($res7->json('daily_trends'));
@@ -1827,6 +1828,25 @@ class UmaTrackerApiTest extends TestCase
         $res30 = $this->getJson('/api/career/stats?range=30_days');
         $res30->assertStatus(200);
         $this->assertNotEmpty($res30->json('daily_trends'));
+
+        // Test historical months tracks with previous month data
+        CareerRun::create([
+            'uma_name' => 'Mejiro McQueen',
+            'scenario' => 'The Twinkle Legends',
+            'fans_gained' => 25000000,
+            'evaluation_score' => 26000,
+            'final_rank' => 'UG',
+            'run_date' => now()->subMonth()->startOfMonth()->addDays(5)->format('Y-m-d'),
+        ]);
+
+        $resPast = $this->getJson('/api/career/stats');
+        $resPast->assertStatus(200);
+        $pastMonths = $resPast->json('historical_months');
+        $this->assertNotEmpty($pastMonths);
+        $this->assertEquals(now()->subMonth()->format('Y-m'), $pastMonths[0]['month_key']);
+        $this->assertEquals(25000000, $pastMonths[0]['total_fans']);
+        $this->assertTrue($pastMonths[0]['quota_achieved']);
+        $this->assertNotEmpty($pastMonths[0]['daily_trends']);
     }
 
     public function test_gacha_stats_includes_ssr_intervals_and_rarity_percentages(): void

@@ -736,10 +736,14 @@ export default function DashboardView({
                                 <h3 className="text-base font-black text-slate-900 dark:text-white">
                                     Tren Akumulasi Fans Harian
                                 </h3>
-                                <span className="text-[11px] font-normal text-slate-400">vs Target Kuota Circle</span>
+                                {careerRange === 'this_month' && (
+                                    <span className="text-[11px] font-normal text-slate-400">vs Target Kuota Circle</span>
+                                )}
                             </div>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                                Garis akumulasi total fans (dalam Jutaan) dibandingkan garis kuota target ({(targetQuota / 1000000).toFixed(0)}M)
+                                {careerRange === 'this_month'
+                                    ? `Garis akumulasi total fans (dalam Jutaan) dibandingkan garis kuota target (${(targetQuota / 1000000).toFixed(0)}M)`
+                                    : `Garis akumulasi total fans (dalam Jutaan) pada rentang ${careerRange === '30_days' ? '30 hari terakhir' : '7 hari terakhir'}`}
                             </p>
                         </div>
 
@@ -838,20 +842,22 @@ export default function DashboardView({
                                         }}
                                     />
                                     <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                                    {/* Target Quota Reference Line */}
-                                    <ReferenceLine 
-                                        y={targetQuota / 1000000} 
-                                        stroke="#f59e0b" 
-                                        strokeDasharray="4 4" 
-                                        strokeWidth={2}
-                                        label={{ 
-                                            value: `Target Quota (${(targetQuota / 1000000).toFixed(0)}M)`, 
-                                            position: 'top', 
-                                            fill: '#d97706', 
-                                            fontSize: 10,
-                                            fontWeight: 'bold'
-                                        }} 
-                                    />
+                                    {/* Target Quota Reference Line - Only visible on Bulan Berjalan */}
+                                    {careerRange === 'this_month' && (
+                                        <ReferenceLine 
+                                            y={targetQuota / 1000000} 
+                                            stroke="#f59e0b" 
+                                            strokeDasharray="4 4" 
+                                            strokeWidth={2}
+                                            label={{ 
+                                                value: `Target Quota (${(targetQuota / 1000000).toFixed(0)}M)`, 
+                                                position: 'top', 
+                                                fill: '#d97706', 
+                                                fontSize: 10,
+                                                fontWeight: 'bold'
+                                            }} 
+                                        />
+                                    )}
                                     <Area 
                                         type="monotone" 
                                         dataKey="cumulative_fans_m" 

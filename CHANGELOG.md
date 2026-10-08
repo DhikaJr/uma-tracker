@@ -2,6 +2,30 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.6.1] - 8 Oktober 2026
+
+### 🌐 Terjemahan Bahasa Indonesia Rincian Lomba & Green Skills
+- **Lokalisasi Lengkap Deskripsi Panduan Green Skills**:
+  - Menerjemahkan panduan pemanfaatan parameter lomba pada menu rincian event ([`CompetitionEventDetailView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CompetitionEventDetailView.jsx)) ke dalam Bahasa Indonesia:
+    *"Dengan mengetahui parameter lintasan, Anda dapat memanfaatkannya saat mempersiapkan Uma Musume untuk mengincar green skill spesifik (contoh: untuk syarat aktivasi Groundwork / 地固め maupun tambahan stat murni)."*
+
+### 📊 Sinkronisasi Akurat Jumlah Data Katalog pada Footer
+- **Pembaruan Statistik Katalog Terkini**:
+  - Menyesuaikan angka total aset pada footer aplikasi ([`AppMain.jsx`](file:///c:/Projects/uma-tracker/resources/js/AppMain.jsx)) agar selaras dengan data basis data saat ini:
+    - **Support Cards**: Diperbarui menjadi **563 kartu** (316 SSR, 101 SR, 146 R).
+    - **Varian Karakter**: Diperbarui menjadi **271 pilihan** (249 bintang 3★, 13 bintang 2★, 9 bintang 1★).
+
+### 📈 Peningkatan Analisis Pelacakan Karir & Fans
+- **Visibilitas Target Kuota Circle Sesuai Tab**:
+  - Garis referensi target kuota (`ReferenceLine`) serta label perbandingan target kuota pada grafik tren akumulasi fans harian kini hanya dimunculkan saat tab **"Bulan Berjalan"** aktif (`careerRange === 'this_month'`).
+  - Menyembunyikan target kuota pada tab **"30 Hari"** dan **"7 Hari"** di halaman Analisis ([`AnalyticsView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/AnalyticsView.jsx)) dan Dasbor ([`DashboardView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/DashboardView.jsx)) agar tampilan fokus pada rentang hari yang dipilih.
+- **Card Baru: Trek Akumulasi Fans Bulan-Bulan Sebelumnya**:
+  - Menambahkan kartu arsip riwayat akumulasi fans per bulan lampau pada halaman Analisis Karir & Fans.
+  - **Pemilih Bulan Lampau (Historical Month Selector)**: Memungkinkan pelatih memilih dan meninjau performa tiap bulan sebelumnya (misal: *September 2026* dengan total 83,11M fans dan 120 run) beserta status pencapaian target kuota bulanan.
+  - **4 Metrik Ringkasan Utama**: Menampilkan Total Fans, Total Karir Run, Rata-Rata Fans/Run, serta Persentase dan Lencana Status Kuota (*Kuota Tercapai 🎉*).
+  - **Grafik Akumulasi Harian Interaktif**: Menampilkan kurva akumulasi fans harian dari awal hingga akhir bulan lampau terhadap garis target kuota circle dalam satuan Jutaan (M).
+  - **Backend Support & Database Portability**: Menghitung data historis bulanan secara efisien dan portabel di [`CareerController.php`](file:///c:/Projects/uma-tracker/app/Http/Controllers/Api/CareerController.php) serta menambahkan pengujian fitur terintegrasi di [`UmaTrackerApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/UmaTrackerApiTest.php).
+
 ## [Versi 2.6.0] - 8 Oktober 2026
 
 ### 🏁 Halaman Khusus Rincian Event CM & LoH (Dedicated Page Navigation)

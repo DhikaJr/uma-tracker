@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     TrendingUp,
     Sparkles,
@@ -11,7 +11,9 @@ import {
     Layers,
     RotateCcw,
     Zap,
-    Award
+    Award,
+    History,
+    CheckCircle2
 } from 'lucide-react';
 import {
     ResponsiveContainer,
@@ -152,6 +154,7 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
     const [loadingCareer, setLoadingCareer] = useState(true);
     const [loadingGacha, setLoadingGacha] = useState(true);
     const [hoveredRarity, setHoveredRarity] = useState(null);
+    const [selectedPastMonthKey, setSelectedPastMonthKey] = useState(null);
 
     // Fetch Career stats with range
     const fetchCareerStats = async () => {
@@ -201,6 +204,25 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
         target_m: Math.round((targetQuota / 1000000) * 100) / 100,
         runs: item.runs_count || 0,
     }));
+
+    // Historical previous months tracks
+    const historicalMonths = careerStats?.historical_months || [];
+    const activePastMonth = useMemo(() => {
+        if (!historicalMonths || historicalMonths.length === 0) return null;
+        return historicalMonths.find(m => m.month_key === selectedPastMonthKey) || historicalMonths[0];
+    }, [historicalMonths, selectedPastMonthKey]);
+
+    const formattedPastTrends = useMemo(() => {
+        if (!activePastMonth?.daily_trends?.length) return [];
+        return activePastMonth.daily_trends.map(item => ({
+            date: item.date || item.run_date,
+            fans: item.fans_gained,
+            cumulative_fans: item.cumulative_fans,
+            cumulative_fans_m: Math.round(((item.cumulative_fans || 0) / 1000000) * 100) / 100,
+            target_m: Math.round(((activePastMonth.target_quota || 20000000) / 1000000) * 100) / 100,
+            runs: item.runs_count || 0,
+        }));
+    }, [activePastMonth]);
 
     // Scenario Performance Data formatting
     const scenarioStats = careerStats?.scenario_stats || [];
@@ -424,10 +446,14 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
                                 <div>
                                     <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
                                         <span>Tren Akumulasi Fans Harian</span>
-                                        <span className="text-[11px] font-normal text-slate-400">vs Target Kuota Circle</span>
+                                        {careerRange === 'this_month' && (
+                                            <span className="text-[11px] font-normal text-slate-400">vs Target Kuota Circle</span>
+                                        )}
                                     </h3>
                                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                        Garis akumulasi total fans (dalam Jutaan) dibandingkan garis kuota target ({(targetQuota / 1000000).toFixed(0)}M)
+                                        {careerRange === 'this_month'
+                                            ? `Garis akumulasi total fans (dalam Jutaan) dibandingkan garis kuota target (${(targetQuota / 1000000).toFixed(0)}M)`
+                                            : `Garis akumulasi total fans (dalam Jutaan) pada rentang ${careerRange === '30_days' ? '30 hari terakhir' : '7 hari terakhir'}`}
                                     </p>
                                 </div>
 
@@ -499,20 +525,22 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
                                             />
                                             <Tooltip content={<CustomCumulativeFansTooltip />} />
                                             <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                                            {/* Target Quota Reference Line */}
-                                            <ReferenceLine
-                                                y={targetQuota / 1000000}
-                                                stroke="#f59e0b"
-                                                strokeDasharray="4 4"
-                                                strokeWidth={2}
-                                                label={{
-                                                    value: `Target Quota (${(targetQuota / 1000000).toFixed(0)}M)`,
-                                                    position: 'top',
-                                                    fill: '#d97706',
-                                                    fontSize: 10,
-                                                    fontWeight: 'bold'
-                                                }}
-                                            />
+                                            {/* Target Quota Reference Line - Only visible on Bulan Berjalan */}
+                                            {careerRange === 'this_month' && (
+                                                <ReferenceLine
+                                                    y={targetQuota / 1000000}
+                                                    stroke="#f59e0b"
+                                                    strokeDasharray="4 4"
+                                                    strokeWidth={2}
+                                                    label={{
+                                                        value: `Target Quota (${(targetQuota / 1000000).toFixed(0)}M)`,
+                                                        position: 'top',
+                                                        fill: '#d97706',
+                                                        fontSize: 10,
+                                                        fontWeight: 'bold'
+                                                    }}
+                                                />
+                                            )}
                                             <Area
                                                 type="monotone"
                                                 dataKey="cumulative_fans_m"
@@ -580,6 +608,198 @@ export default function AnalyticsView({ circleGoal = 20000000, baseRate = 3.0, o
                                 </span>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Card: Trek Akumulasi Fans pada Bulan-Bulan Sebelumnya */}
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5">
+                        {/* Card Header & Month Switcher */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <span className="p-1.5 rounded-xl bg-indigo-500/15 text-indigo-500">
+                                        <History className="w-5 h-5" />
+                                    </span>
+                                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                                        Trek Akumulasi Fans Bulan-Bulan Sebelumnya
+                                    </h3>
+                                </div>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    Histori akumulasi capaian fans harian per bulan lampau terhadap target kuota circle
+                                </p>
+                            </div>
+
+                            {/* Month Selector Buttons */}
+                            {historicalMonths.length > 0 && (
+                                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200/70 dark:border-slate-700 self-start sm:self-auto flex-wrap">
+                                    {historicalMonths.map(m => {
+                                        const isSelected = activePastMonth?.month_key === m.month_key;
+                                        return (
+                                            <button
+                                                key={m.month_key}
+                                                type="button"
+                                                onClick={() => setSelectedPastMonthKey(m.month_key)}
+                                                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                                                    isSelected
+                                                        ? 'bg-indigo-600 text-white shadow-xs'
+                                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                                                }`}
+                                            >
+                                                <Calendar className="w-3.5 h-3.5" />
+                                                <span>{m.month_name}</span>
+                                                {m.quota_achieved && (
+                                                    <span className={`text-[10px] px-1 py-0.2 rounded font-bold ${
+                                                        isSelected ? 'bg-indigo-700 text-indigo-100' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                                                    }`}>
+                                                        ✓
+                                                    </span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {historicalMonths.length === 0 ? (
+                            <div className="py-12 text-center space-y-2">
+                                <div className="inline-flex p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400">
+                                    <History className="w-6 h-6" />
+                                </div>
+                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                    Belum ada data karir pada bulan-bulan sebelumnya.
+                                </p>
+                                <p className="text-[11px] text-slate-400">
+                                    Data karir bulan berjalan akan tersimpan dan tampil sebagai arsip riwayat begitu memasuki bulan berikutnya.
+                                </p>
+                            </div>
+                        ) : activePastMonth ? (
+                            <div className="space-y-5">
+                                {/* Quick Metrics Grid */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80">
+                                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                                            Total Fans
+                                        </span>
+                                        <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5 block">
+                                            {(activePastMonth.total_fans / 1000000).toFixed(2)}M
+                                        </span>
+                                        <span className="text-[10px] text-slate-400">
+                                            {activePastMonth.total_fans.toLocaleString('id-ID')} fans
+                                        </span>
+                                    </div>
+
+                                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80">
+                                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                                            Total Karir Run
+                                        </span>
+                                        <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5 block">
+                                            {activePastMonth.runs_count} Run
+                                        </span>
+                                        <span className="text-[10px] text-slate-400">
+                                            Terselesaikan
+                                        </span>
+                                    </div>
+
+                                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80">
+                                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                                            Rata-Rata Fans / Run
+                                        </span>
+                                        <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5 block">
+                                            {(activePastMonth.avg_fans / 1000).toFixed(0)}K
+                                        </span>
+                                        <span className="text-[10px] text-slate-400">
+                                            {activePastMonth.avg_fans.toLocaleString('id-ID')} fans/run
+                                        </span>
+                                    </div>
+
+                                    <div className={`p-3.5 rounded-2xl border ${
+                                        activePastMonth.quota_achieved
+                                            ? 'bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-200/60 dark:border-emerald-800/60'
+                                            : 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-200/60 dark:border-amber-800/60'
+                                    }`}>
+                                        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                                            Target Kuota ({(activePastMonth.target_quota / 1000000).toFixed(0)}M)
+                                        </span>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                            <span className={`text-base sm:text-lg font-black ${
+                                                activePastMonth.quota_achieved
+                                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                                    : 'text-amber-600 dark:text-amber-400'
+                                            }`}>
+                                                {activePastMonth.quota_percentage}%
+                                            </span>
+                                            {activePastMonth.quota_achieved && (
+                                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            )}
+                                        </div>
+                                        <span className={`text-[10px] font-semibold ${
+                                            activePastMonth.quota_achieved
+                                                ? 'text-emerald-600 dark:text-emerald-400'
+                                                : 'text-amber-600 dark:text-amber-400'
+                                        }`}>
+                                            {activePastMonth.quota_achieved ? 'Kuota Tercapai 🎉' : 'Belum Memenuhi Target'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Accumulation Chart Container */}
+                                <div className="h-72 w-full pt-2">
+                                    {formattedPastTrends.length === 0 ? (
+                                        <div className="h-full flex items-center justify-center text-xs text-slate-400">
+                                            Belum ada data akumulasi harian untuk bulan ini.
+                                        </div>
+                                    ) : (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart data={formattedPastTrends} margin={{ top: 15, right: 15, left: -5, bottom: 0 }}>
+                                                <defs>
+                                                    <linearGradient id="pastMonthCumulFanColor" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
+                                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:stroke-slate-800" />
+                                                <XAxis
+                                                    dataKey="date"
+                                                    tick={{ fontSize: 11, fill: '#64748b' }}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                />
+                                                <YAxis
+                                                    tick={{ fontSize: 11, fill: '#64748b' }}
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    unit="M"
+                                                />
+                                                <Tooltip content={<CustomCumulativeFansTooltip />} />
+                                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                                <ReferenceLine
+                                                    y={activePastMonth.target_quota / 1000000}
+                                                    stroke="#f59e0b"
+                                                    strokeDasharray="4 4"
+                                                    strokeWidth={2}
+                                                    label={{
+                                                        value: `Target Quota (${(activePastMonth.target_quota / 1000000).toFixed(0)}M)`,
+                                                        position: 'top',
+                                                        fill: '#d97706',
+                                                        fontSize: 10,
+                                                        fontWeight: 'bold'
+                                                    }}
+                                                />
+                                                <Area
+                                                    type="monotone"
+                                                    dataKey="cumulative_fans_m"
+                                                    name="Akumulasi Fans"
+                                                    stroke="#4f46e5"
+                                                    strokeWidth={3}
+                                                    fillOpacity={1}
+                                                    fill="url(#pastMonthCumulFanColor)"
+                                                />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    )}
+                                </div>
+                            </div>
+                        ) : null}
                     </div>
                 </div>
             )}
