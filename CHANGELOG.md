@@ -2,6 +2,36 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.6.2] - 8 Oktober 2026
+
+### 🔍 Indikator Tingkat Keyakinan OCR & Validasi Input Visual
+- **Deteksi Confidence Score Per Kolom Form**:
+  - Mengkalkulasi tingkat keyakinan (*confidence percentage*) pengenalan teks dari Tesseract.js secara individual untuk setiap kolom hasil ekstraksi: `uma_name`, `final_rank`, `evaluation_score`, `fans_gained`, dan `scenario` pada [`CareerOcrZone.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CareerOcrZone.jsx).
+  - Menampilkan lencana persentase akurasi di setiap tag hasil pemindaian OCR.
+  - Menambahkan banner peringatan otomatis jika ada salah satu kolom yang terdeteksi dengan keyakinan di bawah 75%.
+- **Highlighting & Penanda Peringatan pada Form Input**:
+  - Pada formulir input fans ([`FansView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/FansView.jsx)), kolom yang memiliki keyakinan rendah (< 75%) otomatis diberi garis tepi (*border*) berwarna amber/kuning menyala serta lencana peringatan *"Cek Ulang (< 75%)"*.
+  - Peringatan otomatis dihapus secara reaktif saat pelatih mengedit/memperbaiki nilai kolom, memilih saran karakter, atau menekan tombol skor cepat (*Quick Score*).
+
+### 🚀 Optimasi PWA Offline Caching & Fallback Visual Anggun
+- **Pre-caching Aset GameTora via Workbox**:
+  - Menambahkan konfigurasi Workbox `runtimeCaching` pada [`vite.config.js`](file:///c:/Projects/uma-tracker/vite.config.js) untuk domain CDN `https://gametora.com/.*`.
+  - Menggunakan strategi `CacheFirst` dengan masa kedaluwarsa 30 hari dan kapasitas hingga 1.500 aset (`gametora-cdn-cache`), memungkinkan ikon karakter, support card, dan skill tetap diakses dengan cepat saat offline atau koneksi lambat.
+- **Fallback Avatar Lokal saat Offline**:
+  - Menambahkan penanganan `onError` pada gambar avatar karakter di [`FansView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/FansView.jsx).
+  - Menghasilkan avatar inisial vektor SVG lokal secara instan tanpa ketergantungan jaringan eksternal apabila gambar CDN gagal dimuat saat mode luring.
+
+### 📚 Sinkronisasi Dokumentasi & Spesifikasi Proyek (`README.md`)
+- **Pembaruan Hierarki Rank Resmi**:
+  - Memperbarui dokumentasi rentang hierarki rank evaluasi dari `LG24` menjadi `LF24` (mencakup Legend F: `LF` s.d. `LF24` hingga $\ge 104.800$ pts).
+- **Pembaruan Statistik Test Suite**:
+  - Menyelaraskan catatan jumlah pengujian otomatis menjadi **208 tests, 2.810 assertions**.
+- **Dokumentasi Fitur Komprehensif v2.6.0 & v2.6.1**:
+  - Mendokumentasikan fitur Rekomendasi Green Skills Resmi (GameTora & Zero Speculative Data) dan Dedicated Page Navigation (`?event=<id>`) pada Bagian 8.
+  - Mendokumentasikan kartu Riwayat Akumulasi Fans Bulan-Bulan Lampau dan Target Kuota Circle Kontekstual pada Bagian 2.
+- **Pembaruan Tabel REST API**:
+  - Menambahkan dokumentasi endpoint baru: `GET /api/collection/skill-detail`, `POST /api/gacha/pulls/bulk-update`, dan `GET /api/changelog`.
+
 ## [Versi 2.6.1] - 8 Oktober 2026
 
 ### 🌐 Terjemahan Bahasa Indonesia Rincian Lomba & Green Skills

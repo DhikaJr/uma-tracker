@@ -45,13 +45,17 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
 - **Filter Riwayat Karir, Paginasi Dinamis, Bulk Delete & Edit Run**:
   - Filter berdasarkan skenario, rank evaluasi, nama Uma Musume, dan tanggal.
   - Paginasi dinamis, pemilihan massal checkbox, serta dialog penyuntingan run.
-- **Autorank Pintar & Auto-Lock pada Modal Edit (Hierarki E s.d. LG24)**: Skor evaluasi otomatis memetakan badge rank resmi dari Bronze E hingga Legendary Double-Crown LG24. Pada modal penyuntingan run, hasil rank evaluasi dikunci secara otomatis dari perolehan skor total sesi latihan (*auto rank*) tanpa tombol manual yang redundan, serta standarisasi notifikasi dalam Bahasa Indonesia.
-- **OCR Screenshot Import (Tesseract.js Client-Side)**:
+- **Autorank Pintar & Auto-Lock pada Modal Edit (Hierarki E s.d. LF24)**: Skor evaluasi otomatis memetakan badge rank resmi dari Bronze E hingga Legendary Double-Crown LF24 (mencakup tier Legend F: LF s.d. LF24 hingga $\ge 104.800$ pts). Pada modal penyuntingan run, hasil rank evaluasi dikunci secara otomatis dari perolehan skor total sesi latihan (*auto rank*) tanpa tombol manual yang redundan, serta standarisasi notifikasi dalam Bahasa Indonesia.
+- **OCR Screenshot Import (Tesseract.js Client-Side) & Indikator Keyakinan**:
   - Ekstraksi hasil evaluasi karir dari tangkapan layar langsung via clipboard (`Ctrl + V`) atau berkas gambar langsung di browser tanpa membebani server backend.
   - Pengenalan nama karakter, rank tier, skor evaluasi, dan perolehan fans secara otomatis.
+  - **Indikator Tingkat Keyakinan (*Confidence Score*)**: Menghitung persentase akurasi pengenalan teks per kolom (`uma_name`, `final_rank`, `evaluation_score`, `fans_gained`, `scenario`) serta menyajikan penyorotan border amber dan lencana peringatan jika skor keyakinan $< 75\%$ untuk memastikan integritas data input.
 - **Ringkasan Rekor Skenario & Modal Rincian Karakter**:
   - Statistik agregat per skenario mencakup rata-rata perolehan fans, rekor tertinggi (*Max*), dan performa terendah (*Min*).
   - Setiap kartu skenario yang tercatat dapat diklik untuk memunculkan modal dialog rincian karakter apa saja yang karirnya pernah dicatat pada skenario tersebut serta total akumulasi fans yang diraih pada masing-masing skenario.
+- **Trek Akumulasi Fans Bulan-Bulan Sebelumnya & Target Kuota Kontekstual**:
+  - Menampilkan kartu riwayat performa bulanan lampau dengan pemilih bulan (*Historical Month Selector*), menyajikan 4 metrik ringkasan (Total Fans, Sesi Run, Rata-rata Fans, serta Status Pencapaian Kuota Bulanan) disertai grafik kurva akumulasi fans harian interaktif.
+  - Garis target kuota circle disajikan secara cerdas dan kontekstual hanya ketika tab bulan berjalan (*this_month*) aktif.
 - **Modal Analitik Penggunaan Karakter Per Skenario (`CharacterScenarioDetailModal`)**:
   - Setiap kartu karakter pada daftar *Character Performance Breakdown* di Fans Tracker dapat diklik untuk membuka modal dialog statistik komprehensif.
   - Menyajikan sebaran performa karakter per skenario latihan: jumlah sesi latihan, persentase kontribusi sesi, total perolehan fans, rata-rata fans, rekor tertinggi (*Max*), rekor terendah (*Min*), dan *Best Rank* tertinggi yang diraih, dilengkapi kontrol pencarian skenario, opsi pengurutan, serta riwayat 5 sesi terakhir.
@@ -141,6 +145,14 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
   - **Durasi Dasar (*Base Duration*)**: Menampilkan durasi dasar resmi (`Instant effect` untuk durasi seketika dan `X s` untuk durasi berbasis waktu).
 - **Penerjemahan Kondisi Aktivasi Tergesa-gesa / Panik (*Kakari / Temptation*)**:
   - Mendukung penerjemahan komprehensif dan natural ke Bahasa Indonesia untuk seluruh kondisi lawan yang sedang tergesa-gesa (`running_style_temptation_opponent_count_nige`, `_senko`, `_sashi`, `_oikomi`) dan status panik (`is_temptation`) pada mesin penerjemah frontend (`skillConditionTranslator.js`) dan backend (`SkillConditionTranslator.php`).
+- **Halaman Khusus Rincian Event CM & LoH (Dedicated Page Navigation) & Deep-Linking**:
+  - Tombol **"Lihat Rincian Lengkap"** kini membuka tampilan rincian penuh di tab dan halaman yang sama via `CompetitionEventDetailView` (menggantikan dialog modal), lengkap dengan dukungan URL query string deep-linking `?event=<id>` dan navigasi browser.
+- **Rekomendasi Green Skills Resmi (Standar GameTora & Zero Speculative Data)**:
+  - Rekomendasi otomatis pasif Green Skills (Skill Hijau) berdasarkan parameter resmi kondisi balapan yang terkonfirmasi (jarak, sirkuit, arah putaran, musim, cuaca, dan kondisi trek) bersumber dari katalog GameTora.
+  - **Penanganan Cuaca & Trek Acak pada League of Heroes**: Menandai green skill cuaca & trek acak (Good/Bad Track, Sunny/Cloudy/Rainy/Snowy Days) sebagai *"Dapat Diambil (Situasional)"*, bukan rekomendasi utama.
+  - **Zero Speculative Data**: Memberikan disclaimer transparan jika parameter kompetisi belum diumumkan resmi oleh Cygames.
+- **Panduan Terjemahan Strategi Lomba**:
+  - Menerjemahkan panduan pemanfaatan parameter kondisi lomba dan green skills ke Bahasa Indonesia yang mudah dipahami.
 
 ### 9. Sistem Pencadangan Data Teruji (Backup Schema v2.0)
 - **Integritas Data Transaksional**:
@@ -155,6 +167,7 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
 
 ### 10. Progressive Web App (PWA) & Mobile Navigation
 - **PWA Siap Pasang (`vite-plugin-pwa`)**: Web App Manifest terkalibrasi dengan root path resmi, ikon 192x192 & 512x512, tema warna `#10b981`, serta mode standalone.
+- **Pre-caching Aset CDN GameTora & Fallback Luring (Offline)**: Pengaturan Workbox `runtimeCaching` dengan strategi `CacheFirst` dan masa simpan 30 hari untuk aset CDN `https://gametora.com/.*` serta fallback grafis SVG inisial lokal saat mode offline/koneksi terputus.
 - **Sticky Bottom Navigation**: Navigasi khusus layar ponsel dengan touch target ramah jari (&ge; 48px) dan layout tanpa scrollbar horizontal liar.
 
 ---
@@ -272,6 +285,7 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 | `GET` | `/api/gacha/pulls` | Menampilkan riwayat gacha (filter banner, rarity, pagination) |
 | `POST` | `/api/gacha/pulls` | Mencatat 1 tarikan gacha baru (otomatis memaksakan `is_rate_up = false` pada banner Twinkle dan memvalidasi pool SSR) |
 | `POST` | `/api/gacha/pulls/batch` | Mencatat batch tarikan tiket (1–10 pull) dengan penegakan otomatis aturan banner Twinkle |
+| `POST` | `/api/gacha/pulls/bulk-update` | Memperbarui catatan tarikan gacha secara massal |
 | `PUT` | `/api/gacha/pulls/{id}` | Memperbarui catatan gacha pull, validasi pool banner Twinkle, & rekalkulasi pity counter |
 | `DELETE` | `/api/gacha/pulls/{id}` | Menghapus 1 catatan pull gacha & rekalkulasi pity |
 | `POST` | `/api/gacha/bulk-delete` | Menghapus catatan pull secara massal |
@@ -290,7 +304,7 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 | `DELETE` | `/api/career/runs/{id}` | Menghapus catatan sesi karir |
 | `POST` | `/api/career/bulk-delete` | Menghapus riwayat karir secara massal |
 | `GET` | `/api/career/stats` | Statistik akumulasi fans, target kuota circle, dan rata-rata per run |
-| `GET` | `/api/career/metadata` | Metadata nama skenario resmi, rank E–LG24, daftar nama dasar Uma (khusus modul karir tanpa kurung), dan OCR map |
+| `GET` | `/api/career/metadata` | Metadata nama skenario resmi, rank E–LF24, daftar nama dasar Uma (khusus modul karir tanpa kurung), dan OCR map |
 
 ### Affinity & Compatibility Endpoints
 | Metode | Endpoint | Deskripsi |
@@ -308,6 +322,7 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 | `POST` | `/api/collection/characters/stars` | Memperbarui level bintang karakter (1★ s.d. 5★) |
 | `GET` | `/api/collection/support-cards` | Daftar support card koleksi beserta limit break (0LB s.d. 4LB) |
 | `GET` | `/api/collection/support-cards/detail` | Detail kartu: status 0LB–MLB, efek unik, hint, dan alur event latihan |
+| `GET` | `/api/collection/skill-detail` | Detail formula skill GameTora: efek, target balapan, durasi dasar, dan kondisi aktivasi |
 | `POST` | `/api/collection/support-cards/toggle` | Mengubah status kepemilikan support card |
 | `POST` | `/api/collection/support-cards/limit-break` | Memperbarui tingkat limit break kartu |
 
@@ -324,7 +339,7 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 | `GET` | `/api/backup/export` | Mengunduh berkas cadangan JSON Schema v2.0 (`?download=1`) |
 | `POST` | `/api/backup/import` | Memulihkan data dari berkas cadangan JSON (mode `merge` atau `overwrite`) |
 
-### Circle Tracker, Planner & Settings Endpoints
+### Circle Tracker, Planner, Changelog & Settings Endpoints
 | Metode | Endpoint | Deskripsi |
 |---|---|---|
 | `GET` | `/api/circle-tracker/status` | Mengambil data live circle dari API `muxueuma.com` atau arsip lokal. Mendukung query `?period=YYYY-MM` untuk penelusuran arsip statistik historis bulanan dan penanda anggota aktif vs yang telah keluar (*ex-member*) |
@@ -332,6 +347,7 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 | `POST` | `/api/circle-tracker/track-player` | Menyimpan nama trainer yang dipantau di dalam circle |
 | `GET` | `/api/planner/config` | Mengambil konfigurasi target tabungan Carat & tiket JP |
 | `POST` | `/api/planner/config` | Menyimpan konfigurasi Jewel & Spark Planner |
+| `GET` | `/api/changelog` | Mengambil catatan riwayat versi pembaruan aplikasi (*changelog*) terstruktur |
 | `GET` | `/api/settings` | Mengambil pengaturan umum aplikasi (kuota circle bulanan, dll.) |
 | `POST` | `/api/settings` | Menyimpan pengaturan umum aplikasi |
 | `GET` | `/api/dashboard/summary` | Ringkasan metrik untuk KPI cards dan grafik dashboard utama |
@@ -343,7 +359,7 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 Aplikasi dilengkapi rangkaian pengujian otomatis berbasis **PHPUnit** pada database memori terisolasi (`:memory:`):
 
 ```bash
-# Menjalankan seluruh pengujian (203 tests, 2.689 assertions)
+# Menjalankan seluruh pengujian (208 tests, 2.810 assertions)
 php artisan test --compact
 
 # Menjalankan pengujian spesifik

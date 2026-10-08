@@ -465,7 +465,43 @@ export default function CareerOcrZone({
                 },
             });
 
+            const overallConf = Math.round(result.data?.confidence || 0);
+            const words = result.data?.words || [];
+            const lines = result.data?.lines || [];
+
             const parsed = parseOcrText(result.data.text, umaPresets, umaOcrMap, scenarios, rankThresholds);
+
+            // Compute confidence score per detected field
+            const extractFieldConfidence = (val, fWords, fLines, fallback) => {
+                if (val === null || val === undefined || val === '') return null;
+                const strVal = String(val).toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (!strVal) return null;
+
+                for (const w of fWords) {
+                    const cleanW = (w.text || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                    if (cleanW && (cleanW.includes(strVal) || strVal.includes(cleanW))) {
+                        return Math.round(w.confidence || 0);
+                    }
+                }
+                for (const l of fLines) {
+                    const cleanL = (l.text || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                    if (cleanL && (cleanL.includes(strVal) || strVal.includes(cleanL))) {
+                        return Math.round(l.confidence || 0);
+                    }
+                }
+                return Math.round(fallback || 75);
+            };
+
+            const confidences = {
+                overall: overallConf,
+                uma_name: extractFieldConfidence(parsed.uma_name, words, lines, overallConf),
+                final_rank: extractFieldConfidence(parsed.final_rank, words, lines, overallConf),
+                evaluation_score: extractFieldConfidence(parsed.evaluation_score, words, lines, overallConf),
+                fans_gained: extractFieldConfidence(parsed.fans_gained, words, lines, overallConf),
+                scenario: extractFieldConfidence(parsed.scenario, words, lines, overallConf),
+            };
+
+            parsed.confidences = confidences;
             setDetectedResult(parsed);
             setProgressPercent(100);
             setProgressStatus('Pemindaian selesai!');
@@ -481,11 +517,22 @@ export default function CareerOcrZone({
                 parsed.scenario ? 'Skenario' : null,
             ].filter(Boolean);
 
+            const hasLowConf = Object.entries(confidences).some(
+                ([k, v]) => k !== 'overall' && parsed[k] && v !== null && v < 75
+            );
+
             if (detectedCount.length > 0) {
-                onNotify?.(
-                    `OCR Berhasil! Berhasil mengisi otomatis: ${detectedCount.join(', ')}.`,
-                    'success'
-                );
+                if (hasLowConf) {
+                    onNotify?.(
+                        `OCR Selesai! Mengisi otomatis: ${detectedCount.join(', ')}. Peringatan: Terdapat nilai dengan keyakinan < 75%, mohon periksa ulang sebelum menyimpan.`,
+                        'warning'
+                    );
+                } else {
+                    onNotify?.(
+                        `OCR Berhasil! Berhasil mengisi otomatis: ${detectedCount.join(', ')} (Tingkat Keyakinan: ${overallConf}%).`,
+                        'success'
+                    );
+                }
             } else {
                 onNotify?.(
                     'Gambar terbaca, namun tidak ada angka/rank/nama/skenario yang cocok secara otomatis. Silakan periksa teks hasil scan.',
@@ -663,45 +710,109 @@ export default function CareerOcrZone({
                                 ></div>
                             </div>
 
-                            {/* Extracted Fields Badge Row */}
-                            {detectedResult && !processing && (
-                                <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
-                                    <span className="text-slate-400 font-semibold">Hasil Deteksi:</span>
-                                    {detectedResult.uma_name ? (
-                                        <span className="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800/60">
-                                            Uma: {detectedResult.uma_name}
+                            {/* Extracted Fields Badge Row with Confidence Indicators */}
+                            {detectedResult && !processing && (() => {
+                                const confs = detectedResult.confidences || {};
+                                const renderConfBadge = (fieldKey) => {
+                                    const conf = confs[fieldKey];
+                                    if (conf === null || conf === undefined) return null;
+                                    const isLow = conf < 75;
+                                    return (
+                                        <span
+                                            className={`inline-flex items-center gap-0.5 text-[9px] font-mono px-1 py-0.2 rounded font-black ml-1.5 ${
+                                                isLow
+                                                    ? 'bg-amber-200 text-amber-900 dark:bg-amber-900 dark:text-amber-200 border border-amber-400 dark:border-amber-600'
+                                                    : 'bg-emerald-200/80 text-emerald-900 dark:bg-emerald-900/80 dark:text-emerald-200'
+                                            }`}
+                                            title={`Tingkat keyakinan OCR: ${conf}% ${isLow ? '(Rendah, mohon periksa ulang)' : '(Tinggi)'}`}
+                                        >
+                                            {isLow ? <AlertTriangle className="w-2.5 h-2.5 text-amber-700 dark:text-amber-300" /> : <CheckCircle2 className="w-2.5 h-2.5 text-emerald-700 dark:text-emerald-300" />}
+                                            <span>{conf}%</span>
                                         </span>
-                                    ) : (
-                                        <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600">
-                                            Nama: Manual
-                                        </span>
-                                    )}
+                                    );
+                                };
 
-                                    {detectedResult.final_rank ? (
-                                        <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold font-mono border border-amber-200 dark:border-amber-800/60">
-                                            Rank: {detectedResult.final_rank}
-                                        </span>
-                                    ) : null}
+                                const anyLow = Object.entries(confs).some(
+                                    ([k, v]) => k !== 'overall' && detectedResult[k] && v !== null && v < 75
+                                );
 
-                                    {detectedResult.evaluation_score ? (
-                                        <span className="px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 font-bold font-mono border border-purple-200 dark:border-purple-800/60">
-                                            Skor: {detectedResult.evaluation_score.toLocaleString()}
-                                        </span>
-                                    ) : null}
+                                return (
+                                    <div className="space-y-2 pt-1">
+                                        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                                            <span className="text-slate-400 font-semibold">
+                                                Hasil Deteksi (Keyakinan {confs.overall ? `${confs.overall}%` : ''}):
+                                            </span>
+                                            {detectedResult.uma_name ? (
+                                                <span className={`px-2 py-0.5 rounded-md font-bold border flex items-center ${
+                                                    confs.uma_name < 75
+                                                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700'
+                                                        : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
+                                                }`}>
+                                                    <span>Uma: {detectedResult.uma_name}</span>
+                                                    {renderConfBadge('uma_name')}
+                                                </span>
+                                            ) : (
+                                                <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600">
+                                                    Nama: Manual
+                                                </span>
+                                            )}
 
-                                    {detectedResult.fans_gained ? (
-                                        <span className="px-2 py-0.5 rounded-md bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 font-bold font-mono border border-teal-200 dark:border-teal-800/60">
-                                            +{detectedResult.fans_gained.toLocaleString()} Fans
-                                        </span>
-                                    ) : null}
+                                            {detectedResult.final_rank ? (
+                                                <span className={`px-2 py-0.5 rounded-md font-bold font-mono border flex items-center ${
+                                                    confs.final_rank < 75
+                                                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700'
+                                                        : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/60'
+                                                }`}>
+                                                    <span>Rank: {detectedResult.final_rank}</span>
+                                                    {renderConfBadge('final_rank')}
+                                                </span>
+                                            ) : null}
 
-                                    {detectedResult.scenario ? (
-                                        <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-800/60">
-                                            Skenario: {detectedResult.scenario}
-                                        </span>
-                                    ) : null}
-                                </div>
-                            )}
+                                            {detectedResult.evaluation_score ? (
+                                                <span className={`px-2 py-0.5 rounded-md font-bold font-mono border flex items-center ${
+                                                    confs.evaluation_score < 75
+                                                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700'
+                                                        : 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800/60'
+                                                }`}>
+                                                    <span>Skor: {detectedResult.evaluation_score.toLocaleString()}</span>
+                                                    {renderConfBadge('evaluation_score')}
+                                                </span>
+                                            ) : null}
+
+                                            {detectedResult.fans_gained ? (
+                                                <span className={`px-2 py-0.5 rounded-md font-bold font-mono border flex items-center ${
+                                                    confs.fans_gained < 75
+                                                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700'
+                                                        : 'bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 border-teal-200 dark:border-teal-800/60'
+                                                }`}>
+                                                    <span>+{detectedResult.fans_gained.toLocaleString()} Fans</span>
+                                                    {renderConfBadge('fans_gained')}
+                                                </span>
+                                            ) : null}
+
+                                            {detectedResult.scenario ? (
+                                                <span className={`px-2 py-0.5 rounded-md font-bold border flex items-center ${
+                                                    confs.scenario < 75
+                                                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700'
+                                                        : 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800/60'
+                                                }`}>
+                                                    <span>Skenario: {detectedResult.scenario}</span>
+                                                    {renderConfBadge('scenario')}
+                                                </span>
+                                            ) : null}
+                                        </div>
+
+                                        {anyLow && (
+                                            <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-[11px] flex items-center gap-2 shadow-2xs">
+                                                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                                                <span>
+                                                    <strong>Peringatan Akurasi (&lt; 75%):</strong> Beberapa nilai terdeteksi dengan keyakinan rendah. Kolom formulir di bawah ditandai warna kuning untuk diperiksa ulang sebelum menyimpan.
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>

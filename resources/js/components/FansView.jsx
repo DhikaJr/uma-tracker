@@ -16,7 +16,8 @@ import {
     CheckCircle2,
     RefreshCw,
     Calendar,
-    RotateCcw
+    RotateCcw,
+    AlertTriangle
 } from 'lucide-react';
 import RankBadge from './RankBadge';
 import DeleteConfirmModal from './DeleteConfirmModal';
@@ -141,6 +142,9 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
     const [showUmaModal, setShowUmaModal] = useState(false);
     const [umaModalSearch, setUmaModalSearch] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
+
+    // OCR Low-Confidence Warnings per Field (< 75%)
+    const [ocrWarnings, setOcrWarnings] = useState({});
 
     // Helper: Parse thousand-separated string to integer
     const parseNumber = (val) => {
@@ -429,6 +433,8 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
     };
 
     const applyQuickScore = (scoreNum) => {
+        clearOcrWarning('evaluation_score');
+        clearOcrWarning('final_rank');
         const formatted = formatNumber(scoreNum);
         const autoRank = getRankFromScore(scoreNum);
         setForm(prev => ({
@@ -440,6 +446,20 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
 
     // Handle Auto-Fill from OCR Screenshot
     const handleOcrExtracted = (parsed) => {
+        // Collect low-confidence warnings (< 75%)
+        if (parsed.confidences) {
+            const warnings = {};
+            ['uma_name', 'scenario', 'fans_gained', 'evaluation_score', 'final_rank'].forEach(f => {
+                const c = parsed.confidences[f];
+                if (c !== null && c !== undefined && c < 75 && parsed[f]) {
+                    warnings[f] = c;
+                }
+            });
+            setOcrWarnings(warnings);
+        } else {
+            setOcrWarnings({});
+        }
+
         setForm(prev => {
             const next = { ...prev };
             if (parsed.uma_name) {
@@ -471,6 +491,15 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
             } else if (parsed.final_rank) {
                 next.final_rank = parsed.final_rank;
             }
+            return next;
+        });
+    };
+
+    const clearOcrWarning = (fieldName) => {
+        setOcrWarnings(prev => {
+            if (!prev[fieldName]) return prev;
+            const next = { ...prev };
+            delete next[fieldName];
             return next;
         });
     };
@@ -609,8 +638,14 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                         {/* Uma Name with Autocomplete & Roster Search */}
                         <div className="relative">
                             <div className="flex items-center justify-between mb-1">
-                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                                    Nama Uma Musume *
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                    <span>Nama Uma Musume *</span>
+                                    {ocrWarnings.uma_name && (
+                                        <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1">
+                                            <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
+                                            <span>Cek Ulang ({ocrWarnings.uma_name}%)</span>
+                                        </span>
+                                    )}
                                 </label>
                                 <div className="flex items-center gap-2">
                                     <button
@@ -639,12 +674,17 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                                 required
                                 value={form.uma_name}
                                 onChange={(e) => {
+                                    clearOcrWarning('uma_name');
                                     setForm({ ...form, uma_name: e.target.value });
                                     setShowSuggestions(true);
                                 }}
                                 onFocus={() => setShowSuggestions(true)}
                                 placeholder="Ketik atau cari nama (misal: Epiphaneia, Oguri Cap)"
-                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                                className={`w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500 focus:outline-none ${
+                                    ocrWarnings.uma_name
+                                        ? 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/30'
+                                        : 'border-slate-300 dark:border-slate-700'
+                                }`}
                             />
 
                             {/* Floating Autocomplete Suggestions */}
@@ -669,6 +709,7 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                                                     key={uma}
                                                     type="button"
                                                     onClick={() => {
+                                                        clearOcrWarning('uma_name');
                                                         setForm({ ...form, uma_name: uma });
                                                         setShowSuggestions(false);
                                                     }}
@@ -701,6 +742,7 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                                         key={uma}
                                         type="button"
                                         onClick={() => {
+                                            clearOcrWarning('uma_name');
                                             setForm({ ...form, uma_name: uma });
                                             setShowSuggestions(false);
                                         }}
@@ -714,13 +756,28 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
 
                         {/* Scenario Selector */}
                         <div>
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                Skenario Pelatihan *
-                            </label>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                    <span>Skenario Pelatihan *</span>
+                                    {ocrWarnings.scenario && (
+                                        <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1">
+                                            <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
+                                            <span>Cek Ulang ({ocrWarnings.scenario}%)</span>
+                                        </span>
+                                    )}
+                                </label>
+                            </div>
                             <select
                                 value={form.scenario}
-                                onChange={(e) => setForm({ ...form, scenario: e.target.value })}
-                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                                onChange={(e) => {
+                                    clearOcrWarning('scenario');
+                                    setForm({ ...form, scenario: e.target.value });
+                                }}
+                                className={`w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none ${
+                                    ocrWarnings.scenario
+                                        ? 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/30'
+                                        : 'border-slate-300 dark:border-slate-700'
+                                }`}
                             >
                                 {(metadata.scenarios || []).map((sc) => (
                                     <option key={sc} value={sc}>{sc}</option>
@@ -845,24 +902,39 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                     </div>
 
                     {/* Fans Gained Input with Auto Thousand-Formatting */}
-                    <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200">
-                        <label className="block text-xs font-bold text-slate-800 mb-1">
-                            Fans Gained per Career Run *
-                        </label>
+                    <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800">
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                <span>Fans Gained per Career Run *</span>
+                                {ocrWarnings.fans_gained && (
+                                    <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1">
+                                        <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
+                                        <span>Cek Ulang ({ocrWarnings.fans_gained}%)</span>
+                                    </span>
+                                )}
+                            </label>
+                        </div>
                         <div className="relative">
                             <input
                                 type="text"
                                 required
                                 value={form.fans_gained}
-                                onChange={(e) => setForm({ ...form, fans_gained: formatNumber(e.target.value) })}
+                                onChange={(e) => {
+                                    clearOcrWarning('fans_gained');
+                                    setForm({ ...form, fans_gained: formatNumber(e.target.value) });
+                                }}
                                 placeholder="Contoh: 35.000.000 (ketik angka perolehan fans)"
-                                className="w-full bg-white border border-emerald-300 rounded-xl px-4 py-2.5 text-base font-mono font-black text-emerald-950 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                                className={`w-full bg-white dark:bg-slate-800 border rounded-xl px-4 py-2.5 text-base font-mono font-black text-emerald-950 dark:text-emerald-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none ${
+                                    ocrWarnings.fans_gained
+                                        ? 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/30'
+                                        : 'border-emerald-300 dark:border-emerald-700'
+                                }`}
                             />
                             <span className="absolute right-4 top-2.5 text-xs font-bold text-emerald-600 pointer-events-none">
                                 fans
                             </span>
                         </div>
-                        <span className="text-[11px] text-slate-500 mt-1 block">
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">
                             Masukkan jumlah perolehan fans yang didapat dari run ini (otomatis format titik)
                         </span>
                     </div>
@@ -893,20 +965,36 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                         </div>
 
                         {/* Evaluation Score Input Field with Auto-Detection */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center bg-white p-3.5 rounded-xl border border-slate-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center bg-white dark:bg-slate-800/90 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700">
                             <div>
-                                <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-                                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                                    <span>Skor Evaluasi / Rating Points (Wajib Diisi) *</span>
+                                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                                    <span className="flex items-center gap-1.5">
+                                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                                        <span>Skor Evaluasi / Rating Points (Wajib Diisi) *</span>
+                                    </span>
+                                    {ocrWarnings.evaluation_score && (
+                                        <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1">
+                                            <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
+                                            <span>Cek Ulang ({ocrWarnings.evaluation_score}%)</span>
+                                        </span>
+                                    )}
                                 </label>
                                 <div className="relative">
                                     <input
                                         type="text"
                                         required
                                         value={form.evaluation_score}
-                                        onChange={handleScoreInput}
+                                        onChange={(e) => {
+                                            clearOcrWarning('evaluation_score');
+                                            clearOcrWarning('final_rank');
+                                            handleScoreInput(e);
+                                        }}
                                         placeholder="Contoh: 19.200 atau 23.900"
-                                        className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm font-mono font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                                        className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl px-3.5 py-2 text-sm font-mono font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none ${
+                                            ocrWarnings.evaluation_score
+                                                ? 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/30'
+                                                : 'border-slate-300 dark:border-slate-600'
+                                        }`}
                                     />
                                     <span className="absolute right-3.5 top-2.5 text-xs font-bold text-slate-400 pointer-events-none">
                                         pts
@@ -1128,6 +1216,11 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                                                 <img
                                                     src={char.image_url}
                                                     alt={char.uma_name}
+                                                    onError={(e) => {
+                                                        const initials = (char.uma_name || 'UM').slice(0, 2).toUpperCase();
+                                                        e.currentTarget.onerror = null;
+                                                        e.currentTarget.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="%2310b981"/><text x="50%" y="54%" font-family="sans-serif" font-weight="900" font-size="24" fill="%23ffffff" dominant-baseline="middle" text-anchor="middle">${initials}</text></svg>`;
+                                                    }}
                                                     className="w-9 h-9 rounded-xl object-cover object-top border border-slate-200 dark:border-slate-700 shrink-0 shadow-2xs"
                                                     loading="lazy"
                                                 />

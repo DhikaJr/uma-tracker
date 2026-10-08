@@ -50,6 +50,22 @@ export default defineConfig({
             workbox: {
                 navigateFallback: null,
                 globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+                runtimeCaching: [
+                    {
+                        urlPattern: /^https:\/\/gametora\.com\/.*/i,
+                        handler: 'CacheFirst',
+                        options: {
+                            cacheName: 'gametora-cdn-cache',
+                            expiration: {
+                                maxEntries: 1500,
+                                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+                            },
+                            cacheableResponse: {
+                                statuses: [0, 200],
+                            },
+                        },
+                    },
+                ],
             },
         }),
         {
