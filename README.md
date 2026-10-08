@@ -153,6 +153,23 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
   - **Zero Speculative Data**: Memberikan disclaimer transparan jika parameter kompetisi belum diumumkan resmi oleh Cygames.
 - **Panduan Terjemahan Strategi Lomba**:
   - Menerjemahkan panduan pemanfaatan parameter kondisi lomba dan green skills ke Bahasa Indonesia yang mudah dipahami.
+- **Diagram Layout Sirkuit & Fase Balapan Resmi (Official Racetrack Layout & Race Phases)**:
+  - **Integrasi Diagram & Fase GameTora**: Menampilkan visualisasi layout diagram lintasan sirkuit dan tahapan fase balapan resmi pada halaman rincian lomba ([`CompetitionEventDetailView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CompetitionEventDetailView.jsx)) untuk event yang terkonfirmasi resmi:
+    - **Event #1 (CM Classic Oktober 2026)**: Kyoto 2200m Turf Outer (`https://gametora.com/umamusume/racetracks/kyoto#2200-turf-outer`, Course ID `10808`).
+    - **Event #2 (LoH November 2026)**: Kyoto 3000m Turf Outer (`https://gametora.com/umamusume/racetracks/kyoto#3000-turf-outer`, Course ID `10810`).
+    - **Event #3 (CM Long Desember 2026)**: Nakayama 2500m Turf Inner (`https://gametora.com/umamusume/racetracks/nakayama#2500-turf-inner`, Course ID `10506`).
+  - **Prinsip Bebas Spekulasi (Zero Speculative Data)**: Event masa depan yang parameternya belum dirilis resmi oleh Cygames (Event #4, #5, #6) secara ketat dikecualikan dari tampilan diagram hingga pengumuman resmi.
+  - **Lokalisasi Penuh Bahasa Indonesia**:
+    - **Fase Balapan**: *Fase Awal (Early-Race)*, *Fase Tengah (Mid-Race)*, *Fase Akhir (Late-Race)*, dan *Spurt Terakhir (Last Spurt)*.
+    - **Legenda & Penanda Lintasan**: *Trek Lurus (Straights)*, *Tikungan (Corners)*, *Tanjakan (Slope Up)*, *Turunan (Slope Down)*, *Datar (Flat)*, *Posisi Tetap Berakhir (Position Keep End)*, dan *Mulai Memacu (Spurt Start)*.
+    - **Tabel Metrik Lintasan 5-Kolom**: Pembagian jarak meter dan kemiringan per fase, tikungan, kontur elevasi, trek lurus, serta penanda khusus dan stat threshold lintasan.
+  - **Interaktivitas Visual & Dukungan Multi-Lap**:
+    - Tab pemilih putaran (*Semua Putaran / All Laps*, *Putaran 1*, *Putaran 2*) dengan diagram individual per lap.
+    - Modal pratinjau resolusi tinggi dengan zoom dan tautan unduh langsung gambar diagram penuh.
+    - Tautan cepat langsung ke halaman GameTora resmi dengan format: `https://gametora.com/umamusume/racetracks/{region}#{jarak}-{turf/dirt}-{inner/outer}`.
+  - **Katalog Sirkuit & Sinkronisasi GameTora Berkelanjutan**:
+    - Basis data 17 sirkuit pacuan kuda Jepang tersimpan di `resources/js/data/racetracksCatalog.json`.
+    - Sinkronisasi otomatis dataset `racetracks` dan `racetracks_extended` via `GameToraSyncService.php` dan helper `CompetitionRacetrackHelper.php`.
 
 ### 9. Sistem Pencadangan Data Teruji (Backup Schema v2.0)
 - **Integritas Data Transaksional**:
@@ -235,7 +252,7 @@ Akses aplikasi melalui peramban di: **`http://127.0.0.1:8000`**
 ## ⚡ Perintah Artisan Terverifikasi (CLI Commands)
 
 ### 1. Sinkronisasi Data Katalog dari GameTora
-Mengunduh dan menyinkronkan data katalog karakter, support card, dan banner JP 2026+:
+Mengunduh dan menyinkronkan data katalog karakter, support card, banner JP 2026+, serta katalog sirkuit pacuan kuda resmi:
 ```bash
 # Sinkronisasi data katalog standar (hanya jalan jika terdapat pembaruan hash)
 php artisan uma:sync-catalog
@@ -329,8 +346,8 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 ### Competition Planner Endpoints
 | Metode | Endpoint | Deskripsi |
 |---|---|---|
-| `GET` | `/api/competition-events` | Menampilkan seluruh event kompetisi Champions Meeting & League of Heroes berurutan kronologis resmi Cygames JP |
-| `GET` | `/api/competition-events/{id}` | Menampilkan detail spesifik kondisi event lomba kompetisi tertentu |
+| `GET` | `/api/competition-events` | Menampilkan seluruh event kompetisi Champions Meeting & League of Heroes berurutan kronologis resmi Cygames JP, disertai atribut `racetrack_course` dinamis (diagram, fase, elevasi, dan tautan GameTora) untuk event yang terkonfirmasi resmi |
+| `GET` | `/api/competition-events/{id}` | Menampilkan detail spesifik kondisi event lomba kompetisi tertentu beserta lampiran objek `racetrack_course` |
 
 ### Backup & Restore Endpoints
 | Metode | Endpoint | Deskripsi |
@@ -359,7 +376,7 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 Aplikasi dilengkapi rangkaian pengujian otomatis berbasis **PHPUnit** pada database memori terisolasi (`:memory:`):
 
 ```bash
-# Menjalankan seluruh pengujian (208 tests, 2.810 assertions)
+# Menjalankan seluruh pengujian (210 tests, 2.846 assertions)
 php artisan test --compact
 
 # Menjalankan pengujian spesifik
@@ -375,11 +392,11 @@ vendor/bin/pint
 ```
 
 ### Cakupan Pengujian:
-- **Upcoming Competition Planner**: Integritas seeder tepat 6 event resmi Cygames 2026–2027, idempotensi seeder tanpa duplikasi, pengurutan kronologis presisi multi-prioritas (`year`, `month`, `period`, `start_date`), preservasi nilai `NULL` dan eksplisit `"random"`, isolasi aturan khusus `no_debuff` pada CM MILE Maret 2027, serta pengujian serialisasi API.
+- **Upcoming Competition Planner**: Integritas seeder tepat 6 event resmi Cygames 2026–2027, idempotensi seeder tanpa duplikasi, pengurutan kronologis presisi multi-prioritas (`year`, `month`, `period`, `start_date`), preservasi nilai `NULL` dan eksplisit `"random"`, isolasi aturan khusus `no_debuff` pada CM MILE Maret 2027, integritas dataset 17 sirkuit pada `racetracksCatalog.json`, lampiran objek layout sirkuit resmi `racetrack_course` untuk event terkonfirmasi, isolasi nilai `NULL` untuk event yang belum diumumkan (Zero Speculative Data), serta pengujian serialisasi API.
 - **Inheritance Affinity & Compatibility**: Pengujian kalkulasi kompatibilitas silsilah 7 slot lengkap, penambahan bonus kemenangan G1 bersama (+3 poin/balapan), ambang batas klasifikasi badge (△, ○, ◎), validasi ketat anti-duplikasi karakter silsilah lintas kostum, dan algoritma rekomendasi indukan terbaik dari koleksi user.
 - **Backup & Restore Integrity**: Pengujian pemulihan round-trip, kepatuhan skema v2.0, proteksi atomik rollback, penolakan versi tidak dikenal, integritas foreign key SQLite, dan pemulihan field JSON katalog.
 - **Gacha Logic, Twinkle Collection & Rate Audit**: Verifikasi persistensi atribut `base_rate` (3,00% vs 4,50%), kalkulasi dinamis featured rate-up 0,75%, aturan khusus banner Twinkle Collection (pembagian rate 3% terbagi rata tanpa rate-up, isolasi pool B3 8 karakter, dan dukungan pool B1/B2), eksklusivitas karakter bervarian kostum resmi `[...]` pada katalog metadata gacha, eksklusi banner berbayar (`scam_gacha = true` / `restriction = premium`), dan siklus hidup pity counter.
-- **Koleksi & GameTora Sync**: Proteksi batas minimum bintang karakter bawaan, matriks efek status kartu bantuan 0LB–MLB, dan integritas hash pembaruan katalog.
+- **Koleksi & GameTora Sync**: Proteksi batas minimum bintang karakter bawaan, matriks efek status kartu bantuan 0LB–MLB, integritas hash pembaruan katalog, serta sinkronisasi dataset sirkuit balap.
 - **PWA & UI Routing**: Verifikasi manifest PWA, routing service worker, dan pengalihan build fallback.
 
 ---

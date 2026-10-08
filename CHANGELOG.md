@@ -26,6 +26,15 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
   - Mengintegrasikan sinkronisasi berkala dataset `racetracks` dan `racetracks_extended` pada [`GameToraSyncService.php`](file:///c:/Projects/uma-tracker/app/Services/GameToraSyncService.php) dan [`CompetitionRacetrackHelper.php`](file:///c:/Projects/uma-tracker/app/Support/CompetitionRacetrackHelper.php).
   - Melengkapi rangkaian uji otomatis di [`CompetitionEventTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CompetitionEventTest.php) (seluruh 210 tests lolos dengan 2.846 assertions).
 
+### 📚 Sinkronisasi Dokumentasi & Spesifikasi Proyek (`README.md`)
+- **Dokumentasi Fitur Layout Sirkuit & Fase Lomba**:
+  - Mendokumentasikan fitur visual diagram layout sirkuit resmi, fase balapan, legenda, tabel metrik 5 kolom, dan prinsip Zero Speculative Data pada Bagian 8 `README.md`.
+- **Pembaruan Endpoint REST API & Perintah Artisan**:
+  - Memperbarui tabel endpoint `GET /api/competition-events` dan `GET /api/competition-events/{id}` terkait objek `racetrack_course`.
+  - Menyelaraskan deskripsi perintah CLI `php artisan uma:sync-catalog` terkait sinkronisasi dataset sirkuit balap.
+- **Pembaruan Statistik Test Suite**:
+  - Memperbarui catatan statistik pengujian otomatis menjadi **210 tests, 2.846 assertions**.
+
 ## [Versi 2.6.2] - 8 Oktober 2026
 
 ### 🔍 Indikator Tingkat Keyakinan OCR & Validasi Input Visual
