@@ -307,4 +307,152 @@ class CompetitionEventTest extends TestCase
         $this->assertSame('5 s', $frenzied['effects'][0]['formatted_value']);
         $this->assertSame('Rushing enemy Late Surgers', $frenzied['effects'][0]['target_name']);
     }
+
+    /**
+     * Test green skill recommendations for fully confirmed October 2026 CM Classic.
+     */
+    public function test_green_skill_recommendations_for_fully_confirmed_cm_classic_october_2026(): void
+    {
+        $this->seed(CompetitionEventSeeder::class);
+
+        $event = CompetitionEvent::where('year', 2026)->where('month', 10)->firstOrFail();
+
+        $this->assertTrue($event->is_fully_confirmed);
+        $recs = $event->recommended_green_skills;
+
+        $this->assertTrue($recs['is_fully_confirmed']);
+        $this->assertTrue($recs['has_recommendations']);
+        $this->assertFalse($recs['has_random_conditions']);
+        $this->assertNull($recs['random_disclaimer']);
+
+        $skillNames = array_column($recs['skills'], 'name_en');
+        $this->assertContains('Right-Handed ○', $skillNames);
+        $this->assertContains('Kyoto Racecourse ○', $skillNames);
+        $this->assertContains('Non-Standard Distance ○', $skillNames);
+        $this->assertContains('Fall Runner ○', $skillNames);
+        $this->assertContains('Cloudy Days ○', $skillNames);
+        $this->assertContains('Good Track Condition ○', $skillNames);
+
+        // All 6 should have recommendation_status 'recommended'
+        foreach ($recs['skills'] as $skill) {
+            $this->assertSame('recommended', $skill['recommendation_status']);
+            $this->assertSame('Direkomendasikan (Pasti Aktif)', $skill['status_label']);
+            $this->assertSame('+40', $skill['value']);
+            $this->assertNotEmpty($skill['desc_id']);
+        }
+    }
+
+    /**
+     * Test green skill recommendations for November 2026 League of Heroes:
+     * Weather & Track are random, so Good Track, Bad Track, and Weather skills must be marked as 'situational' (Dapat Diambil).
+     */
+    public function test_green_skill_recommendations_for_league_of_heroes_november_2026_with_random_conditions(): void
+    {
+        $this->seed(CompetitionEventSeeder::class);
+
+        $event = CompetitionEvent::where('year', 2026)->where('month', 11)->firstOrFail();
+
+        $this->assertTrue($event->is_fully_confirmed);
+        $recs = $event->recommended_green_skills;
+
+        $this->assertTrue($recs['is_fully_confirmed']);
+        $this->assertTrue($recs['has_recommendations']);
+        $this->assertTrue($recs['has_random_conditions']);
+        $this->assertNotNull($recs['random_disclaimer']);
+        $this->assertStringContainsString('League of Heroes', $recs['random_disclaimer']);
+        $this->assertStringContainsString('Dapat Diambil (Situasional)', $recs['random_disclaimer']);
+
+        $skillsByName = collect($recs['skills'])->keyBy('name_en');
+
+        // Confirmed Fixed Parameters (Recommended)
+        $this->assertTrue($skillsByName->has('Right-Handed ○'));
+        $this->assertSame('recommended', $skillsByName->get('Right-Handed ○')['recommendation_status']);
+
+        $this->assertTrue($skillsByName->has('Kyoto Racecourse ○'));
+        $this->assertSame('recommended', $skillsByName->get('Kyoto Racecourse ○')['recommendation_status']);
+
+        $this->assertTrue($skillsByName->has('Non-Standard Distance ○'));
+        $this->assertSame('recommended', $skillsByName->get('Non-Standard Distance ○')['recommendation_status']);
+
+        $this->assertTrue($skillsByName->has('Fall Runner ○'));
+        $this->assertSame('recommended', $skillsByName->get('Fall Runner ○')['recommendation_status']);
+
+        // Explicit Random Weather & Track conditions (Situational / Dapat Diambil)
+        $situationalNames = [
+            'Good Track Condition ○',
+            'Bad Track Condition ○',
+            'Sunny Days ○',
+            'Cloudy Days ○',
+            'Rainy Days ○',
+            'Snowy Days ○',
+        ];
+
+        foreach ($situationalNames as $name) {
+            $this->assertTrue($skillsByName->has($name), "Expected {$name} to be in LoH green skills");
+            $this->assertSame('situational', $skillsByName->get($name)['recommendation_status']);
+            $this->assertSame('Dapat Diambil (Situasional)', $skillsByName->get($name)['status_label']);
+        }
+    }
+
+    /**
+     * Test green skill recommendations for December 2026 CM Long (Nakayama 2500m Winter Sunny Good).
+     */
+    public function test_green_skill_recommendations_for_cm_long_december_2026(): void
+    {
+        $this->seed(CompetitionEventSeeder::class);
+
+        $event = CompetitionEvent::where('year', 2026)->where('month', 12)->firstOrFail();
+
+        $this->assertTrue($event->is_fully_confirmed);
+        $recs = $event->recommended_green_skills;
+
+        $skillNames = array_column($recs['skills'], 'name_en');
+        $this->assertContains('Right-Handed ○', $skillNames);
+        $this->assertContains('Nakayama Racecourse ○', $skillNames);
+        $this->assertContains('Non-Standard Distance ○', $skillNames);
+        $this->assertContains('Winter Runner ○', $skillNames);
+        $this->assertContains('Sunny Days ○', $skillNames);
+        $this->assertContains('Good Track Condition ○', $skillNames);
+    }
+
+    /**
+     * Test unannounced / partially announced events return disclaimer without speculation.
+     */
+    public function test_unannounced_events_return_disclaimer_without_speculation(): void
+    {
+        $this->seed(CompetitionEventSeeder::class);
+
+        // January 2027 CM Classic (Venue and Distance are NULL)
+        $event = CompetitionEvent::where('year', 2027)->where('month', 1)->firstOrFail();
+
+        $this->assertFalse($event->is_fully_confirmed);
+        $recs = $event->recommended_green_skills;
+
+        $this->assertFalse($recs['is_fully_confirmed']);
+        $this->assertFalse($recs['has_recommendations']);
+        $this->assertEmpty($recs['skills']);
+        $this->assertStringContainsString('Rekomendasi green skill belum tersedia', $recs['disclaimer']);
+    }
+
+    /**
+     * Test greenSkillsCatalog.json exists and has 26 skills.
+     */
+    public function test_green_skills_catalog_json_integrity(): void
+    {
+        $path = resource_path('js/data/greenSkillsCatalog.json');
+        $this->assertFileExists($path);
+
+        $json = json_decode((string) file_get_contents($path), true);
+        $this->assertIsArray($json);
+        $this->assertCount(26, $json);
+
+        // Spot check key skills
+        $this->assertArrayHasKey('200012', $json); // Right-Handed ○
+        $this->assertArrayHasKey('200062', $json); // Kyoto Racecourse ○
+        $this->assertArrayHasKey('200132', $json); // Standard Distance ○
+        $this->assertArrayHasKey('200142', $json); // Non-Standard Distance ○
+        $this->assertArrayHasKey('200152', $json); // Good Track Condition ○
+        $this->assertArrayHasKey('200162', $json); // Bad Track Condition ○
+        $this->assertArrayHasKey('200212', $json); // Sunny Days ○
+    }
 }

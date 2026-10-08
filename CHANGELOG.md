@@ -2,6 +2,49 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.6.0] - 8 Oktober 2026
+
+### 🏁 Halaman Khusus Rincian Event CM & LoH (Dedicated Page Navigation)
+- **Transisi Tampilan Penuh di Tab yang Sama**:
+  - Tombol **"Lihat Rincian Lengkap"** pada kartu event maupun pintasan kartu event pada Dasbor kini langsung membuka halaman rincian lengkap balapan di tab yang sama melalui komponen baru [`CompetitionEventDetailView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CompetitionEventDetailView.jsx).
+  - Mengeliminasi popup modal dialog sebelumnya demi kenyamanan analisis rincian trek dan strategi balapan.
+  - Menyediakan tombol navigasi **"← Kembali ke Daftar Event"** serta breadcrumb untuk beralih kembali ke daftar event kapan saja.
+- **Dukungan URL Deep-Linking & Browser History**:
+  - Sinkronisasi state event terpilih dengan query parameter URL (`?event=<id>`) dan `window.history.pushState`.
+  - Tombol Back/Forward pada browser serta refresh halaman bekerja secara mulus untuk langsung membuka rincian event terkait.
+
+### 🌿 Rekomendasi Green Skills Resmi (Standar GameTora & Zero Speculative Data)
+- **Mesin Pencocokan Green Skills Deterministik**:
+  - Mengimplementasikan modul recommender pada backend [`CompetitionGreenSkillRecommender.php`](file:///c:/Projects/uma-tracker/app/Support/CompetitionGreenSkillRecommender.php) dan utilitas frontend [`greenSkillHelper.js`](file:///c:/Projects/uma-tracker/resources/js/utils/greenSkillHelper.js).
+  - Menghimpun 26 katalog green skills GameTora lengkap dengan data kondisi aktivasi dan efeknya pada [`greenSkillsCatalog.json`](file:///c:/Projects/uma-tracker/resources/js/data/greenSkillsCatalog.json).
+  - Mencocokkan kondisi resmi balapan terkonfirmasi:
+    - **Arah Putaran**: *Right-Handed ○ (右回り○)* atau *Left-Handed ○ (左回り○)* (+40 Speed).
+    - **Sirkuit / Venue**: *Kyoto Racecourse ○ (京都レース場○)*, *Nakayama Racecourse ○ (中山レース場○)*, *Tokyo*, *Hanshin*, dll. (+40 Stamina).
+    - **Jarak Lintasan**: *Standard Distance ○ (根幹距離○)* untuk kelipatan 400m atau *Non-Standard Distance ○ (非根幹距離○)* untuk non-kelipatan 400m (+40 Stamina).
+    - **Musim**: *Fall Runner ○ (秋ウマ娘○)*, *Winter Runner ○ (冬ウマ娘○)*, *Spring*, *Summer* (+40 Speed).
+    - **Cuaca & Kondisi Trek** (pada gelaran CM dengan kondisi pasti): *Sunny Days ○*, *Cloudy Days ○*, *Good Track Condition ○*, dll.
+  - Setiap kartu green skill dilengkapi ikon resmi CDN GameTora, nama dwibahasa, lencana status stat (+40 Speed / Stamina / Power / Guts), deskripsi dwibahasa, lencana rekomendasi, serta tombol **"More"** untuk memeriksa formula aktivasi lengkap melalui modal [`SkillDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/SkillDetailModal.jsx).
+- **Proteksi Integritas Data (Event Belum Lengkap)**:
+  - Pada gelaran kompetisi yang parameter sirkuit dan musimnya belum diumumkan secara resmi (seperti CM Classic Jan 2027, LoH Feb 2027, CM Mile Mar 2027), sistem secara tegas menampilkan kartu disclaimer:
+    *"Rekomendasi green skill belum tersedia karena informasi balapan resmi belum memadai (Zero Speculative Data)"*.
+
+### 🎲 Penanganan Cuaca & Kondisi Lintasan Acak pada League of Heroes
+- **Disclaimer Khusus League of Heroes**:
+  - Menyematkan kartu peringatan khusus yang menjelaskan bahwa cuaca dan kondisi lintasan berganti secara acak pada setiap ronde balapan LoH.
+- **Lencana "Dapat Diambil (Situasional)"**:
+  - Secara eksplisit menandai 6 green skill terkait cuaca dan kondisi lintasan acak sebagai **"Dapat Diambil (Situasional)"** (lencana kuning/amber), bukan direkomendasikan utama:
+    1. *Good Track Condition ○ (良バ場○)*
+    2. *Bad Track Condition ○ (道悪○)*
+    3. *Sunny Days ○ (晴れの日○)*
+    4. *Cloudy Days ○ (曇りの日○)*
+    5. *Rainy Days ○ (雨の日○)*
+    6. *Snowy Days ○ (雪の日○)*
+  - Sementara skill yang berbasis parameter pasti (*Right-Handed ○*, *Kyoto Racecourse ○*, *Non-Standard Distance ○*, dan *Fall Runner ○*) tetap berstatus **"Direkomendasikan (Pasti Aktif)"** (lencana hijau/emerald).
+
+### 🧪 Rangkaian Pengujian Otomatis
+- Menambahkan 5 metode pengujian baru pada [`CompetitionEventTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CompetitionEventTest.php) untuk menguji rekomendasi CM Classic Okt 2026, LoH acak Nov 2026, CM Long Des 2026, event belum diumumkan, serta integritas katalog JSON green skills.
+- Memperbarui pengujian [`ChangelogApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/ChangelogApiTest.php) untuk memverifikasi versi terbaru 2.6.0.
+
 ## [Versi 2.5.1] - 8 Oktober 2026
 
 ### 🎯 Perbaikan Format Efek Debuff Skill, Target Sasaran & Durasi Dasar (Standar GameTora)

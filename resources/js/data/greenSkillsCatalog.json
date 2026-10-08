@@ -1,0 +1,5475 @@
+{
+  "200012": {
+    "id": 200012,
+    "name_en": "Right-Handed ○",
+    "name_jp": "右回り○",
+    "icon_id": 10011,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10011.png",
+    "stat": "Speed",
+    "value": "+40",
+    "desc_en": "Moderately increase performance on right-handed tracks.",
+    "desc_id": "Meningkatkan status Speed sebesar +40 pada sirkuit putaran kanan (searah jarum jam).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "rotation==1",
+        "effects": [
+          {
+            "type": 1,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 1,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        105602,
+        102201,
+        106701,
+        105802,
+        106703,
+        106803,
+        111901,
+        102303,
+        111101,
+        112701,
+        110902,
+        111301,
+        110602,
+        100503,
+        107403,
+        114901
+      ],
+      "char_e": [
+        100502,
+        102002,
+        104701,
+        104702,
+        110702,
+        101703
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "rotation==1",
+          "effects": [
+            {
+              "type": 1,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance on right-handed tracks.",
+      "desc_ko": "시계(우회전) 방향 코스에 다소 강해진다",
+      "desc_tw": "變得稍微擅長順時針賽道",
+      "endesc": "Your Speed stat is increased by 40 on clockwise tracks",
+      "enname": "Right Turns ○",
+      "iconid": 10011,
+      "id": 200012,
+      "jpdesc": "右回りコースならスピードが少し上がる",
+      "jpname": "右回り○",
+      "loc": {
+        "en": {
+          "char": [
+            105602,
+            102201,
+            106701,
+            105802
+          ],
+          "char_e": [
+            100502,
+            102002,
+            104701
+          ],
+          "sup_e": [
+            [
+              30065,
+              20016
+            ],
+            []
+          ],
+          "sup_hint": [
+            [
+              30010,
+              30044,
+              30069,
+              30087,
+              30105,
+              30123,
+              20037,
+              20053
+            ],
+            [
+              10028,
+              10072,
+              10076
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            105602,
+            102201,
+            106701,
+            105802,
+            106703,
+            106803,
+            111901,
+            102303,
+            111101,
+            112701
+          ],
+          "char_e": [
+            100502,
+            102002,
+            104701,
+            104702,
+            110702
+          ],
+          "sup_e": [
+            [
+              30065,
+              30163,
+              20016,
+              20058
+            ],
+            []
+          ],
+          "sup_hint": [
+            [
+              30010,
+              30037,
+              30044,
+              30069,
+              30087,
+              30105,
+              30123,
+              30167,
+              30168,
+              30175,
+              30204,
+              30230,
+              30246,
+              20037,
+              20053,
+              20057,
+              20059,
+              20079
+            ],
+            [
+              10028,
+              10072,
+              10076,
+              10119
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            105602,
+            102201,
+            106701,
+            105802,
+            106703,
+            106803,
+            111901,
+            102303,
+            111101,
+            112701
+          ],
+          "char_e": [
+            100502,
+            102002,
+            104701,
+            104702,
+            110702
+          ],
+          "sup_e": [
+            [
+              30065,
+              30163,
+              20016,
+              20058
+            ],
+            []
+          ],
+          "sup_hint": [
+            [
+              30010,
+              30037,
+              30044,
+              30069,
+              30087,
+              30105,
+              30123,
+              30167,
+              30168,
+              30175,
+              30204,
+              30230,
+              30246,
+              20037,
+              20053,
+              20057,
+              20059,
+              20079
+            ],
+            [
+              10028,
+              10072,
+              10076,
+              10119
+            ]
+          ]
+        }
+      },
+      "name_en": "Right-Handed ○",
+      "name_ko": "시계(우) 방향○",
+      "name_tw": "順時針○",
+      "rarity": 1,
+      "sup_e": [
+        [
+          30065,
+          30163,
+          20016,
+          20058
+        ],
+        []
+      ],
+      "sup_hint": [
+        [
+          30010,
+          30037,
+          30044,
+          30069,
+          30087,
+          30105,
+          30123,
+          30167,
+          30168,
+          30175,
+          30204,
+          30230,
+          30246,
+          30261,
+          30281,
+          30286,
+          30311,
+          20037,
+          20053,
+          20057,
+          20059,
+          20079
+        ],
+        [
+          10028,
+          10072,
+          10076,
+          10119,
+          10131,
+          10146
+        ]
+      ],
+      "tid": "1f",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200011,
+        200013,
+        200014
+      ]
+    }
+  },
+  "200022": {
+    "id": 200022,
+    "name_en": "Left-Handed ○",
+    "name_jp": "左回り○",
+    "icon_id": 10011,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10011.png",
+    "stat": "Speed",
+    "value": "+40",
+    "desc_en": "Moderately increase performance on left-handed tracks.",
+    "desc_id": "Meningkatkan status Speed sebesar +40 pada sirkuit putaran kiri (berlawanan jarum jam).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "rotation==2",
+        "effects": [
+          {
+            "type": 1,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 1,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        100201,
+        107101,
+        109401,
+        109501,
+        112402
+      ],
+      "char_e": [
+        100201,
+        104701,
+        100202,
+        104702,
+        108402,
+        101703
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "rotation==2",
+          "effects": [
+            {
+              "type": 1,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance on left-handed tracks.",
+      "desc_ko": "반시계(좌회전) 방향 코스에 다소 강해진다",
+      "desc_tw": "變得稍微擅長逆時針賽道",
+      "endesc": "Your Speed stat is increased by 40 on counterclockwise tracks",
+      "enname": "Left Turns ○",
+      "iconid": 10011,
+      "id": 200022,
+      "jpdesc": "左回りコースならスピードが少し上がる",
+      "jpname": "左回り○",
+      "loc": {
+        "en": {
+          "char": [
+            100201,
+            107101
+          ],
+          "char_e": [
+            100201,
+            104701
+          ],
+          "sup_e": [
+            [
+              30002,
+              30062,
+              30065,
+              30076,
+              30081,
+              30120
+            ],
+            [
+              10002
+            ]
+          ],
+          "sup_hint": [
+            [
+              30085,
+              30119,
+              20034
+            ],
+            [
+              10069
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            100201,
+            107101,
+            109401
+          ],
+          "char_e": [
+            100201,
+            104701,
+            100202,
+            104702,
+            108402
+          ],
+          "sup_e": [
+            [
+              30002,
+              30062,
+              30065,
+              30076,
+              30081,
+              30120,
+              30252,
+              20063
+            ],
+            [
+              10002
+            ]
+          ],
+          "sup_hint": [
+            [
+              30085,
+              30119,
+              30127,
+              30141,
+              30183,
+              30202,
+              30211,
+              30234,
+              30245,
+              20034,
+              20063
+            ],
+            [
+              10069
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            100201,
+            107101,
+            109401
+          ],
+          "char_e": [
+            100201,
+            104701,
+            100202,
+            104702,
+            108402
+          ],
+          "sup_e": [
+            [
+              30002,
+              30062,
+              30065,
+              30076,
+              30081,
+              30120,
+              30252,
+              20063
+            ],
+            [
+              10002
+            ]
+          ],
+          "sup_hint": [
+            [
+              30085,
+              30119,
+              30127,
+              30141,
+              30183,
+              30202,
+              30211,
+              30234,
+              30245,
+              20034,
+              20063
+            ],
+            [
+              10069
+            ]
+          ]
+        }
+      },
+      "name_en": "Left-Handed ○",
+      "name_ko": "반시계(좌) 방향○",
+      "name_tw": "逆時針○",
+      "rarity": 1,
+      "sup_e": [
+        [
+          30002,
+          30062,
+          30065,
+          30076,
+          30081,
+          30120,
+          30252,
+          30288,
+          20063
+        ],
+        [
+          10002
+        ]
+      ],
+      "sup_hint": [
+        [
+          30085,
+          30119,
+          30127,
+          30141,
+          30183,
+          30202,
+          30211,
+          30234,
+          30245,
+          30282,
+          30288,
+          30308,
+          20034,
+          20063
+        ],
+        [
+          10069
+        ]
+      ],
+      "tid": "1i",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200021,
+        200023,
+        200024
+      ]
+    }
+  },
+  "200032": {
+    "id": 200032,
+    "name_en": "Tokyo Racecourse ○",
+    "name_jp": "東京レース場○",
+    "icon_id": 10021,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10021.png",
+    "stat": "Stamina",
+    "value": "+40",
+    "desc_en": "Moderately increase performance at Tokyo Racecourse.",
+    "desc_id": "Meningkatkan status Stamina sebesar +40 saat berlomba di Sirkuit Tokyo (東京レース場).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "track_id==10006",
+        "effects": [
+          {
+            "type": 2,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 2,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        103101,
+        107102,
+        108401,
+        110401,
+        107202,
+        103703
+      ],
+      "char_e": [
+        100101,
+        100102,
+        103701,
+        103702,
+        100103,
+        103703
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "track_id==10006",
+          "effects": [
+            {
+              "type": 2,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance at Tokyo Racecourse.",
+      "desc_ko": "도쿄 경기장에 다소 강해진다",
+      "desc_tw": "變得稍微擅長東京賽場",
+      "endesc": "In Tokyo, your Stamina stat is increased by 40",
+      "enname": "Tokyo Racetrack ○",
+      "iconid": 10021,
+      "id": 200032,
+      "jpdesc": "東京レース場ならスタミナが少し上がる",
+      "jpname": "東京レース場○",
+      "loc": {
+        "en": {
+          "char": [
+            103101
+          ],
+          "char_e": [
+            100101,
+            100102,
+            103701,
+            103702,
+            100103
+          ],
+          "sup_hint": [
+            [
+              30005,
+              30104,
+              20039
+            ],
+            [
+              10007
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            103101,
+            107102,
+            108401,
+            110401,
+            107202,
+            103703
+          ],
+          "char_e": [
+            100101,
+            100102,
+            103701,
+            103702,
+            100103,
+            103703
+          ],
+          "sup_e": [
+            [
+              30180
+            ],
+            []
+          ],
+          "sup_hint": [
+            [
+              30005,
+              30104,
+              30135,
+              30150,
+              30165,
+              30197,
+              30203,
+              30240,
+              20039,
+              20070,
+              20075
+            ],
+            [
+              10007,
+              10091,
+              10097
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            103101,
+            107102,
+            108401,
+            110401,
+            107202,
+            103703
+          ],
+          "char_e": [
+            100101,
+            100102,
+            103701,
+            103702,
+            100103,
+            103703
+          ],
+          "sup_e": [
+            [
+              30180
+            ],
+            []
+          ],
+          "sup_hint": [
+            [
+              30005,
+              30104,
+              30135,
+              30150,
+              30165,
+              30197,
+              30203,
+              30240,
+              20039,
+              20070,
+              20075
+            ],
+            [
+              10007,
+              10091,
+              10097
+            ]
+          ]
+        }
+      },
+      "name_en": "Tokyo Racecourse ○",
+      "name_ko": "도쿄 경기장○",
+      "name_tw": "東京賽場○",
+      "rarity": 1,
+      "sup_e": [
+        [
+          30180
+        ],
+        []
+      ],
+      "sup_hint": [
+        [
+          30005,
+          30104,
+          30135,
+          30150,
+          30165,
+          30197,
+          30203,
+          30240,
+          30273,
+          20039,
+          20070,
+          20075
+        ],
+        [
+          10007,
+          10091,
+          10097
+        ]
+      ],
+      "tid": "1l",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200031,
+        200033,
+        200034
+      ]
+    }
+  },
+  "200042": {
+    "id": 200042,
+    "name_en": "Nakayama Racecourse ○",
+    "name_jp": "中山レース場○",
+    "icon_id": 10021,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10021.png",
+    "stat": "Stamina",
+    "value": "+40",
+    "desc_en": "Moderately increase performance at Nakayama Racecourse.",
+    "desc_id": "Meningkatkan status Stamina sebesar +40 saat berlomba di Sirkuit Nakayama (中山レース場).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "track_id==10005",
+        "effects": [
+          {
+            "type": 2,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 2,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        108301
+      ],
+      "char_e": [
+        100101,
+        100102,
+        100601,
+        100602,
+        102101,
+        100103,
+        102102,
+        104102,
+        100603,
+        104103,
+        104101,
+        106601
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "track_id==10005",
+          "effects": [
+            {
+              "type": 2,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance at Nakayama Racecourse.",
+      "desc_ko": "나카야마 경기장에 다소 강해진다",
+      "desc_tw": "變得稍微擅長中山賽場",
+      "endesc": "In Nakayama, your Stamina stat is increased by 40",
+      "enname": "Nakayama Racetrack ○",
+      "iconid": 10021,
+      "id": 200042,
+      "jpdesc": "中山レース場ならスタミナが少し上がる",
+      "jpname": "中山レース場○",
+      "loc": {
+        "en": {
+          "char_e": [
+            100101,
+            100102,
+            100601,
+            100602,
+            102101,
+            100103,
+            102102,
+            104101
+          ],
+          "sup_e": [
+            [
+              30024,
+              30043,
+              30067,
+              30108,
+              30146,
+              20048
+            ],
+            [
+              10005,
+              10067
+            ]
+          ],
+          "sup_hint": [
+            [
+              30006,
+              30027,
+              30031,
+              30070,
+              30105,
+              20011
+            ],
+            [
+              10009,
+              10034,
+              10054
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            108301
+          ],
+          "char_e": [
+            100101,
+            100102,
+            100601,
+            100602,
+            102101,
+            100103,
+            102102,
+            104102,
+            104101,
+            106601
+          ],
+          "sup_e": [
+            [
+              30024,
+              30043,
+              30067,
+              30108,
+              30146,
+              30163,
+              20048
+            ],
+            [
+              10005,
+              10067
+            ]
+          ],
+          "sup_hint": [
+            [
+              30006,
+              30027,
+              30031,
+              30037,
+              30070,
+              30105,
+              30152,
+              30213,
+              20011,
+              20059,
+              20062
+            ],
+            [
+              10009,
+              10034,
+              10054
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            108301
+          ],
+          "char_e": [
+            100101,
+            100102,
+            100601,
+            100602,
+            102101,
+            100103,
+            102102,
+            104102,
+            104101,
+            106601
+          ],
+          "sup_e": [
+            [
+              30024,
+              30043,
+              30067,
+              30108,
+              30146,
+              30163,
+              20048
+            ],
+            [
+              10005,
+              10067
+            ]
+          ],
+          "sup_hint": [
+            [
+              30006,
+              30027,
+              30031,
+              30037,
+              30070,
+              30105,
+              30152,
+              30213,
+              20011,
+              20059,
+              20062
+            ],
+            [
+              10009,
+              10034,
+              10054
+            ]
+          ]
+        }
+      },
+      "name_en": "Nakayama Racecourse ○",
+      "name_ko": "나카야마 경기장○",
+      "name_tw": "中山賽場○",
+      "rarity": 1,
+      "sup_e": [
+        [
+          30024,
+          30043,
+          30067,
+          30108,
+          30146,
+          30163,
+          20048
+        ],
+        [
+          10005,
+          10067
+        ]
+      ],
+      "sup_hint": [
+        [
+          30006,
+          30027,
+          30031,
+          30037,
+          30070,
+          30105,
+          30152,
+          30213,
+          30291,
+          20011,
+          20059,
+          20062
+        ],
+        [
+          10009,
+          10034,
+          10054,
+          10143
+        ]
+      ],
+      "tid": "1o",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200041,
+        200043
+      ]
+    }
+  },
+  "200052": {
+    "id": 200052,
+    "name_en": "Hanshin Racecourse ○",
+    "name_jp": "阪神レース場○",
+    "icon_id": 10021,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10021.png",
+    "stat": "Stamina",
+    "value": "+40",
+    "desc_en": "Moderately increase performance at Hanshin Racecourse.",
+    "desc_id": "Meningkatkan status Stamina sebesar +40 saat berlomba di Sirkuit Hanshin (阪神レース場).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "track_id==10009",
+        "effects": [
+          {
+            "type": 2,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 2,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        104001,
+        105102
+      ],
+      "char_e": [
+        102301,
+        102302,
+        102101,
+        100702,
+        102102,
+        100703,
+        102303,
+        100701
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "track_id==10009",
+          "effects": [
+            {
+              "type": 2,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance at Hanshin Racecourse.",
+      "desc_ko": "한신 경기장에 다소 강해진다",
+      "desc_tw": "變得稍微擅長阪神賽場",
+      "endesc": "In Hanshin, your Stamina stat is increased by 40",
+      "enname": "Hanshin Racetrack ○",
+      "iconid": 10021,
+      "id": 200052,
+      "jpdesc": "阪神レース場ならスタミナが少し上がる",
+      "jpname": "阪神レース場○",
+      "loc": {
+        "en": {
+          "char": [
+            104001
+          ],
+          "char_e": [
+            102301,
+            102302,
+            102101,
+            100702,
+            102102,
+            100701
+          ],
+          "sup_e": [
+            [
+              30004,
+              30043,
+              30057,
+              30074,
+              30089,
+              30108,
+              20015
+            ],
+            [
+              10006,
+              10043,
+              10067
+            ]
+          ],
+          "sup_hint": [
+            [
+              30018,
+              30027,
+              30082,
+              30113,
+              20006,
+              20027
+            ],
+            [
+              10029,
+              10041,
+              10054
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            104001,
+            105102
+          ],
+          "char_e": [
+            102301,
+            102302,
+            102101,
+            100702,
+            102102,
+            100703,
+            102303,
+            100701
+          ],
+          "sup_e": [
+            [
+              30004,
+              30043,
+              30057,
+              30074,
+              30089,
+              30108,
+              30131,
+              30163,
+              30168,
+              30172,
+              20015,
+              20061,
+              20079
+            ],
+            [
+              10006,
+              10043,
+              10067
+            ]
+          ],
+          "sup_hint": [
+            [
+              30018,
+              30027,
+              30061,
+              30082,
+              30113,
+              30194,
+              20006,
+              20027
+            ],
+            [
+              10029,
+              10041,
+              10054,
+              10114
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            104001,
+            105102
+          ],
+          "char_e": [
+            102301,
+            102302,
+            102101,
+            100702,
+            102102,
+            100703,
+            102303,
+            100701
+          ],
+          "sup_e": [
+            [
+              30004,
+              30043,
+              30057,
+              30074,
+              30089,
+              30108,
+              30131,
+              30163,
+              30168,
+              30172,
+              20015,
+              20061,
+              20079
+            ],
+            [
+              10006,
+              10043,
+              10067
+            ]
+          ],
+          "sup_hint": [
+            [
+              30018,
+              30027,
+              30082,
+              30113,
+              30194,
+              20006,
+              20027
+            ],
+            [
+              10029,
+              10041,
+              10054,
+              10114
+            ]
+          ]
+        }
+      },
+      "name_en": "Hanshin Racecourse ○",
+      "name_ko": "한신 경기장○",
+      "name_tw": "阪神賽場○",
+      "rarity": 1,
+      "sup_e": [
+        [
+          30004,
+          30043,
+          30057,
+          30074,
+          30089,
+          30108,
+          30131,
+          30163,
+          30168,
+          30172,
+          30278,
+          20015,
+          20061,
+          20079
+        ],
+        [
+          10006,
+          10043,
+          10067
+        ]
+      ],
+      "sup_hint": [
+        [
+          30018,
+          30027,
+          30061,
+          30082,
+          30113,
+          30194,
+          30269,
+          20006,
+          20027
+        ],
+        [
+          10029,
+          10041,
+          10054,
+          10114
+        ]
+      ],
+      "tid": "1r",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200051,
+        200053
+      ]
+    }
+  },
+  "200062": {
+    "id": 200062,
+    "name_en": "Kyoto Racecourse ○",
+    "name_jp": "京都レース場○",
+    "icon_id": 10021,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10021.png",
+    "stat": "Stamina",
+    "value": "+40",
+    "desc_en": "Moderately increase performance at Kyoto Racecourse.",
+    "desc_id": "Meningkatkan status Stamina sebesar +40 saat berlomba di Sirkuit Kyoto (京都レース場).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "track_id==10008",
+        "effects": [
+          {
+            "type": 2,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 2,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        105602,
+        105901,
+        105902,
+        110601,
+        103003
+      ],
+      "char_e": [
+        101901,
+        103001,
+        103002,
+        102101,
+        101902,
+        102102,
+        103003
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "track_id==10008",
+          "effects": [
+            {
+              "type": 2,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance at Kyoto Racecourse.",
+      "desc_ko": "교토 경기장에 다소 강해진다",
+      "desc_tw": "變得稍微擅長京都賽場",
+      "endesc": "In Kyoto, your Stamina stat is increased by 40",
+      "enname": "Kyoto Racetrack ○",
+      "iconid": 10021,
+      "id": 200062,
+      "jpdesc": "京都レース場ならスタミナが少し上がる",
+      "jpname": "京都レース場○",
+      "loc": {
+        "en": {
+          "char": [
+            105602,
+            105901,
+            105902
+          ],
+          "char_e": [
+            101901,
+            103001,
+            103002,
+            102101,
+            101902,
+            102102
+          ],
+          "sup_e": [
+            [
+              30100,
+              20032
+            ],
+            [
+              10068
+            ]
+          ],
+          "sup_hint": [
+            [
+              30022,
+              30023,
+              30034,
+              30041,
+              20018
+            ],
+            [
+              10010,
+              10015,
+              10046
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            105602,
+            105901,
+            105902,
+            110601,
+            103003
+          ],
+          "char_e": [
+            101901,
+            103001,
+            103002,
+            102101,
+            101902,
+            102102,
+            103003
+          ],
+          "sup_e": [
+            [
+              30100,
+              20032,
+              20057
+            ],
+            [
+              10068
+            ]
+          ],
+          "sup_hint": [
+            [
+              30022,
+              30023,
+              30034,
+              30041,
+              30139,
+              30189,
+              20018,
+              20086
+            ],
+            [
+              10010,
+              10015,
+              10046
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            105602,
+            105901,
+            105902,
+            110601,
+            103003
+          ],
+          "char_e": [
+            101901,
+            103001,
+            103002,
+            102101,
+            101902,
+            102102,
+            103003
+          ],
+          "sup_e": [
+            [
+              30100,
+              20032,
+              20057
+            ],
+            [
+              10068
+            ]
+          ],
+          "sup_hint": [
+            [
+              30022,
+              30023,
+              30034,
+              30041,
+              30139,
+              30189,
+              20018,
+              20086
+            ],
+            [
+              10010,
+              10015,
+              10046
+            ]
+          ]
+        }
+      },
+      "name_en": "Kyoto Racecourse ○",
+      "name_ko": "교토 경기장○",
+      "name_tw": "京都賽場○",
+      "rarity": 1,
+      "sup_e": [
+        [
+          30100,
+          30281,
+          20032,
+          20057
+        ],
+        [
+          10068
+        ]
+      ],
+      "sup_hint": [
+        [
+          30022,
+          30023,
+          30034,
+          30041,
+          30139,
+          30189,
+          30318,
+          20018,
+          20086
+        ],
+        [
+          10010,
+          10015,
+          10046
+        ]
+      ],
+      "tid": "1u",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200061,
+        200063,
+        200064
+      ]
+    }
+  },
+  "200072": {
+    "id": 200072,
+    "name_en": "Chukyo Racecourse ○",
+    "name_jp": "中京レース場○",
+    "icon_id": 10021,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10021.png",
+    "stat": "Stamina",
+    "value": "+40",
+    "desc_en": "Moderately increase performance at Chukyo Racecourse.",
+    "desc_id": "Meningkatkan status Stamina sebesar +40 saat berlomba di Sirkuit Chukyo (中京レース場).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "track_id==10007",
+        "effects": [
+          {
+            "type": 2,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 2,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "track_id==10007",
+          "effects": [
+            {
+              "type": 2,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance at Chukyo Racecourse.",
+      "desc_ko": "츄쿄 경기장에 다소 강해진다",
+      "desc_tw": "變得稍微擅長中京賽場",
+      "endesc": "In Chukyo, your Stamina stat is increased by 40",
+      "enname": "Chukyo Racetrack ○",
+      "iconid": 10021,
+      "id": 200072,
+      "jpdesc": "中京レース場ならスタミナが少し上がる",
+      "jpname": "中京レース場○",
+      "name_en": "Chukyo Racecourse ○",
+      "name_ko": "츄쿄 경기장○",
+      "name_tw": "中京賽場○",
+      "rarity": 1,
+      "tid": "1x",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200071,
+        200073
+      ]
+    }
+  },
+  "200082": {
+    "id": 200082,
+    "name_en": "Sapporo Racecourse ○",
+    "name_jp": "札幌レース場○",
+    "icon_id": 10021,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10021.png",
+    "stat": "Stamina",
+    "value": "+40",
+    "desc_en": "Moderately increase performance at Sapporo Racecourse.",
+    "desc_id": "Meningkatkan status Stamina sebesar +40 saat berlomba di Sirkuit Sapporo (札幌レース場).",
+    "cost": 70,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "track_id==10001",
+        "effects": [
+          {
+            "type": 2,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 2,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "track_id==10001",
+          "effects": [
+            {
+              "type": 2,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 70,
+      "desc_en": "Moderately increase performance at Sapporo Racecourse.",
+      "desc_ko": "삿포로 경기장에 다소 강해진다",
+      "desc_tw": "變得稍微擅長札幌賽場",
+      "endesc": "In Sapporo, your Stamina stat is increased by 40",
+      "enname": "Sapporo Racetrack ○",
+      "iconid": 10021,
+      "id": 200082,
+      "jpdesc": "札幌レース場ならスタミナが少し上がる",
+      "jpname": "札幌レース場○",
+      "loc": {
+        "en": {
+          "sup_hint": [
+            [
+              30014
+            ],
+            [
+              10017
+            ]
+          ]
+        },
+        "ko": {
+          "sup_e": [
+            [
+              30214
+            ],
+            []
+          ],
+          "sup_hint": [
+            [
+              30014
+            ],
+            [
+              10017
+            ]
+          ]
+        },
+        "zh_tw": {
+          "sup_e": [
+            [
+              30214
+            ],
+            []
+          ],
+          "sup_hint": [
+            [
+              30014
+            ],
+            [
+              10017
+            ]
+          ]
+        }
+      },
+      "name_en": "Sapporo Racecourse ○",
+      "name_ko": "삿포로 경기장○",
+      "name_tw": "札幌賽場○",
+      "rarity": 1,
+      "sup_e": [
+        [
+          30214
+        ],
+        []
+      ],
+      "sup_hint": [
+        [
+          30014
+        ],
+        [
+          10017
+        ]
+      ],
+      "tid": "1A",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200081,
+        200083
+      ]
+    }
+  },
+  "200092": {
+    "id": 200092,
+    "name_en": "Hakodate Racecourse ○",
+    "name_jp": "函館レース場○",
+    "icon_id": 10021,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10021.png",
+    "stat": "Stamina",
+    "value": "+40",
+    "desc_en": "Moderately increase performance at Hakodate Racecourse.",
+    "desc_id": "Meningkatkan status Stamina sebesar +40 saat berlomba di Sirkuit Hakodate (函館レース場).",
+    "cost": 70,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "track_id==10002",
+        "effects": [
+          {
+            "type": 2,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 2,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "track_id==10002",
+          "effects": [
+            {
+              "type": 2,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 70,
+      "desc_en": "Moderately increase performance at Hakodate Racecourse.",
+      "desc_ko": "하코다테 경기장에 다소 강해진다",
+      "desc_tw": "變得稍微擅長函館賽場",
+      "endesc": "In Hakodate, your Stamina stat is increased by 40",
+      "enname": "Hakodate Racetrack ○",
+      "iconid": 10021,
+      "id": 200092,
+      "jpdesc": "函館レース場ならスタミナが少し上がる",
+      "jpname": "函館レース場○",
+      "loc": {
+        "en": {
+          "sup_hint": [
+            [
+              30078,
+              20016
+            ],
+            [
+              10044
+            ]
+          ]
+        },
+        "ko": {
+          "sup_hint": [
+            [
+              30078,
+              20016
+            ],
+            [
+              10044
+            ]
+          ]
+        },
+        "zh_tw": {
+          "sup_hint": [
+            [
+              30078,
+              20016
+            ],
+            [
+              10044
+            ]
+          ]
+        }
+      },
+      "name_en": "Hakodate Racecourse ○",
+      "name_ko": "하코다테 경기장○",
+      "name_tw": "函館賽場○",
+      "rarity": 1,
+      "sup_hint": [
+        [
+          30078,
+          20016
+        ],
+        [
+          10044
+        ]
+      ],
+      "tid": "1D",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200091,
+        200093
+      ]
+    }
+  },
+  "200102": {
+    "id": 200102,
+    "name_en": "Fukushima Racecourse ○",
+    "name_jp": "福島レース場○",
+    "icon_id": 10021,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10021.png",
+    "stat": "Stamina",
+    "value": "+40",
+    "desc_en": "Moderately increase performance at Fukushima Racecourse.",
+    "desc_id": "Meningkatkan status Stamina sebesar +40 saat berlomba di Sirkuit Fukushima (福島レース場).",
+    "cost": 70,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "track_id==10004",
+        "effects": [
+          {
+            "type": 2,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 2,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "track_id==10004",
+          "effects": [
+            {
+              "type": 2,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 70,
+      "desc_en": "Moderately increase performance at Fukushima Racecourse.",
+      "desc_ko": "후쿠시마 경기장에 다소 강해진다",
+      "desc_tw": "變得稍微擅長福島賽場",
+      "endesc": "In Fukushima, your Stamina stat is increased by 40",
+      "enname": "Fukushima Racetrack ○",
+      "iconid": 10021,
+      "id": 200102,
+      "jpdesc": "福島レース場ならスタミナが少し上がる",
+      "jpname": "福島レース場○",
+      "name_en": "Fukushima Racecourse ○",
+      "name_ko": "후쿠시마 경기장○",
+      "name_tw": "福島賽場○",
+      "rarity": 1,
+      "tid": "1G",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200101,
+        200103
+      ]
+    }
+  },
+  "200112": {
+    "id": 200112,
+    "name_en": "Niigata Racecourse ○",
+    "name_jp": "新潟レース場○",
+    "icon_id": 10021,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10021.png",
+    "stat": "Stamina",
+    "value": "+40",
+    "desc_en": "Moderately increase performance at Niigata Racecourse.",
+    "desc_id": "Meningkatkan status Stamina sebesar +40 saat berlomba di Sirkuit Niigata (新潟レース場).",
+    "cost": 70,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "track_id==10003",
+        "effects": [
+          {
+            "type": 2,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 2,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "track_id==10003",
+          "effects": [
+            {
+              "type": 2,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 70,
+      "desc_en": "Moderately increase performance at Niigata Racecourse.",
+      "desc_ko": "니이가타 경기장에 다소 강해진다",
+      "desc_tw": "變得稍微擅長新潟賽場",
+      "endesc": "In Niigata, your Stamina stat is increased by 40",
+      "enname": "Niigata Racetrack ○",
+      "iconid": 10021,
+      "id": 200112,
+      "jpdesc": "新潟レース場ならスタミナが少し上がる",
+      "jpname": "新潟レース場○",
+      "name_en": "Niigata Racecourse ○",
+      "name_ko": "니이가타 경기장○",
+      "name_tw": "新潟賽場○",
+      "rarity": 1,
+      "tid": "1J",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200111,
+        200113
+      ]
+    }
+  },
+  "200122": {
+    "id": 200122,
+    "name_en": "Kokura Racecourse ○",
+    "name_jp": "小倉レース場○",
+    "icon_id": 10021,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10021.png",
+    "stat": "Stamina",
+    "value": "+40",
+    "desc_en": "Moderately increase performance at Kokura Racecourse.",
+    "desc_id": "Meningkatkan status Stamina sebesar +40 saat berlomba di Sirkuit Kokura (小倉レース場).",
+    "cost": 70,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "track_id==10010",
+        "effects": [
+          {
+            "type": 2,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 2,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        106001
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "track_id==10010",
+          "effects": [
+            {
+              "type": 2,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 70,
+      "desc_en": "Moderately increase performance at Kokura Racecourse.",
+      "desc_ko": "코쿠라 경기장에 다소 강해진다",
+      "desc_tw": "變得稍微擅長小倉賽場",
+      "endesc": "At Kokura, your Stamina stat is increased by 40",
+      "enname": "Kokura Racetrack ○",
+      "iconid": 10021,
+      "id": 200122,
+      "jpdesc": "小倉レース場ならスタミナが少し上がる",
+      "jpname": "小倉レース場○",
+      "loc": {
+        "en": {
+          "char": [
+            106001
+          ],
+          "sup_hint": [
+            [
+              30054,
+              20019,
+              20026
+            ],
+            [
+              10047
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            106001
+          ],
+          "sup_hint": [
+            [
+              30054,
+              30138,
+              20019,
+              20026
+            ],
+            [
+              10047
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            106001
+          ],
+          "sup_hint": [
+            [
+              30054,
+              30138,
+              20019,
+              20026
+            ],
+            [
+              10047
+            ]
+          ]
+        }
+      },
+      "name_en": "Kokura Racecourse ○",
+      "name_ko": "코쿠라 경기장○",
+      "name_tw": "小倉賽場○",
+      "rarity": 1,
+      "sup_hint": [
+        [
+          30054,
+          30138,
+          20019,
+          20026
+        ],
+        [
+          10047
+        ]
+      ],
+      "tid": "1M",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200121,
+        200123
+      ]
+    }
+  },
+  "200132": {
+    "id": 200132,
+    "name_en": "Standard Distance ○",
+    "name_jp": "根幹距離○",
+    "icon_id": 10021,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10021.png",
+    "stat": "Stamina",
+    "value": "+40",
+    "desc_en": "Moderately increase performance over standard distances (multiples of 400m).",
+    "desc_id": "Meningkatkan status Stamina sebesar +40 pada jarak balapan standar (kelipatan 400m).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "is_basis_distance==1",
+        "effects": [
+          {
+            "type": 2,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 2,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        103901,
+        103503,
+        110502,
+        103201
+      ],
+      "char_e": [
+        103701,
+        103702,
+        107201,
+        107202,
+        103703
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "is_basis_distance==1",
+          "effects": [
+            {
+              "type": 2,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance over standard distances (multiples of 400m).",
+      "desc_ko": "근간거리(400m의 배수)에 다소 강해진다",
+      "desc_tw": "變得稍微擅長主要距離（400m的倍數）",
+      "endesc": "Your Stamina stat is increased by 40 in Core Distance races (multiples of 400m)",
+      "enname": "Core Distances ○",
+      "iconid": 10021,
+      "id": 200132,
+      "jpdesc": "根幹距離（400mの倍数）ならスタミナが少し上がる",
+      "jpname": "根幹距離○",
+      "loc": {
+        "en": {
+          "char": [
+            103901,
+            103201
+          ],
+          "char_e": [
+            103701,
+            103702,
+            107201
+          ],
+          "sup_e": [
+            [
+              30042,
+              30094,
+              20030
+            ],
+            [
+              10065
+            ]
+          ],
+          "sup_hint": [
+            [
+              30007,
+              30018,
+              30039,
+              30082,
+              30096,
+              30102,
+              30122,
+              30124,
+              20013,
+              20027,
+              20033
+            ],
+            [
+              10011,
+              10038,
+              10041,
+              10063
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            103901,
+            103503,
+            110502,
+            103201
+          ],
+          "char_e": [
+            103701,
+            103702,
+            107201,
+            107202,
+            103703
+          ],
+          "sup_e": [
+            [
+              30042,
+              30094,
+              30197,
+              20030
+            ],
+            [
+              10065
+            ]
+          ],
+          "sup_hint": [
+            [
+              30007,
+              30018,
+              30039,
+              30082,
+              30096,
+              30102,
+              30122,
+              30124,
+              30127,
+              30185,
+              30198,
+              30217,
+              30243,
+              30255,
+              20013,
+              20027,
+              20033,
+              20070,
+              20081
+            ],
+            [
+              10011,
+              10038,
+              10041,
+              10063,
+              10097,
+              10102,
+              10106,
+              10115,
+              10124,
+              10127
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            103901,
+            103503,
+            110502,
+            103201
+          ],
+          "char_e": [
+            103701,
+            103702,
+            107201,
+            107202,
+            103703
+          ],
+          "sup_e": [
+            [
+              30042,
+              30094,
+              30197,
+              20030
+            ],
+            [
+              10065
+            ]
+          ],
+          "sup_hint": [
+            [
+              30007,
+              30018,
+              30039,
+              30082,
+              30096,
+              30102,
+              30122,
+              30124,
+              30127,
+              30185,
+              30198,
+              30217,
+              30243,
+              30255,
+              20013,
+              20027,
+              20033,
+              20070,
+              20081
+            ],
+            [
+              10011,
+              10038,
+              10041,
+              10063,
+              10097,
+              10102,
+              10106,
+              10115,
+              10124,
+              10127
+            ]
+          ]
+        }
+      },
+      "name_en": "Standard Distance ○",
+      "name_ko": "근간거리○",
+      "name_tw": "主要距離○",
+      "rarity": 1,
+      "sce_e": [
+        6
+      ],
+      "sup_e": [
+        [
+          30042,
+          30094,
+          30197,
+          20030
+        ],
+        [
+          10065
+        ]
+      ],
+      "sup_hint": [
+        [
+          30007,
+          30018,
+          30039,
+          30082,
+          30096,
+          30102,
+          30122,
+          30124,
+          30127,
+          30185,
+          30198,
+          30217,
+          30243,
+          30255,
+          30277,
+          20013,
+          20027,
+          20033,
+          20070,
+          20081
+        ],
+        [
+          10011,
+          10038,
+          10041,
+          10063,
+          10097,
+          10102,
+          10106,
+          10115,
+          10124,
+          10127
+        ]
+      ],
+      "tid": "1P",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200131,
+        200133
+      ]
+    }
+  },
+  "200142": {
+    "id": 200142,
+    "name_en": "Non-Standard Distance ○",
+    "name_jp": "非根幹距離○",
+    "icon_id": 10021,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10021.png",
+    "stat": "Stamina",
+    "value": "+40",
+    "desc_en": "Moderately increase performance over non-standard distances (non-multiples of 400m).",
+    "desc_id": "Meningkatkan status Stamina sebesar +40 pada jarak balapan non-standar (bukan kelipatan 400m).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "is_basis_distance==0",
+        "effects": [
+          {
+            "type": 2,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 2,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        101501,
+        105801,
+        102502
+      ],
+      "char_e": [
+        101501,
+        101502,
+        107401,
+        100702,
+        100703,
+        107402,
+        107403,
+        100701
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "is_basis_distance==0",
+          "effects": [
+            {
+              "type": 2,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance over non-standard distances (non-multiples of 400m).",
+      "desc_ko": "비근간거리(400m의 배수 이외)에 다소 강해진다",
+      "desc_tw": "變得稍微擅長非主要距離（非400m的倍數）",
+      "endesc": "Your Stamina stat is increased by 40 in Non-Core Distance races (not multiples of 400m)",
+      "enname": "Non-Core Distances ○",
+      "iconid": 10021,
+      "id": 200142,
+      "jpdesc": "非根幹距離（400mの倍数以外）ならスタミナが少し上がる",
+      "jpname": "非根幹距離○",
+      "loc": {
+        "en": {
+          "char": [
+            101501,
+            105801
+          ],
+          "char_e": [
+            101501,
+            101502,
+            107401,
+            100702,
+            100701
+          ],
+          "sup_e": [
+            [
+              30075,
+              30110,
+              20008
+            ],
+            [
+              10012,
+              10031
+            ]
+          ],
+          "sup_hint": [
+            [
+              30072,
+              30079,
+              30086,
+              30105,
+              20007,
+              20017,
+              20053
+            ],
+            [
+              10030,
+              10045,
+              10077
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            101501,
+            105801,
+            102502
+          ],
+          "char_e": [
+            101501,
+            101502,
+            107401,
+            100702,
+            100703,
+            107402,
+            100701
+          ],
+          "sup_e": [
+            [
+              30075,
+              30110,
+              30152,
+              30157,
+              30231,
+              20008,
+              20054,
+              20078
+            ],
+            [
+              10012,
+              10031
+            ]
+          ],
+          "sup_hint": [
+            [
+              30072,
+              30079,
+              30086,
+              30105,
+              30176,
+              30226,
+              20007,
+              20017,
+              20053,
+              20054,
+              20057,
+              20084
+            ],
+            [
+              10030,
+              10045,
+              10077,
+              10123
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            101501,
+            105801,
+            102502
+          ],
+          "char_e": [
+            101501,
+            101502,
+            107401,
+            100702,
+            100703,
+            107402,
+            100701
+          ],
+          "sup_e": [
+            [
+              30075,
+              30110,
+              30152,
+              30157,
+              30231,
+              20008,
+              20054,
+              20078
+            ],
+            [
+              10012,
+              10031
+            ]
+          ],
+          "sup_hint": [
+            [
+              30072,
+              30079,
+              30086,
+              30105,
+              30176,
+              30226,
+              20007,
+              20017,
+              20053,
+              20054,
+              20057,
+              20084
+            ],
+            [
+              10030,
+              10045,
+              10077,
+              10123
+            ]
+          ]
+        }
+      },
+      "name_en": "Non-Standard Distance ○",
+      "name_ko": "비근간거리○",
+      "name_tw": "非主要距離○",
+      "rarity": 1,
+      "sup_e": [
+        [
+          30075,
+          30110,
+          30152,
+          30157,
+          30231,
+          20008,
+          20054,
+          20078
+        ],
+        [
+          10012,
+          10031
+        ]
+      ],
+      "sup_hint": [
+        [
+          30072,
+          30079,
+          30086,
+          30105,
+          30176,
+          30226,
+          30266,
+          20007,
+          20017,
+          20053,
+          20054,
+          20057,
+          20084
+        ],
+        [
+          10030,
+          10045,
+          10077,
+          10123,
+          10134
+        ]
+      ],
+      "tid": "1S",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200141,
+        200143
+      ]
+    }
+  },
+  "200152": {
+    "id": 200152,
+    "name_en": "Good Track Condition ○",
+    "name_jp": "良バ場○",
+    "icon_id": 10031,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10031.png",
+    "stat": "Power",
+    "value": "+40",
+    "desc_en": "Moderately increase performance on firm ground.",
+    "desc_id": "Meningkatkan status Power sebesar +40 saat kondisi lintasan baik / kering (Good Track / 良バ場).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "ground_condition==1",
+        "effects": [
+          {
+            "type": 3,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 3,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        106701,
+        102202,
+        104201,
+        107701,
+        106003,
+        102802,
+        103501
+      ],
+      "char_e": [
+        103001,
+        103002,
+        105101,
+        105102,
+        103003
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "ground_condition==1",
+          "effects": [
+            {
+              "type": 3,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance on firm ground.",
+      "desc_ko": "「양호」상태인 경기장에 다소 강해진다",
+      "desc_tw": "變得稍微擅長「良好」的場地狀態",
+      "endesc": "Your Power stat is increased by 40 in races with Firm track condition",
+      "enname": "Good Track Condition ○",
+      "iconid": 10031,
+      "id": 200152,
+      "jpdesc": "「良」のバ場状態ならパワーが少し上がる",
+      "jpname": "良バ場○",
+      "loc": {
+        "en": {
+          "char": [
+            106701,
+            102202,
+            104201,
+            103501
+          ],
+          "char_e": [
+            103001,
+            103002,
+            105101
+          ],
+          "sup_e": [
+            [
+              30023,
+              30034,
+              30081,
+              30100
+            ],
+            [
+              10015
+            ]
+          ],
+          "sup_hint": [
+            [
+              30012,
+              30016,
+              30018,
+              30029,
+              30033,
+              30046,
+              30056,
+              30079,
+              30082,
+              30086,
+              30095,
+              30116,
+              30123,
+              30145,
+              20017,
+              20020,
+              20027,
+              20029,
+              20053
+            ],
+            [
+              10016,
+              10019,
+              10041,
+              10045,
+              10048,
+              10056,
+              10061,
+              10077,
+              10084
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            106701,
+            102202,
+            104201,
+            107701,
+            106003,
+            103501
+          ],
+          "char_e": [
+            103001,
+            103002,
+            105101,
+            105102,
+            103003
+          ],
+          "sup_e": [
+            [
+              30023,
+              30034,
+              30081,
+              30100,
+              20086
+            ],
+            [
+              10015
+            ]
+          ],
+          "sup_hint": [
+            [
+              30012,
+              30016,
+              30018,
+              30029,
+              30033,
+              30046,
+              30056,
+              30079,
+              30082,
+              30086,
+              30095,
+              30116,
+              30123,
+              30141,
+              30145,
+              30155,
+              30186,
+              20017,
+              20020,
+              20027,
+              20029,
+              20053,
+              20063
+            ],
+            [
+              10016,
+              10019,
+              10041,
+              10045,
+              10048,
+              10056,
+              10061,
+              10077,
+              10113
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            106701,
+            102202,
+            104201,
+            107701,
+            106003,
+            103501
+          ],
+          "char_e": [
+            103001,
+            103002,
+            105101,
+            105102,
+            103003
+          ],
+          "sup_e": [
+            [
+              30023,
+              30034,
+              30081,
+              30100,
+              20086
+            ],
+            [
+              10015
+            ]
+          ],
+          "sup_hint": [
+            [
+              30012,
+              30016,
+              30018,
+              30029,
+              30033,
+              30046,
+              30056,
+              30079,
+              30082,
+              30086,
+              30095,
+              30116,
+              30123,
+              30141,
+              30145,
+              30155,
+              30186,
+              20017,
+              20020,
+              20027,
+              20029,
+              20053,
+              20063
+            ],
+            [
+              10016,
+              10019,
+              10041,
+              10045,
+              10048,
+              10056,
+              10061,
+              10077,
+              10113
+            ]
+          ]
+        }
+      },
+      "name_en": "Firm Conditions ○",
+      "name_ko": "양호한 경기장○",
+      "name_tw": "良好場地○",
+      "rarity": 1,
+      "sup_e": [
+        [
+          30023,
+          30034,
+          30081,
+          30100,
+          30318,
+          20086
+        ],
+        [
+          10015
+        ]
+      ],
+      "sup_hint": [
+        [
+          30012,
+          30016,
+          30018,
+          30029,
+          30033,
+          30046,
+          30056,
+          30079,
+          30082,
+          30086,
+          30095,
+          30116,
+          30123,
+          30141,
+          30145,
+          30155,
+          30186,
+          30268,
+          20017,
+          20020,
+          20027,
+          20029,
+          20053,
+          20063
+        ],
+        [
+          10016,
+          10019,
+          10041,
+          10045,
+          10048,
+          10056,
+          10061,
+          10077,
+          10084,
+          10113,
+          10136
+        ]
+      ],
+      "tid": "1V",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200151,
+        200153,
+        200154
+      ]
+    }
+  },
+  "200162": {
+    "id": 200162,
+    "name_en": "Bad Track Condition ○",
+    "name_jp": "道悪○",
+    "icon_id": 10031,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10031.png",
+    "stat": "Power",
+    "value": "+40",
+    "desc_en": "Moderately increase performance on good, soft, and heavy ground.",
+    "desc_id": "Meningkatkan status Power sebesar +40 saat kondisi lintasan agak lembap, basah, atau berat (Yielding, Soft, Heavy / 道悪).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "ground_condition==2@ground_condition==3@ground_condition==4",
+        "effects": [
+          {
+            "type": 3,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 3,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        100101,
+        101901,
+        102301,
+        104601,
+        101002,
+        108701,
+        102102,
+        104301,
+        100703,
+        107402,
+        108801,
+        107002,
+        113701
+      ],
+      "char_e": [
+        101402,
+        102601,
+        102602,
+        107401,
+        102702,
+        107402,
+        107403,
+        101401,
+        102701
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "ground_condition==2@ground_condition==3@ground_condition==4",
+          "effects": [
+            {
+              "type": 3,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance on good, soft, and heavy ground.",
+      "desc_ko": "「다습」, 「포화」, 「불량」 상태인 경기장에 다소 강해진다",
+      "desc_tw": "變得稍微擅長「略差」「差」「極差」的場地狀態",
+      "endesc": "Your Power stat is increased by 40 in races with non-Firm track conditions",
+      "enname": "Bad Track Condition ○",
+      "iconid": 10031,
+      "id": 200162,
+      "jpdesc": "「稍重」「重」「不良」のバ場状態ならパワーが少し上がる",
+      "jpname": "道悪○",
+      "loc": {
+        "en": {
+          "char": [
+            100101,
+            101901,
+            102301,
+            104601,
+            101002,
+            108701,
+            102102
+          ],
+          "char_e": [
+            101402,
+            102601,
+            102602,
+            107401,
+            101401,
+            102701
+          ],
+          "sup_e": [
+            [
+              30027,
+              30064,
+              30085,
+              30115,
+              20005,
+              20048
+            ],
+            [
+              10026,
+              10054
+            ]
+          ],
+          "sup_hint": [
+            [
+              30001,
+              30017,
+              30022,
+              30025,
+              30043,
+              30048,
+              30053,
+              30075,
+              30091,
+              30108,
+              30113,
+              30117,
+              20006,
+              20008,
+              20010,
+              20031,
+              20038,
+              20043,
+              20045
+            ],
+            [
+              10001,
+              10029,
+              10031,
+              10033,
+              10039,
+              10066,
+              10067,
+              10071
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            100101,
+            101901,
+            102301,
+            104601,
+            101002,
+            108701,
+            102102,
+            104301,
+            100703,
+            107402,
+            108801,
+            107002
+          ],
+          "char_e": [
+            101402,
+            102601,
+            102602,
+            107401,
+            102702,
+            107402,
+            101401,
+            102701
+          ],
+          "sup_e": [
+            [
+              30027,
+              30064,
+              30085,
+              30115,
+              30154,
+              30229,
+              20005,
+              20036,
+              20048
+            ],
+            [
+              10026,
+              10054
+            ]
+          ],
+          "sup_hint": [
+            [
+              30001,
+              30017,
+              30022,
+              30025,
+              30043,
+              30048,
+              30053,
+              30061,
+              30075,
+              30091,
+              30108,
+              30113,
+              30117,
+              30139,
+              30141,
+              20006,
+              20008,
+              20010,
+              20031,
+              20038,
+              20043,
+              20045,
+              20055
+            ],
+            [
+              10001,
+              10029,
+              10031,
+              10033,
+              10039,
+              10066,
+              10067,
+              10071,
+              10087
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            100101,
+            101901,
+            102301,
+            104601,
+            101002,
+            108701,
+            102102,
+            104301,
+            100703,
+            107402,
+            108801,
+            107002
+          ],
+          "char_e": [
+            101402,
+            102601,
+            102602,
+            107401,
+            102702,
+            107402,
+            101401,
+            102701
+          ],
+          "sup_e": [
+            [
+              30027,
+              30064,
+              30085,
+              30115,
+              30154,
+              30229,
+              20005,
+              20036,
+              20048
+            ],
+            [
+              10026,
+              10054
+            ]
+          ],
+          "sup_hint": [
+            [
+              30001,
+              30017,
+              30022,
+              30025,
+              30043,
+              30048,
+              30053,
+              30075,
+              30091,
+              30108,
+              30113,
+              30117,
+              30139,
+              30141,
+              20006,
+              20008,
+              20010,
+              20031,
+              20038,
+              20043,
+              20045,
+              20055
+            ],
+            [
+              10001,
+              10029,
+              10031,
+              10033,
+              10039,
+              10066,
+              10067,
+              10071,
+              10087
+            ]
+          ]
+        }
+      },
+      "name_en": "Wet Conditions ○",
+      "name_ko": "진창길○",
+      "name_tw": "路況差勁○",
+      "rarity": 1,
+      "sup_e": [
+        [
+          30027,
+          30064,
+          30085,
+          30115,
+          30154,
+          30229,
+          30297,
+          30307,
+          20005,
+          20036,
+          20048
+        ],
+        [
+          10026,
+          10054,
+          10145
+        ]
+      ],
+      "sup_hint": [
+        [
+          30001,
+          30017,
+          30022,
+          30025,
+          30043,
+          30048,
+          30053,
+          30061,
+          30075,
+          30091,
+          30108,
+          30113,
+          30117,
+          30139,
+          30141,
+          30313,
+          20006,
+          20008,
+          20010,
+          20031,
+          20038,
+          20043,
+          20045,
+          20055,
+          20090,
+          20096
+        ],
+        [
+          10001,
+          10029,
+          10031,
+          10033,
+          10039,
+          10066,
+          10067,
+          10071,
+          10087,
+          10147
+        ]
+      ],
+      "tid": "1Y",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200161,
+        200163,
+        200164
+      ]
+    }
+  },
+  "200172": {
+    "id": 200172,
+    "name_en": "Spring Runner ○",
+    "name_jp": "春ウマ娘○",
+    "icon_id": 10011,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10011.png",
+    "stat": "Speed",
+    "value": "+40",
+    "desc_en": "Moderately increase performance in spring.",
+    "desc_id": "Meningkatkan status Speed sebesar +40 saat berlomba di musim semi (Spring / 春).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "season==1@season==5",
+        "effects": [
+          {
+            "type": 1,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 1,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        100302,
+        101301,
+        106901,
+        102002,
+        106102,
+        101602,
+        110501,
+        112701
+      ],
+      "char_e": [
+        106801,
+        103601,
+        107801,
+        106702,
+        106802,
+        107601,
+        103602,
+        106803,
+        107802,
+        107602,
+        104103
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "season==1@season==5",
+          "effects": [
+            {
+              "type": 1,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance in spring.",
+      "desc_ko": "봄철 레이스에 다소 강해진다",
+      "desc_tw": "變得稍微擅長春季的競賽",
+      "endesc": "Your Speed stat is increased by 40 in Spring",
+      "enname": "Spring Girl ○",
+      "iconid": 10011,
+      "id": 200172,
+      "jpdesc": "春のレースならスピードが少し上がる",
+      "jpname": "春ウマ娘○",
+      "loc": {
+        "en": {
+          "char": [
+            100302,
+            101301,
+            106901,
+            102002,
+            106102
+          ],
+          "char_e": [
+            106801,
+            103601,
+            107801
+          ],
+          "sup_e": [
+            [
+              30038,
+              30109
+            ],
+            [
+              10062
+            ]
+          ],
+          "sup_hint": [
+            [
+              30125,
+              20032
+            ],
+            [
+              10010,
+              10068,
+              10085
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            100302,
+            101301,
+            106901,
+            102002,
+            106102,
+            101602,
+            110501,
+            112701
+          ],
+          "char_e": [
+            106801,
+            103601,
+            107801,
+            106702,
+            106802,
+            107601,
+            103602,
+            106803,
+            107802
+          ],
+          "sup_e": [
+            [
+              30038,
+              30109
+            ],
+            [
+              10062
+            ]
+          ],
+          "sup_hint": [
+            [
+              30125,
+              30142,
+              30244,
+              30248,
+              20032
+            ],
+            [
+              10010,
+              10068,
+              10085,
+              10120
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            100302,
+            101301,
+            106901,
+            102002,
+            106102,
+            101602,
+            110501,
+            112701
+          ],
+          "char_e": [
+            106801,
+            103601,
+            107801,
+            106702,
+            106802,
+            107601,
+            103602,
+            106803,
+            107802
+          ],
+          "sup_e": [
+            [
+              30038,
+              30109
+            ],
+            [
+              10062
+            ]
+          ],
+          "sup_hint": [
+            [
+              30125,
+              30142,
+              30244,
+              30248,
+              20032
+            ],
+            [
+              10010,
+              10068,
+              10085,
+              10120
+            ]
+          ]
+        }
+      },
+      "name_en": "Spring Runner ○",
+      "name_ko": "봄 우마무스메○",
+      "name_tw": "春賽馬娘○",
+      "rarity": 1,
+      "sup_e": [
+        [
+          30038,
+          30109,
+          30300
+        ],
+        [
+          10062
+        ]
+      ],
+      "sup_hint": [
+        [
+          30125,
+          30142,
+          30244,
+          30248,
+          30274,
+          30293,
+          30294,
+          20032
+        ],
+        [
+          10010,
+          10068,
+          10085,
+          10120
+        ]
+      ],
+      "tid": "21",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200171,
+        200173,
+        200174
+      ]
+    }
+  },
+  "200182": {
+    "id": 200182,
+    "name_en": "Summer Runner ○",
+    "name_jp": "夏ウマ娘○",
+    "icon_id": 10011,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10011.png",
+    "stat": "Speed",
+    "value": "+40",
+    "desc_en": "Moderately increase performance in summer.",
+    "desc_id": "Meningkatkan status Speed sebesar +40 saat berlomba di musim panas (Summer / 夏).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "season==2",
+        "effects": [
+          {
+            "type": 1,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 1,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        103202,
+        106301
+      ],
+      "char_e": [
+        100702,
+        101303,
+        107801,
+        100202,
+        112001,
+        103703,
+        109902,
+        107802,
+        108902,
+        102003
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "season==2",
+          "effects": [
+            {
+              "type": 1,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance in summer.",
+      "desc_ko": "여름철 레이스에 다소 강해진다",
+      "desc_tw": "變得稍微擅長夏季的競賽",
+      "endesc": "Your Speed stat is increased by 40 in Summer",
+      "enname": "Summer Girl ○",
+      "iconid": 10011,
+      "id": 200182,
+      "jpdesc": "夏のレースならスピードが少し上がる",
+      "jpname": "夏ウマ娘○",
+      "loc": {
+        "en": {
+          "char_e": [
+            100702,
+            101303,
+            107801
+          ],
+          "sup_hint": [
+            [
+              30107,
+              30108,
+              30109,
+              20001
+            ],
+            [
+              10049
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            103202,
+            106301
+          ],
+          "char_e": [
+            100702,
+            101303,
+            107801,
+            100202,
+            112001,
+            103703,
+            109902,
+            107802
+          ],
+          "sup_hint": [
+            [
+              30107,
+              30108,
+              30109,
+              30155,
+              30195,
+              30214,
+              20001
+            ],
+            [
+              10049
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            103202,
+            106301
+          ],
+          "char_e": [
+            100702,
+            101303,
+            107801,
+            100202,
+            112001,
+            103703,
+            109902,
+            107802
+          ],
+          "sup_hint": [
+            [
+              30107,
+              30108,
+              30109,
+              30155,
+              30195,
+              30214,
+              20001
+            ],
+            [
+              10049
+            ]
+          ]
+        }
+      },
+      "name_en": "Summer Runner ○",
+      "name_ko": "여름 우마무스메○",
+      "name_tw": "夏賽馬娘○",
+      "rarity": 1,
+      "sup_hint": [
+        [
+          30107,
+          30108,
+          30109,
+          30155,
+          30195,
+          30214,
+          30261,
+          30309,
+          20001,
+          20100
+        ],
+        [
+          10049,
+          10131
+        ]
+      ],
+      "tid": "24",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200181,
+        200183,
+        200184
+      ]
+    }
+  },
+  "200192": {
+    "id": 200192,
+    "name_en": "Fall Runner ○",
+    "name_jp": "秋ウマ娘○",
+    "icon_id": 10011,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10011.png",
+    "stat": "Speed",
+    "value": "+40",
+    "desc_en": "Moderately increase performance in fall.",
+    "desc_id": "Meningkatkan status Speed sebesar +40 saat berlomba di musim gugur (Autumn / 秋).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "season==3",
+        "effects": [
+          {
+            "type": 1,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 1,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        101302,
+        101702,
+        102201,
+        102202,
+        104701,
+        104702,
+        112101,
+        109302
+      ],
+      "char_e": [
+        105901,
+        106701,
+        105902,
+        103601,
+        107801,
+        102102,
+        103402,
+        106702,
+        106703,
+        103602,
+        103902,
+        107802
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "season==3",
+          "effects": [
+            {
+              "type": 1,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance in fall.",
+      "desc_ko": "가을철 레이스에 다소 강해진다",
+      "desc_tw": "變得稍微擅長秋季的競賽",
+      "endesc": "Your Speed stat is increased by 40 in Autumn",
+      "enname": "Autumn Girl ○",
+      "iconid": 10011,
+      "id": 200192,
+      "jpdesc": "秋のレースならスピードが少し上がる",
+      "jpname": "秋ウマ娘○",
+      "loc": {
+        "en": {
+          "char": [
+            101302,
+            101702,
+            102201,
+            102202,
+            104701
+          ],
+          "char_e": [
+            105901,
+            106701,
+            105902,
+            103601,
+            107801,
+            102102,
+            103402
+          ],
+          "sup_hint": [
+            [
+              30010,
+              30116,
+              20037
+            ],
+            [
+              10028
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            101302,
+            101702,
+            102201,
+            102202,
+            104701,
+            104702,
+            112101
+          ],
+          "char_e": [
+            105901,
+            106701,
+            105902,
+            103601,
+            107801,
+            102102,
+            103402,
+            106702,
+            106703,
+            103602,
+            103902,
+            107802
+          ],
+          "sup_hint": [
+            [
+              30010,
+              30116,
+              30126,
+              20037
+            ],
+            [
+              10028,
+              10086
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            101302,
+            101702,
+            102201,
+            102202,
+            104701,
+            104702,
+            112101
+          ],
+          "char_e": [
+            105901,
+            106701,
+            105902,
+            103601,
+            107801,
+            102102,
+            103402,
+            106702,
+            106703,
+            103602,
+            103902,
+            107802
+          ],
+          "sup_hint": [
+            [
+              30010,
+              30116,
+              30126,
+              20037
+            ],
+            [
+              10028,
+              10086
+            ]
+          ]
+        }
+      },
+      "name_en": "Fall Runner ○",
+      "name_ko": "가을 우마무스메○",
+      "name_tw": "秋賽馬娘○",
+      "rarity": 1,
+      "sce_e": [
+        6
+      ],
+      "sup_hint": [
+        [
+          30010,
+          30116,
+          30126,
+          30265,
+          30267,
+          30270,
+          30296,
+          30315,
+          30320,
+          20037
+        ],
+        [
+          10028,
+          10086,
+          10133,
+          10135
+        ]
+      ],
+      "tid": "27",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200191,
+        200193,
+        200194
+      ]
+    }
+  },
+  "200202": {
+    "id": 200202,
+    "name_en": "Winter Runner ○",
+    "name_jp": "冬ウマ娘○",
+    "icon_id": 10011,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10011.png",
+    "stat": "Speed",
+    "value": "+40",
+    "desc_en": "Moderately increase performance in winter.",
+    "desc_id": "Meningkatkan status Speed sebesar +40 saat berlomba di musim dingin (Winter / 冬).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "season==4",
+        "effects": [
+          {
+            "type": 1,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 1,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        101502,
+        103401,
+        107402,
+        101103,
+        107602
+      ],
+      "char_e": [
+        100602,
+        102302,
+        100103,
+        102901,
+        107801,
+        100802,
+        100902,
+        106003,
+        102902,
+        103302,
+        107702,
+        107802,
+        104902,
+        111902
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "season==4",
+          "effects": [
+            {
+              "type": 1,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance in winter.",
+      "desc_ko": "겨울철 레이스에 다소 강해진다",
+      "desc_tw": "變得稍微擅長冬季的競賽",
+      "endesc": "Your Speed stat is increased by 40 in Winter",
+      "enname": "Winter Girl ○",
+      "iconid": 10011,
+      "id": 200202,
+      "jpdesc": "冬のレースならスピードが少し上がる",
+      "jpname": "冬ウマ娘○",
+      "loc": {
+        "en": {
+          "char": [
+            101502,
+            103401
+          ],
+          "char_e": [
+            100602,
+            102302,
+            100103,
+            102901,
+            107801,
+            100802,
+            100902
+          ],
+          "sup_hint": [
+            [
+              30031,
+              30070,
+              30105,
+              30123,
+              30124,
+              30125,
+              20011,
+              20032
+            ],
+            [
+              10034,
+              10068,
+              10085
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            101502,
+            103401,
+            107402,
+            101103
+          ],
+          "char_e": [
+            100602,
+            102302,
+            100103,
+            102901,
+            107801,
+            100802,
+            100902,
+            106003,
+            102902,
+            103302,
+            107702,
+            107802
+          ],
+          "sup_e": [
+            [
+              30175
+            ],
+            []
+          ],
+          "sup_hint": [
+            [
+              30031,
+              30070,
+              30105,
+              30123,
+              30124,
+              30125,
+              30129,
+              30176,
+              20011,
+              20032
+            ],
+            [
+              10034,
+              10068,
+              10085
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            101502,
+            103401,
+            107402,
+            101103
+          ],
+          "char_e": [
+            100602,
+            102302,
+            100103,
+            102901,
+            107801,
+            100802,
+            100902,
+            106003,
+            102902,
+            103302,
+            107702,
+            107802
+          ],
+          "sup_e": [
+            [
+              30175
+            ],
+            []
+          ],
+          "sup_hint": [
+            [
+              30031,
+              30070,
+              30105,
+              30123,
+              30124,
+              30125,
+              30129,
+              30176,
+              20011,
+              20032
+            ],
+            [
+              10034,
+              10068,
+              10085
+            ]
+          ]
+        }
+      },
+      "name_en": "Winter Runner ○",
+      "name_ko": "겨울 우마무스메○",
+      "name_tw": "冬賽馬娘○",
+      "rarity": 1,
+      "sup_e": [
+        [
+          30175
+        ],
+        []
+      ],
+      "sup_hint": [
+        [
+          30031,
+          30070,
+          30105,
+          30123,
+          30124,
+          30125,
+          30129,
+          30176,
+          30278,
+          30283,
+          20011,
+          20032,
+          20093,
+          20094
+        ],
+        [
+          10034,
+          10068,
+          10085
+        ]
+      ],
+      "tid": "2a",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200201,
+        200203,
+        200204
+      ]
+    }
+  },
+  "200212": {
+    "id": 200212,
+    "name_en": "Sunny Days ○",
+    "name_jp": "晴れの日○",
+    "icon_id": 10041,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10041.png",
+    "stat": "Guts",
+    "value": "+40",
+    "desc_en": "Moderately increase performance in sunny weather.",
+    "desc_id": "Meningkatkan status Guts sebesar +40 saat berlomba di cuaca cerah (Sunny / 晴).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "weather==1",
+        "effects": [
+          {
+            "type": 4,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 4,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        100102,
+        102801
+      ],
+      "char_e": [
+        110901,
+        110902
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "weather==1",
+          "effects": [
+            {
+              "type": 4,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance in sunny weather.",
+      "desc_ko": "맑은 날 레이스에 다소 강해진다",
+      "desc_tw": "變得稍微擅長晴天的競賽",
+      "endesc": "Your Guts stat is increased by 40 on Sunny Days",
+      "enname": "Sunny Days ○",
+      "iconid": 10041,
+      "id": 200212,
+      "jpdesc": "晴れの日のレースなら根性が少し上がる",
+      "jpname": "晴れの日○",
+      "loc": {
+        "en": {
+          "char": [
+            100102,
+            102801
+          ],
+          "sup_e": [
+            [
+              30007,
+              30040,
+              30102,
+              20033
+            ],
+            [
+              10011
+            ]
+          ],
+          "sup_hint": [
+            [
+              30007,
+              30029,
+              30040,
+              30041,
+              30116,
+              30125,
+              20018
+            ],
+            [
+              10011,
+              10046,
+              10056,
+              10064,
+              10085
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            100102,
+            102801
+          ],
+          "char_e": [
+            110901
+          ],
+          "sup_e": [
+            [
+              30007,
+              30040,
+              30102,
+              30133,
+              30161,
+              20033
+            ],
+            [
+              10011
+            ]
+          ],
+          "sup_hint": [
+            [
+              30007,
+              30029,
+              30040,
+              30041,
+              30116,
+              30125,
+              30133,
+              30155,
+              20018,
+              20060,
+              20063
+            ],
+            [
+              10011,
+              10046,
+              10056,
+              10064,
+              10085
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            100102,
+            102801
+          ],
+          "char_e": [
+            110901
+          ],
+          "sup_e": [
+            [
+              30007,
+              30040,
+              30102,
+              30133,
+              30161,
+              20033
+            ],
+            [
+              10011
+            ]
+          ],
+          "sup_hint": [
+            [
+              30007,
+              30029,
+              30040,
+              30041,
+              30116,
+              30125,
+              30133,
+              30155,
+              20018,
+              20060,
+              20063
+            ],
+            [
+              10011,
+              10046,
+              10056,
+              10064,
+              10085
+            ]
+          ]
+        }
+      },
+      "name_en": "Sunny Days ○",
+      "name_ko": "맑은 날○",
+      "name_tw": "晴天○",
+      "rarity": 1,
+      "sup_e": [
+        [
+          30007,
+          30040,
+          30102,
+          30133,
+          30161,
+          20033
+        ],
+        [
+          10011
+        ]
+      ],
+      "sup_hint": [
+        [
+          30007,
+          30029,
+          30040,
+          30041,
+          30116,
+          30125,
+          30133,
+          30155,
+          20018,
+          20060,
+          20063
+        ],
+        [
+          10011,
+          10046,
+          10056,
+          10064,
+          10085
+        ]
+      ],
+      "tid": "2d",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200211
+      ]
+    }
+  },
+  "200222": {
+    "id": 200222,
+    "name_en": "Cloudy Days ○",
+    "name_jp": "曇りの日○",
+    "icon_id": 10041,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10041.png",
+    "stat": "Guts",
+    "value": "+40",
+    "desc_en": "Moderately increase performance in cloudy weather.",
+    "desc_id": "Meningkatkan status Guts sebesar +40 saat berlomba di cuaca berawan (Cloudy / 曇).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "weather==2",
+        "effects": [
+          {
+            "type": 4,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 4,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        100601
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "weather==2",
+          "effects": [
+            {
+              "type": 4,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance in cloudy weather.",
+      "desc_ko": "흐린 날 레이스에 다소 강해진다",
+      "desc_tw": "變得稍微擅長陰天的競賽",
+      "endesc": "Your Guts stat is increased by 40 on Cloudy Days",
+      "enname": "Cloudy Days ○",
+      "iconid": 10041,
+      "id": 200222,
+      "jpdesc": "曇りの日のレースなら根性が少し上がる",
+      "jpname": "曇りの日○",
+      "loc": {
+        "en": {
+          "char": [
+            100601
+          ],
+          "sup_e": [
+            [
+              30074,
+              30118
+            ],
+            [
+              10082
+            ]
+          ],
+          "sup_hint": [
+            [
+              30012,
+              30017,
+              30024,
+              30033,
+              30046,
+              30056,
+              30113,
+              30146,
+              20001,
+              20006,
+              20020,
+              20045
+            ],
+            [
+              10005,
+              10016,
+              10029,
+              10039,
+              10048,
+              10049
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            100601
+          ],
+          "sup_e": [
+            [
+              30074,
+              30118,
+              30136,
+              30220,
+              30228,
+              30247
+            ],
+            [
+              10082
+            ]
+          ],
+          "sup_hint": [
+            [
+              30012,
+              30017,
+              30024,
+              30033,
+              30046,
+              30056,
+              30061,
+              30113,
+              30129,
+              30146,
+              20001,
+              20006,
+              20020,
+              20045
+            ],
+            [
+              10005,
+              10016,
+              10029,
+              10039,
+              10048,
+              10049
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            100601
+          ],
+          "sup_e": [
+            [
+              30074,
+              30118,
+              30136,
+              30220,
+              30228,
+              30247
+            ],
+            [
+              10082
+            ]
+          ],
+          "sup_hint": [
+            [
+              30012,
+              30017,
+              30024,
+              30033,
+              30046,
+              30056,
+              30113,
+              30129,
+              30146,
+              20001,
+              20006,
+              20020,
+              20045
+            ],
+            [
+              10005,
+              10016,
+              10029,
+              10039,
+              10048,
+              10049
+            ]
+          ]
+        }
+      },
+      "name_en": "Cloudy Days ○",
+      "name_ko": "흐린 날○",
+      "name_tw": "陰天○",
+      "rarity": 1,
+      "sup_e": [
+        [
+          30074,
+          30118,
+          30136,
+          30220,
+          30228,
+          30247
+        ],
+        [
+          10082
+        ]
+      ],
+      "sup_hint": [
+        [
+          30012,
+          30017,
+          30024,
+          30033,
+          30046,
+          30056,
+          30061,
+          30113,
+          30129,
+          30146,
+          20001,
+          20006,
+          20020,
+          20045,
+          20091
+        ],
+        [
+          10005,
+          10016,
+          10029,
+          10039,
+          10048,
+          10049,
+          10137
+        ]
+      ],
+      "tid": "2f",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200221
+      ]
+    }
+  },
+  "200232": {
+    "id": 200232,
+    "name_en": "Rainy Days ○",
+    "name_jp": "雨の日○",
+    "icon_id": 10041,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10041.png",
+    "stat": "Guts",
+    "value": "+40",
+    "desc_en": "Moderately increase performance in rainy weather.",
+    "desc_id": "Meningkatkan status Guts sebesar +40 saat berlomba di cuaca hujan (Rainy / 雨).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "weather==3",
+        "effects": [
+          {
+            "type": 4,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 4,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        102601,
+        102501,
+        104002,
+        105701,
+        102701
+      ],
+      "char_e": [
+        101701,
+        101702,
+        101703
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "weather==3",
+          "effects": [
+            {
+              "type": 4,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance in rainy weather.",
+      "desc_ko": "비 오는 날 레이스에 다소 강해진다",
+      "desc_tw": "變得稍微擅長下雨天的競賽",
+      "endesc": "Your Guts stat is increased by 40 on Rainy Day",
+      "enname": "Rainy Days ○",
+      "iconid": 10041,
+      "id": 200232,
+      "jpdesc": "雨の日のレースなら根性が少し上がる",
+      "jpname": "雨の日○",
+      "loc": {
+        "en": {
+          "char": [
+            102601,
+            102501,
+            104002,
+            102701
+          ],
+          "char_e": [
+            101701,
+            101702
+          ],
+          "sup_e": [
+            [
+              30067,
+              30085,
+              30090,
+              20005
+            ],
+            [
+              10013,
+              10026
+            ]
+          ],
+          "sup_hint": [
+            [
+              30001,
+              30022,
+              30025,
+              30048,
+              30075,
+              30097,
+              20008,
+              20010,
+              20049
+            ],
+            [
+              10001,
+              10031,
+              10033,
+              10078
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            102601,
+            102501,
+            104002,
+            105701,
+            102701
+          ],
+          "char_e": [
+            101701,
+            101702
+          ],
+          "sup_e": [
+            [
+              30037,
+              30067,
+              30085,
+              30090,
+              30229,
+              30233,
+              20005,
+              20058
+            ],
+            [
+              10013,
+              10026
+            ]
+          ],
+          "sup_hint": [
+            [
+              30001,
+              30022,
+              30025,
+              30048,
+              30075,
+              30097,
+              30132,
+              20008,
+              20010,
+              20049
+            ],
+            [
+              10001,
+              10031,
+              10033,
+              10078
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            102601,
+            102501,
+            104002,
+            105701,
+            102701
+          ],
+          "char_e": [
+            101701,
+            101702
+          ],
+          "sup_e": [
+            [
+              30037,
+              30067,
+              30085,
+              30090,
+              30229,
+              30233,
+              20005,
+              20058
+            ],
+            [
+              10013,
+              10026
+            ]
+          ],
+          "sup_hint": [
+            [
+              30001,
+              30022,
+              30025,
+              30048,
+              30075,
+              30097,
+              30132,
+              20008,
+              20010,
+              20049
+            ],
+            [
+              10001,
+              10031,
+              10033,
+              10078
+            ]
+          ]
+        }
+      },
+      "name_en": "Rainy Days ○",
+      "name_ko": "비 오는 날○",
+      "name_tw": "下雨天○",
+      "rarity": 1,
+      "sce_e": [
+        4
+      ],
+      "sup_e": [
+        [
+          30037,
+          30067,
+          30085,
+          30090,
+          30229,
+          30233,
+          30297,
+          20005,
+          20058
+        ],
+        [
+          10013,
+          10026
+        ]
+      ],
+      "sup_hint": [
+        [
+          30001,
+          30022,
+          30025,
+          30048,
+          30075,
+          30097,
+          30132,
+          20008,
+          20010,
+          20049
+        ],
+        [
+          10001,
+          10031,
+          10033,
+          10078
+        ]
+      ],
+      "tid": "2h",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200231,
+        200233
+      ]
+    }
+  },
+  "200242": {
+    "id": 200242,
+    "name_en": "Snowy Days ○",
+    "name_jp": "雪の日○",
+    "icon_id": 10041,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10041.png",
+    "stat": "Guts",
+    "value": "+40",
+    "desc_en": "Moderately increase performance in snowy weather.",
+    "desc_id": "Meningkatkan status Guts sebesar +40 saat berlomba di cuaca bersalju (Snowy / 雪).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "weather==4",
+        "effects": [
+          {
+            "type": 4,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 4,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        105202,
+        102901
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "weather==4",
+          "effects": [
+            {
+              "type": 4,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance in snowy weather.",
+      "desc_ko": "눈 오는 날 레이스에 다소 강해진다",
+      "desc_tw": "變得稍微擅長下雪天的競賽",
+      "endesc": "Your Guts stat is increased by 40 on Snowy Days",
+      "enname": "Snowy Days ○",
+      "iconid": 10041,
+      "id": 200242,
+      "jpdesc": "雪の日のレースなら根性が少し上がる",
+      "jpname": "雪の日○",
+      "loc": {
+        "en": {
+          "char": [
+            105202,
+            102901
+          ],
+          "sup_e": [
+            [
+              30070,
+              20049
+            ],
+            []
+          ],
+          "sup_hint": [
+            [
+              30066,
+              20009
+            ],
+            [
+              10032
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            105202,
+            102901
+          ],
+          "sup_e": [
+            [
+              30070,
+              20049
+            ],
+            []
+          ],
+          "sup_hint": [
+            [
+              30059,
+              30066,
+              20009
+            ],
+            [
+              10032
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            105202,
+            102901
+          ],
+          "sup_e": [
+            [
+              30070,
+              20049
+            ],
+            []
+          ],
+          "sup_hint": [
+            [
+              30066,
+              20009
+            ],
+            [
+              10032
+            ]
+          ]
+        }
+      },
+      "name_en": "Snowy Days ○",
+      "name_ko": "눈 오는 날○",
+      "name_tw": "下雪天○",
+      "rarity": 1,
+      "sup_e": [
+        [
+          30070,
+          20049
+        ],
+        []
+      ],
+      "sup_hint": [
+        [
+          30059,
+          30066,
+          20009
+        ],
+        [
+          10032
+        ]
+      ],
+      "tid": "2k",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200241
+      ]
+    }
+  },
+  "200952": {
+    "id": 200952,
+    "name_en": "Oi Racecourse ○",
+    "name_jp": "大井レース場○",
+    "icon_id": 10021,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10021.png",
+    "stat": "Stamina",
+    "value": "+40",
+    "desc_en": "Moderately increase performance at Oi Racecourse.",
+    "desc_id": "Meningkatkan status Stamina sebesar +40 saat berlomba di Sirkuit Oi (大井レース場).",
+    "cost": 90,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "track_id==10101",
+        "effects": [
+          {
+            "type": 2,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 2,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "char": [
+        104601,
+        103402
+      ],
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "track_id==10101",
+          "effects": [
+            {
+              "type": 2,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 90,
+      "desc_en": "Moderately increase performance at Oi Racecourse.",
+      "desc_ko": "오이 경기장에 다소 강해진다",
+      "desc_tw": "變得稍微擅長大井賽場",
+      "endesc": "At Ooi, your Stamina stat is increased by 40",
+      "enname": "Ooi Racetrack ○",
+      "iconid": 10021,
+      "id": 200952,
+      "jpdesc": "大井レース場ならスタミナが少し上がる",
+      "jpname": "大井レース場○",
+      "loc": {
+        "en": {
+          "char": [
+            104601,
+            103402
+          ],
+          "sup_e": [
+            [
+              20032
+            ],
+            []
+          ],
+          "sup_hint": [
+            [
+              30017,
+              20045
+            ],
+            [
+              10039
+            ]
+          ]
+        },
+        "ko": {
+          "char": [
+            104601,
+            103402
+          ],
+          "sup_e": [
+            [
+              20032
+            ],
+            []
+          ],
+          "sup_hint": [
+            [
+              30017,
+              20045,
+              20064
+            ],
+            [
+              10039,
+              10092
+            ]
+          ]
+        },
+        "zh_tw": {
+          "char": [
+            104601,
+            103402
+          ],
+          "sup_e": [
+            [
+              20032
+            ],
+            []
+          ],
+          "sup_hint": [
+            [
+              30017,
+              20045,
+              20064
+            ],
+            [
+              10039,
+              10092
+            ]
+          ]
+        }
+      },
+      "name_en": "Oi Racecourse ○",
+      "name_ko": "오이 경기장○",
+      "name_tw": "大井賽場○",
+      "rarity": 1,
+      "sup_e": [
+        [
+          20032
+        ],
+        []
+      ],
+      "sup_hint": [
+        [
+          30017,
+          20045,
+          20064
+        ],
+        [
+          10039,
+          10092
+        ]
+      ],
+      "tid": "4j",
+      "type": [
+        "nac"
+      ],
+      "versions": [
+        200951,
+        200953
+      ]
+    }
+  },
+  "202732": {
+    "id": 202732,
+    "name_en": "Longchamp Racetrack ○",
+    "name_jp": "ロンシャンレース場○",
+    "icon_id": 10021,
+    "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_10021.png",
+    "stat": "Stamina",
+    "value": "+40",
+    "desc_en": "At Longchamp, your Stamina stat is increased by 40",
+    "desc_id": "Meningkatkan status Stamina sebesar +40 saat berlomba di Sirkuit Longchamp (ロンシャンレース場).",
+    "cost": 70,
+    "rarity": 1,
+    "condition_groups": [
+      {
+        "base_time": -1,
+        "condition": "track_id==10201",
+        "effects": [
+          {
+            "type": 2,
+            "value": 400000
+          }
+        ]
+      }
+    ],
+    "effects": [
+      {
+        "type": 2,
+        "value": 400000
+      }
+    ],
+    "raw_skill": {
+      "activation": 0,
+      "condition_groups": [
+        {
+          "base_time": -1,
+          "condition": "track_id==10201",
+          "effects": [
+            {
+              "type": 2,
+              "value": 400000
+            }
+          ]
+        }
+      ],
+      "cost": 70,
+      "desc_ko": "롱샹 경기장에 다소 강해진다",
+      "desc_tw": "變得稍微擅長隆尚賽場",
+      "endesc": "At Longchamp, your Stamina stat is increased by 40",
+      "enname": "Longchamp Racetrack ○",
+      "iconid": 10021,
+      "id": 202732,
+      "jpdesc": "ロンシャンレース場ならスタミナが少し上がる",
+      "jpname": "ロンシャンレース場○",
+      "loc": {
+        "ko": {
+          "sup_hint": [
+            [
+              30163
+            ],
+            []
+          ]
+        },
+        "zh_tw": {
+          "sup_hint": [
+            [
+              30163
+            ],
+            []
+          ]
+        }
+      },
+      "name_ko": "롱샹 경기장○",
+      "name_tw": "隆尚賽場○",
+      "rarity": 1,
+      "sce_e": [
+        6
+      ],
+      "sup_hint": [
+        [
+          30163
+        ],
+        []
+      ],
+      "tid": "id",
+      "type": [
+        "nac"
+      ],
+      "unreleased": [
+        "en"
+      ],
+      "versions": [
+        202731,
+        202733,
+        202734
+      ]
+    }
+  }
+}

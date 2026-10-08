@@ -612,7 +612,18 @@ export default function DashboardView({
                             {/* Direct Button to Event Planner */}
                             <button
                                 type="button"
-                                onClick={() => setActiveTab('events')}
+                                onClick={() => {
+                                    try {
+                                        if (featuredEvent?.id) {
+                                            const url = new URL(window.location.href);
+                                            url.searchParams.set('event', String(featuredEvent.id));
+                                            window.history.pushState({ eventId: featuredEvent.id }, '', url.toString());
+                                        }
+                                    } catch {
+                                        // ignore
+                                    }
+                                    setActiveTab('events');
+                                }}
                                 className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs self-start sm:self-center shrink-0"
                                 title="Buka dan lihat event ini langsung pada halaman Event Planner"
                             >
@@ -692,7 +703,18 @@ export default function DashboardView({
                             {/* Quick View Button */}
                             <button
                                 type="button"
-                                onClick={() => setActiveTab('events')}
+                                onClick={() => {
+                                    try {
+                                        if (featuredEvent?.id) {
+                                            const url = new URL(window.location.href);
+                                            url.searchParams.set('event', String(featuredEvent.id));
+                                            window.history.pushState({ eventId: featuredEvent.id }, '', url.toString());
+                                        }
+                                    } catch {
+                                        // ignore
+                                    }
+                                    setActiveTab('events');
+                                }}
                                 className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs self-stretch md:self-auto shrink-0"
                             >
                                 <span>Lihat di Halaman Event</span>

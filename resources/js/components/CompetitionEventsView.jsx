@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { formatIndonesianDate } from '../utils/dateHelper';
 import NoDebuffSkillsModal from './NoDebuffSkillsModal';
+import CompetitionEventDetailView from './CompetitionEventDetailView';
 
 // Formatters and label dictionaries (Bilingual ID & JP)
 const SURFACE_MAP = {
@@ -219,6 +220,69 @@ export default function CompetitionEventsView({ onNotify }) {
     const upcomingCount = events.filter(e => getEventStatus(e, activeDate).status === 'upcoming').length;
     const pastCount = events.filter(e => getEventStatus(e, activeDate).status === 'past').length;
     const confirmedTracks = events.filter(e => e.venue && e.distance).length;
+
+    // Handle opening event detail page in same tab
+    const handleOpenDetail = (event) => {
+        setSelectedEvent(event);
+        try {
+            const url = new URL(window.location.href);
+            url.searchParams.set('event', String(event.id));
+            window.history.pushState({ eventId: event.id }, '', url.toString());
+        } catch {
+            // ignore
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // Handle back to event list
+    const handleBackToList = () => {
+        setSelectedEvent(null);
+        try {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('event');
+            window.history.pushState({}, '', url.toString());
+        } catch {
+            // ignore
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // Synchronize selected event with URL search params and history popstate
+    useEffect(() => {
+        const checkUrlEvent = () => {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const eventId = urlParams.get('event');
+                if (eventId && events.length > 0) {
+                    const found = events.find(e => String(e.id) === String(eventId));
+                    if (found) {
+                        setSelectedEvent(found);
+                        return;
+                    }
+                }
+                if (!eventId && selectedEvent) {
+                    setSelectedEvent(null);
+                }
+            } catch {
+                // ignore
+            }
+        };
+
+        checkUrlEvent();
+        window.addEventListener('popstate', checkUrlEvent);
+        return () => window.removeEventListener('popstate', checkUrlEvent);
+    }, [events]);
+
+    // Dedicated Detail View in the same tab (not modal)
+    if (selectedEvent) {
+        return (
+            <CompetitionEventDetailView
+                event={selectedEvent}
+                activeDate={activeDate}
+                onBack={handleBackToList}
+            />
+        );
+    }
 
     return (
         <div className="space-y-6 sm:space-y-8 animate-fadeIn">
@@ -552,21 +616,11 @@ export default function CompetitionEventsView({ onNotify }) {
                             event={event} 
                             index={idx + 1}
                             activeDate={activeDate}
-                            onOpenDetail={() => setSelectedEvent(event)}
+                            onOpenDetail={() => handleOpenDetail(event)}
                             onOpenNoDebuff={() => setShowNoDebuffModal(true)}
                         />
                     ))}
                 </div>
-            )}
-
-            {/* Detail Modal Dialog */}
-            {selectedEvent && (
-                <CompetitionEventDetailModal
-                    event={selectedEvent}
-                    activeDate={activeDate}
-                    onClose={() => setSelectedEvent(null)}
-                    onOpenNoDebuff={() => setShowNoDebuffModal(true)}
-                />
             )}
 
             {/* Special Rule: No Debuff Skills Modal */}
@@ -873,220 +927,3 @@ function RandomBadge() {
     );
 }
 
-// Modal Dialog: Full Event Details
-function CompetitionEventDetailModal({ event, onClose, activeDate, onOpenNoDebuff }) {
-    useEffect(() => {
-        const handleKeyDown = (e) => {
-            if (e.key === 'Escape') onClose();
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [onClose]);
-
-    const isCM = event.event_type === 'champions_meeting';
-    const isLoH = event.event_type === 'league_of_heroes';
-    const hasNoDebuff = event.special_rule === 'no_debuff';
-
-    const eventStatus = activeDate ? getEventStatus(event, activeDate) : null;
-
-    const conditions = [
-        { label: 'Lokasi (Venue)', value: event.venue ? `${event.venue} (競馬場)` : null },
-        { 
-            label: 'Tipe Lintasan', 
-            value: event.surface ? (event.surface === 'turf' ? 'Rumput (Turf / 芝)' : 'Tanah (Dirt / ダート)') : null 
-        },
-        { 
-            label: 'Jarak Balapan', 
-            value: event.distance ? `${event.distance} Meter` : null 
-        },
-        { 
-            label: 'Kategori Jarak', 
-            value: event.distance_category ? (DISTANCE_CATEGORY_MAP[event.distance_category]?.sub || event.distance_category) : null 
-        },
-        { 
-            label: 'Arah Putaran', 
-            value: event.direction ? `${DIRECTION_MAP[event.direction]?.label || event.direction} (${DIRECTION_MAP[event.direction]?.sub || ''})` : null 
-        },
-        { 
-            label: 'Musim', 
-            value: event.season ? `${SEASON_MAP[event.season]?.label} (${SEASON_MAP[event.season]?.sub})` : null 
-        },
-        { 
-            label: 'Waktu Balapan', 
-            value: event.time_of_day ? `${TIME_MAP[event.time_of_day]?.label} (${TIME_MAP[event.time_of_day]?.sub})` : null 
-        },
-        { 
-            label: 'Cuaca', 
-            value: event.weather, 
-            isRandom: event.weather === 'random',
-            display: event.weather && event.weather !== 'random' ? `${WEATHER_MAP[event.weather]?.label} (${WEATHER_MAP[event.weather]?.sub})` : null
-        },
-        { 
-            label: 'Kondisi Lintasan', 
-            value: event.track_condition, 
-            isRandom: event.track_condition === 'random',
-            display: event.track_condition && event.track_condition !== 'random' ? `${TRACK_CONDITION_MAP[event.track_condition]?.label} (${TRACK_CONDITION_MAP[event.track_condition]?.sub})` : null
-        },
-    ];
-
-    return (
-        <div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn"
-            onClick={onClose}
-        >
-            <div 
-                className="w-full max-w-xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[90vh] flex flex-col"
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* Modal Header */}
-                <div className={`p-5 sm:p-6 text-white flex items-start justify-between gap-4 ${
-                    isCM 
-                        ? 'bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700' 
-                        : 'bg-gradient-to-r from-indigo-700 via-purple-700 to-indigo-800'
-                }`}>
-                    <div>
-                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-white/20 backdrop-blur-xs uppercase tracking-wider">
-                                {isCM ? 'Champions Meeting' : 'League of Heroes'}
-                            </span>
-                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-black/20">
-                                {event.date_label}
-                            </span>
-                            {eventStatus?.status === 'ongoing' && (
-                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-500 text-white flex items-center gap-1 shadow-xs">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                                    <span>Event Sedang Berlangsung</span>
-                                </span>
-                            )}
-                            {eventStatus?.status === 'upcoming' && (
-                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-white/15 text-white">
-                                    Berlangsung Nanti{eventStatus.diffDays ? ` (${eventStatus.diffDays} hari lagi)` : ''}
-                                </span>
-                            )}
-                            {eventStatus?.status === 'past' && (
-                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-black/40 text-slate-300">
-                                    Telah Selesai
-                                </span>
-                            )}
-                        </div>
-                        <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-                            {event.event_name}
-                        </h2>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors cursor-pointer text-white"
-                        title="Tutup Modal"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
-                {/* Modal Scrollable Body */}
-                <div className="p-5 sm:p-6 overflow-y-auto space-y-5">
-                    {/* Special Rule Alert Box if present */}
-                    {hasNoDebuff && (
-                        <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                            <div className="flex items-start gap-3">
-                                <Zap className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-                                <div className="space-y-0.5 text-xs">
-                                    <span className="font-black text-rose-950 dark:text-rose-200 text-sm">
-                                        Aturan Khusus: No Debuff (デバフなし)
-                                    </span>
-                                    <p className="text-rose-800/90 dark:text-rose-300/90 leading-relaxed">
-                                        Pada gelaran Champions Meeting MILE Akhir Maret 2027 ini, seluruh 55 skill debuff dinonaktifkan secara resmi sesuai aturan Cygames.
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={onOpenNoDebuff}
-                                className="shrink-0 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
-                            >
-                                <Zap className="w-3.5 h-3.5" />
-                                <span>Lihat 55 Skill</span>
-                                <ChevronRight className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Condition Matrix */}
-                    <div className="space-y-2">
-                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">
-                            Rincian Kondisi Lomba Terkonfirmasi
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {conditions.map((c, i) => (
-                                <div 
-                                    key={i} 
-                                    className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2"
-                                >
-                                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                                        {c.label}
-                                    </span>
-                                    <div>
-                                        {c.isRandom ? (
-                                            <RandomBadge />
-                                        ) : c.display ? (
-                                            <span className="text-xs font-black text-slate-900 dark:text-white">
-                                                {c.display}
-                                            </span>
-                                        ) : c.value ? (
-                                            <span className="text-xs font-black text-slate-900 dark:text-white">
-                                                {c.value}
-                                            </span>
-                                        ) : (
-                                            <NotAnnouncedPill />
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Source Box */}
-                    <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-2">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                                Sumber Validasi:
-                            </span>
-                            <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200">
-                                {event.source_name || 'Cygames'}
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-500 dark:text-slate-400">Tautan Pengumuman:</span>
-                            <a
-                                href={event.source_url || 'https://umamusume.jp/news/detail?id=3483'}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:underline font-bold"
-                            >
-                                <span>umamusume.jp/news/detail?id=3483</span>
-                                <ExternalLink className="w-3.5 h-3.5" />
-                            </a>
-                        </div>
-                    </div>
-
-                    {/* Disclaimer Note */}
-                    <div className="text-[11px] text-slate-400 text-center leading-relaxed italic">
-                        Prinsip Integritas Data (Zero Speculative Data): Kondisi yang bernilai "Belum diumumkan" tidak diisi oleh sistem hingga Cygames mengumumkan secara resmi pada pembaruan mendatang.
-                    </div>
-                </div>
-
-                {/* Modal Footer */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex justify-end">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-5 py-2 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 transition-colors cursor-pointer"
-                    >
-                        Tutup
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Support\CompetitionGreenSkillRecommender;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -57,6 +58,34 @@ class CompetitionEvent extends Model
         'distance' => 'integer',
         'start_date' => 'date:Y-m-d',
     ];
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = [
+        'is_fully_confirmed',
+        'recommended_green_skills',
+    ];
+
+    /**
+     * Check if race parameters are fully confirmed by Cygames.
+     */
+    public function getIsFullyConfirmedAttribute(): bool
+    {
+        return CompetitionGreenSkillRecommender::isFullyConfirmed($this);
+    }
+
+    /**
+     * Get recommended green skills matching confirmed race conditions.
+     *
+     * @return array<string, mixed>
+     */
+    public function getRecommendedGreenSkillsAttribute(): array
+    {
+        return CompetitionGreenSkillRecommender::getRecommendations($this);
+    }
 
     /**
      * Scope a query to order events chronologically according to:
