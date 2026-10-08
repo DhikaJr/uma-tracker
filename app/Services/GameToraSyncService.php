@@ -1731,6 +1731,58 @@ class GameToraSyncService
     }
 
     /**
+     * Map skill target code and target details to readable English target string.
+     */
+    public function getTargetName(?int $target, ?int $targetDetails): ?string
+    {
+        if ($target === null) {
+            return null;
+        }
+
+        return match ($target) {
+            1 => 'Self',
+            4 => $targetDetails === 18 ? 'All enemies within the field of view' : 'All enemies',
+            7 => $targetDetails === 5 ? 'Five closest girls' : ($targetDetails ? "{$targetDetails} closest girls" : 'Closest girls'),
+            9 => match ($targetDetails) {
+                1 => 'Closest girl ahead of you',
+                2 => 'Two closest girls ahead of you',
+                3 => 'Three closest girls ahead of you',
+                5 => 'Five closest girls ahead of you',
+                18 => 'All enemy girls ahead of you',
+                default => $targetDetails ? "{$targetDetails} closest girls ahead of you" : 'All enemy girls ahead of you',
+            },
+            10 => match ($targetDetails) {
+                1 => 'Closest girl behind you',
+                2 => 'Two closest girls behind you',
+                3 => 'Three closest girls behind you',
+                5 => 'Five closest girls behind you',
+                18 => 'All enemy girls behind you',
+                default => $targetDetails ? "{$targetDetails} closest girls behind you" : 'All enemy girls behind you',
+            },
+            11 => 'All teammates and you',
+            18 => match ($targetDetails) {
+                1 => 'All enemy Front Runners',
+                2 => 'All enemy Pace Chasers',
+                3 => 'All enemy Late Surgers',
+                4 => 'All enemy End Closers',
+                default => 'All enemies',
+            },
+            19 => 'Rushing enemies ahead of you',
+            20 => 'Rushing enemies behind you',
+            21 => match ($targetDetails) {
+                1 => 'Rushing enemy Front Runners',
+                2 => 'Rushing enemy Pace Chasers',
+                3 => 'Rushing enemy Late Surgers',
+                4 => 'Rushing enemy End Closers',
+                default => 'Rushing enemies',
+            },
+            22 => 'Specific character',
+            23 => 'Girl who triggered this skill',
+            default => 'Opponents',
+        };
+    }
+
+    /**
      * Format special scaling rules and table matching GameTora value_scale definitions.
      *
      * @return array<string, mixed>|null
@@ -1935,6 +1987,9 @@ class GameToraSyncService
                 $scaleId = isset($eff['value_scale']) ? (int) $eff['value_scale'] : null;
                 $baseVal = $eVal / 10000;
                 $scaling = $scaleId ? $this->formatSpecialScaling($scaleId, $baseVal) : null;
+                $tCode = isset($eff['target']) ? (int) $eff['target'] : null;
+                $tdCode = isset($eff['target_details']) ? (int) $eff['target_details'] : null;
+                $targetName = $this->getTargetName($tCode, $tdCode);
 
                 $effectItem = [
                     'type' => $eType,
@@ -1942,6 +1997,9 @@ class GameToraSyncService
                     'value' => $eVal,
                     'formatted_value' => $valStr,
                     'display_text' => "{$typeName} ({$valStr})",
+                    'target' => $tCode,
+                    'target_details' => $tdCode,
+                    'target_name' => $targetName,
                     'value_scale' => $scaleId,
                     'special_scaling' => $scaling,
                 ];
@@ -1952,6 +2010,9 @@ class GameToraSyncService
                     'name' => $typeName,
                     'formatted_value' => $valStr,
                     'display_text' => "{$typeName} ({$valStr})",
+                    'target' => $tCode,
+                    'target_details' => $tdCode,
+                    'target_name' => $targetName,
                     'special_scaling' => $scaling,
                 ];
             }

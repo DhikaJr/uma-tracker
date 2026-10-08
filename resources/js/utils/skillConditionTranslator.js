@@ -725,6 +725,70 @@ export function translateClause(clause) {
         case 'temptation_opponent_count_behind':
             return makeResult(trimmed, field, op, val, `Terdapat ${op} ${val} pelari lawan di belakang yang mengalami panik/kakari`, 'status', 'alert-circle');
 
+        case 'running_style_temptation_opponent_count_nige': {
+            const text = (op === '>=' && intVal === 1)
+                ? 'Terdapat minimal 1 pelari Front Runner (pelari depan / 逃げ) lawan yang sedang panik / tergesa-gesa (kakari)'
+                : `Jumlah pelari Front Runner (pelari depan / 逃げ) lawan yang sedang panik / tergesa-gesa (kakari) ${op} ${val}`;
+            return makeResult(
+                trimmed,
+                field,
+                op,
+                val,
+                text,
+                'strategy',
+                'alert-circle',
+                'Jumlah pelari Front Runner (逃げ) lawan yang saat ini sedang mengalami status panik (kakari) di dalam balapan.'
+            );
+        }
+
+        case 'running_style_temptation_opponent_count_senko': {
+            const text = (op === '>=' && intVal === 1)
+                ? 'Terdapat minimal 1 pelari Pace Chaser (pelari penguntit / 先行) lawan yang sedang panik / tergesa-gesa (kakari)'
+                : `Jumlah pelari Pace Chaser (pelari penguntit / 先行) lawan yang sedang panik / tergesa-gesa (kakari) ${op} ${val}`;
+            return makeResult(
+                trimmed,
+                field,
+                op,
+                val,
+                text,
+                'strategy',
+                'alert-circle',
+                'Jumlah pelari Pace Chaser (先行) lawan yang saat ini sedang mengalami status panik (kakari) di dalam balapan.'
+            );
+        }
+
+        case 'running_style_temptation_opponent_count_sashi': {
+            const text = (op === '>=' && intVal === 1)
+                ? 'Terdapat minimal 1 pelari Late Surger (pelari penyalip / 差し) lawan yang sedang panik / tergesa-gesa (kakari)'
+                : `Jumlah pelari Late Surger (pelari penyalip / 差し) lawan yang sedang panik / tergesa-gesa (kakari) ${op} ${val}`;
+            return makeResult(
+                trimmed,
+                field,
+                op,
+                val,
+                text,
+                'strategy',
+                'alert-circle',
+                'Jumlah pelari Late Surger (差し) lawan yang saat ini sedang mengalami status panik (kakari) di dalam balapan.'
+            );
+        }
+
+        case 'running_style_temptation_opponent_count_oikomi': {
+            const text = (op === '>=' && intVal === 1)
+                ? 'Terdapat minimal 1 pelari End Closer (pelari penutup / 追込) lawan yang sedang panik / tergesa-gesa (kakari)'
+                : `Jumlah pelari End Closer (pelari penutup / 追込) lawan yang sedang panik / tergesa-gesa (kakari) ${op} ${val}`;
+            return makeResult(
+                trimmed,
+                field,
+                op,
+                val,
+                text,
+                'strategy',
+                'alert-circle',
+                'Jumlah pelari End Closer (追込) lawan yang saat ini sedang mengalami status panik (kakari) di dalam balapan.'
+            );
+        }
+
         case 'random_lot':
         case 'random_lot_shared':
             return makeResult(trimmed, field, op, val, `Peluang keberhasilan aktivasi ${val}% (undian acak)`, 'random', 'shuffle');

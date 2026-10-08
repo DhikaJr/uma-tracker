@@ -2,6 +2,47 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.5.1] - 8 Oktober 2026
+
+### 🎯 Perbaikan Format Efek Debuff Skill, Target Sasaran & Durasi Dasar (Standar GameTora)
+- **Koreksi Tipe & Nilai Numerik Efek Debuff**:
+  - Mengatasi masalah tampilan efek skill yang sebelumnya jatuh ke fallback `Effect (-300)`, `Effect (-2500)`, atau `Effect (50000)`.
+  - Memetakan kode tipe efek skill secara presisi sesuai standar GameTora:
+    - Tipe `9`: Nilai negatif menjadi `Stamina Drain` (misal: `-300` $\to$ `-0.03`), nilai positif menjadi `Stamina Recovery`.
+    - Tipe `21` & `22`: Nilai negatif menjadi `Decrease Current Speed` (misal: `-2500` $\to$ `-0.25`), nilai positif menjadi `Increase Current Speed`.
+    - Tipe `13`: Menjadi `Increase Rush Time` berdurasi detik (misal: `50000` $\to$ `5 s`).
+    - Tipe `8`: Menjadi `Decrease Field of View` (misal: `-100000` $\to$ `-10`).
+    - Tipe `27`: `Decrease Target Speed` / `Increase Target Speed`.
+    - Tipe `31`: `Decrease Acceleration` / `Increase Acceleration`.
+    - Tipe `37`: `Use Random Rare Skills`.
+  - Mengimplementasikan helper terdedikasi `resources/js/utils/skillEffectFormatter.js` untuk resolusi runtime di seluruh antarmuka modal skill.
+- **Resolusi Target Balapan (*Target Efek*) & Terjemahan Bahasa Indonesia**:
+  - Menampilkan secara eksplisit pihak sasaran efek balapan pada kartu efek (`Target Efek: [Target EN] ([Terjemahan ID])`):
+    - `All enemy girls ahead of you` (*Semua Uma Musume lawan di depan*).
+    - `All enemy girls behind you` (*Semua Uma Musume lawan di belakang*).
+    - `All enemies within the field of view` (*Semua lawan dalam bidang pandang*).
+    - `All enemy [Front Runners/Pace Chasers/Late Surgers/End Closers]` (*Semua [Front Runner/Pace Chaser/Late Surger/End Closer] lawan*).
+    - `Rushing enemy [Front Runners/Pace Chasers/Late Surgers/End Closers]` (*[Front Runner/Pace Chaser/Late Surger/End Closer] lawan yang sedang panik / kakari*).
+- **Tampilan Durasi Dasar (*Base Duration*)**:
+  - Memperbaiki pembacaan durasi dasar pada komponen `SkillDetailModal.jsx` sehingga menampilkan `Instant effect` untuk durasi seketika (`base_time == 0`) dan `X s` (misal `3 s`) untuk durasi berbasis waktu.
+- **Pengayaan Katalog 55 Skill No Debuff**:
+  - Memperkaya berkas `resources/js/data/noDebuffSkills.json` dengan data `base_duration`, `effects` terformat, `target_name`, dan `target_name_id`.
+  - Menambahkan dukungan `getTargetName()` pada backend `app/Services/GameToraSyncService.php`.
+
+### ⚡ Penerjemahan Kondisi Aktivasi Tergesa-gesa / Kakari (*Temptation*)
+- **Dukungan Kondisi Lawan Tergesa-gesa Per Strategi Lari**:
+  - Menerjemahkan 4 parameter kondisi jumlah lawan yang sedang tergesa-gesa/panik (*kakari*) ke dalam Bahasa Indonesia yang alami dan informatif pada `skillConditionTranslator.js` dan `SkillConditionTranslator.php`:
+    - `running_style_temptation_opponent_count_nige>=1`: *"Terdapat minimal 1 pelari Front Runner (pelari depan / 逃げ) lawan yang sedang panik / tergesa-gesa (kakari)"*.
+    - `running_style_temptation_opponent_count_senko>=1`: *"Terdapat minimal 1 pelari Pace Chaser (pelari penguntit / 先行) lawan yang sedang panik / tergesa-gesa (kakari)"*.
+    - `running_style_temptation_opponent_count_sashi>=1`: *"Terdapat minimal 1 pelari Late Surger (pelari penyalip / 差し) lawan yang sedang panik / tergesa-gesa (kakari)"*.
+    - `running_style_temptation_opponent_count_oikomi>=1`: *"Terdapat minimal 1 pelari End Closer (pelari penutup / 追込) lawan yang sedang panik / tergesa-gesa (kakari)"*.
+  - Melengkapi penerjemahan kondisi status panik diri sendiri: `is_temptation==0` (*"Tidak sedang panik / tergesa-gesa (kakari)"*) dan `is_temptation==1` (*"Sedang mengalami panik / tergesa-gesa (kakari)"*).
+
+### 🧪 Pengujian Otomatis & Pembaruan Rangkaian Tes
+- Menambahkan skenario uji baru pada `SkillConditionTranslatorTest.php` untuk memvalidasi penerjemahan seluruh kondisi `running_style_temptation_opponent_count_*` dan `is_temptation`.
+- Menambahkan pengujian assertion integritas efek, target sasaran, dan durasi dasar pada `CompetitionEventTest.php`.
+- Memperbarui pengujian API changelog pada `ChangelogApiTest.php` untuk verifikasi versi terbaru 2.5.1.
+
 ## [Versi 2.5.0] - 7 Oktober 2026
 
 ### 🏆 Modul Perencana Kompetisi CM/LoH Resmi (Upcoming Competition Planner V1)

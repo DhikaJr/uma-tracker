@@ -25,6 +25,7 @@ import {
     TrendingUp
 } from 'lucide-react';
 import { translateConditionString, translateClause } from '../utils/skillConditionTranslator';
+import { enrichSkillEffect, formatSkillBaseDuration } from '../utils/skillEffectFormatter';
 
 /**
  * Format conditions or preconditions with order_rate annotations and linebreaks
@@ -115,7 +116,7 @@ export default function SkillDetailModal({ skill, onClose }) {
     );
 
     const baseCost = skill.base_cost ?? skill.cost ?? null;
-    const baseDuration = skill.base_duration || (skill.base_time !== undefined ? (skill.base_time === 0 ? 'Instant effect' : skill.base_time === -1 ? 'none' : `${skill.base_time / 10000} s`) : null);
+    const baseDuration = skill.base_duration || formatSkillBaseDuration(skill.base_time ?? skill.condition_groups?.[0]?.base_time);
 
     // Resolve effects list fallback
     const fallbackEffects = skill.effects && skill.effects.length > 0
@@ -128,6 +129,7 @@ export default function SkillDetailModal({ skill, onClose }) {
         : [{
             condition: skill.conditions || skill.condition || null,
             precondition: skill.precondition || null,
+            base_time: skill.base_time ?? null,
             base_duration: baseDuration,
             effects: fallbackEffects,
         }];
@@ -270,7 +272,7 @@ export default function SkillDetailModal({ skill, onClose }) {
                     <div className="space-y-4">
                         {conditionGroups.map((cg, cgIdx) => {
                             const cgEffects = (cg.effects && cg.effects.length > 0) ? cg.effects : fallbackEffects;
-                            const triggerDuration = cg.base_duration || baseDuration;
+                            const triggerDuration = formatSkillBaseDuration(cg.base_time, cg.base_duration || baseDuration);
                             const rawFormulaKey = `raw-${cgIdx}`;
                             const isRawOpen = openRawFormulas[rawFormulaKey] || false;
 
@@ -456,28 +458,50 @@ export default function SkillDetailModal({ skill, onClose }) {
                                             </div>
 
                                             {cgEffects.map((eff, effIdx) => {
+                                                const enrichedEff = enrichSkillEffect(eff);
                                                 const scalingKey = `${cgIdx}-${effIdx}`;
                                                 const isScalingOpen = openScalings[scalingKey] !== false;
-                                                const effScaling = eff.special_scaling || null;
+                                                const effScaling = enrichedEff.special_scaling || null;
 
                                                 return (
                                                     <div key={effIdx} className="space-y-2">
-                                                        <div className="p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-3 shadow-xs">
-                                                            <div className="font-bold text-slate-900 dark:text-slate-100 text-xs">
-                                                                <span className="text-slate-500 dark:text-slate-400 font-semibold mr-1.5">
-                                                                    {cgEffects.length > 1 ? `Efek ${effIdx + 1}:` : 'Efek:'}
-                                                                </span>
-                                                                <span>{eff.display_text || `${eff.name || 'Effect'} (${eff.formatted_value || eff.value})`}</span>
+                                                        <div className="p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/80 shadow-xs space-y-2">
+                                                            <div className="flex items-center justify-between gap-3">
+                                                                <div className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                                                                    <span className="text-slate-500 dark:text-slate-400 font-semibold mr-1.5">
+                                                                        {cgEffects.length > 1 ? `Efek ${effIdx + 1}:` : 'Efek:'}
+                                                                    </span>
+                                                                    <span className={enrichedEff.is_debuff ? 'text-rose-600 dark:text-rose-400 font-black' : ''}>
+                                                                        {enrichedEff.name} ({enrichedEff.formatted_value})
+                                                                    </span>
+                                                                </div>
+                                                                {effScaling && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => toggleScaling(scalingKey)}
+                                                                        className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-purple-100 hover:bg-purple-200 dark:bg-purple-950/80 dark:hover:bg-purple-900 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-700 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                                                                    >
+                                                                        <span>Special scaling</span>
+                                                                        {isScalingOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                                                    </button>
+                                                                )}
                                                             </div>
-                                                            {effScaling && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => toggleScaling(scalingKey)}
-                                                                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-purple-100 hover:bg-purple-200 dark:bg-purple-950/80 dark:hover:bg-purple-900 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-700 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
-                                                                >
-                                                                    <span>Special scaling</span>
-                                                                    {isScalingOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                                                                </button>
+
+                                                            {/* Target line if applicable */}
+                                                            {enrichedEff.target_name && (
+                                                                <div className="flex items-start sm:items-center flex-wrap gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
+                                                                    <span className="font-bold text-slate-500 dark:text-slate-400 shrink-0">
+                                                                        Target Efek:
+                                                                    </span>
+                                                                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                                                        {enrichedEff.target_name}
+                                                                    </span>
+                                                                    {enrichedEff.target_name_id && enrichedEff.target_name_id !== enrichedEff.target_name && (
+                                                                        <span className="text-slate-500 dark:text-slate-400 text-[10.5px]">
+                                                                            ({enrichedEff.target_name_id})
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             )}
                                                         </div>
 

@@ -273,8 +273,38 @@ class CompetitionEventTest extends TestCase
             $this->assertArrayHasKey('name_jp', $skill);
             $this->assertArrayHasKey('name_en', $skill);
             $this->assertArrayHasKey('icon_url', $skill);
+            $this->assertArrayHasKey('base_duration', $skill);
             $this->assertNotEmpty($skill['name_en']);
             $this->assertStringStartsWith('https://gametora.com/images/umamusume/skill_icons/', $skill['icon_url']);
+            $this->assertNotEmpty($skill['base_duration']);
+            $this->assertNotEmpty($skill['effects']);
         }
+
+        // Verify specific debuff effect name, value, and target enrichment
+        $skillsByEn = collect($json['skills'])->keyBy('name_en');
+
+        // 1. Mystifying Murmur (魅惑のささやき)
+        $this->assertTrue($skillsByEn->has('Mystifying Murmur'));
+        $mystifying = $skillsByEn->get('Mystifying Murmur');
+        $this->assertSame('Instant effect', $mystifying['base_duration']);
+        $this->assertSame('Stamina Drain', $mystifying['effects'][0]['name']);
+        $this->assertSame('-0.03', $mystifying['effects'][0]['formatted_value']);
+        $this->assertSame('All enemy girls ahead of you', $mystifying['effects'][0]['target_name']);
+
+        // 2. Dominator (独占力)
+        $this->assertTrue($skillsByEn->has('Dominator'));
+        $dominator = $skillsByEn->get('Dominator');
+        $this->assertSame('3 s', $dominator['base_duration']);
+        $this->assertSame('Decrease Current Speed', $dominator['effects'][0]['name']);
+        $this->assertSame('-0.25', $dominator['effects'][0]['formatted_value']);
+        $this->assertSame('All enemy girls ahead of you', $dominator['effects'][0]['target_name']);
+
+        // 3. Frenzied Late Surgers (差し駆け引き)
+        $this->assertTrue($skillsByEn->has('Frenzied Late Surgers'));
+        $frenzied = $skillsByEn->get('Frenzied Late Surgers');
+        $this->assertSame('Instant effect', $frenzied['base_duration']);
+        $this->assertSame('Increase Rush Time', $frenzied['effects'][0]['name']);
+        $this->assertSame('5 s', $frenzied['effects'][0]['formatted_value']);
+        $this->assertSame('Rushing enemy Late Surgers', $frenzied['effects'][0]['target_name']);
     }
 }

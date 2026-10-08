@@ -135,6 +135,12 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
   - Kartu ringkasan interaktif yang disematkan langsung di bawah bagian *Banner Gacha Berlangsung Hari Ini* pada Dasbor, menampilkan kompetisi terdekat yang sedang berjalan atau akan datang, dilengkapi tombol langsung untuk membuka halaman Event Planner.
 - **Modal Interaktif Aturan Khusus "No Debuff (デバフなし)"**:
   - Penanda aturan khusus dapat diklik untuk membuka modal dialog komprehensif yang memuat terjemahan resmi aturan Cygames dalam Bahasa Indonesia, penjelasan pengecualian skill unik & evolusi bawaan karakter, serta katalog 55 skill debuff (Gold, Normal, Warisan) yang dicocokkan langsung dari GameTora lengkap dengan fitur pencarian dan penelusuran formula.
+- **Resolusi Efek Skill, Target Balapan & Durasi Dasar Sesuai Standar GameTora**:
+  - **Efek Skill Terkalibrasi**: Pemetaan akurat tipe dan nilai numerik efek skill (seperti `Stamina Drain (-0.03)`, `Decrease Current Speed (-0.25)`, `Increase Rush Time (5 s)`, dll.) dengan skala presisi `/ 10.000` dan penyorotan visual khusus untuk efek debuff.
+  - **Target Balapan Dinamis**: Menampilkan pihak sasaran efek secara eksplisit (`All enemy girls ahead of you`, `All enemy Late Surgers`, `Rushing enemy Late Surgers`, `All enemies within the field of view`, dll.) disertai penjelasan Bahasa Indonesia.
+  - **Durasi Dasar (*Base Duration*)**: Menampilkan durasi dasar resmi (`Instant effect` untuk durasi seketika dan `X s` untuk durasi berbasis waktu).
+- **Penerjemahan Kondisi Aktivasi Tergesa-gesa / Panik (*Kakari / Temptation*)**:
+  - Mendukung penerjemahan komprehensif dan natural ke Bahasa Indonesia untuk seluruh kondisi lawan yang sedang tergesa-gesa (`running_style_temptation_opponent_count_nige`, `_senko`, `_sashi`, `_oikomi`) dan status panik (`is_temptation`) pada mesin penerjemah frontend (`skillConditionTranslator.js`) dan backend (`SkillConditionTranslator.php`).
 
 ### 9. Sistem Pencadangan Data Teruji (Backup Schema v2.0)
 - **Integritas Data Transaksional**:
@@ -337,7 +343,7 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 Aplikasi dilengkapi rangkaian pengujian otomatis berbasis **PHPUnit** pada database memori terisolasi (`:memory:`):
 
 ```bash
-# Menjalankan seluruh pengujian (199 tests, 2.119 assertions)
+# Menjalankan seluruh pengujian (203 tests, 2.689 assertions)
 php artisan test --compact
 
 # Menjalankan pengujian spesifik

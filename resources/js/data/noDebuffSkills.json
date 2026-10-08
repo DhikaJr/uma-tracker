@@ -4,7 +4,7 @@
     "title_jp": "特殊ルール：デバフなし",
     "target_event": "Champions Meeting MILE (Akhir Maret 2027)",
     "original_rule_jp": "「特殊ルール：デバフなし」では、以下のスキルが発動しません。\n※固有スキルおよび進化スキルは対象外となり、他のウマ娘の速度を下げたり、疲れやすくさせたりするデバフ効果を含んでいても発動します。",
-    "translated_rule_id": "Pada \"Aturan Khusus: No Debuff (Tanpa Debuff)\", seluruh skill dalam daftar berikut ini TIDAK AKAN AKTIF\/TERPICU selama balapan.\n※ Catatan Pengecualian: Skill Unik (Unique Skills) dan Skill Evolusi (Evolved Skills) dikecualikan dari larangan ini, sehingga tetap akan aktif meskipun memiliki efek debuff yang mengurangi kecepatan atau membuat lelah (menguras stamina) Uma Musume lawan.",
+    "translated_rule_id": "Pada \"Aturan Khusus: No Debuff (Tanpa Debuff)\", seluruh skill dalam daftar berikut ini TIDAK AKAN AKTIF/TERPICU selama balapan.\n※ Catatan Pengecualian: Skill Unik (Unique Skills) dan Skill Evolusi (Evolved Skills) dikecualikan dari larangan ini, sehingga tetap akan aktif meskipun memiliki efek debuff yang mengurangi kecepatan atau membuat lelah (menguras stamina) Uma Musume lawan.",
     "total_skills": 55,
     "skills": [
         {
@@ -16,10 +16,10 @@
             "desc_en": "Decrease fatigue, then moderately decrease velocity of runners ahead when positioned toward the back upon approaching mid-race. (Mile)",
             "desc_jp": "レース中盤が迫ったどこかで後方だと持久力を回復し前のウマ娘の速度を少し下げる＜マイル＞",
             "icon_id": 20022,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20022.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_20022.png",
             "rarity": 2,
             "rarity_type": "gold",
-            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "rarity_label": "Skill Langka (Gold / レア)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -29,15 +29,53 @@
                     "effects": [
                         {
                             "type": 9,
-                            "value": 550
+                            "value": 550,
+                            "name": "Stamina Recovery",
+                            "formatted_value": "0.055",
+                            "display_text": "Stamina Recovery (0.055)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         },
                         {
                             "target": 9,
                             "target_details": 18,
                             "type": 21,
-                            "value": -2000
+                            "value": -2000,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.2",
+                            "display_text": "Decrease Current Speed (-0.2)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls ahead of you",
+                            "target_name_id": "Semua Uma Musume lawan di depan"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "type": 9,
+                    "value": 550,
+                    "name": "Stamina Recovery",
+                    "formatted_value": "0.055",
+                    "display_text": "Stamina Recovery (0.055)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
+                },
+                {
+                    "target": 9,
+                    "target_details": 18,
+                    "type": 21,
+                    "value": -2000,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.2",
+                    "display_text": "Decrease Current Speed (-0.2)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls ahead of you",
+                    "target_name_id": "Semua Uma Musume lawan di depan"
                 }
             ]
         },
@@ -50,10 +88,10 @@
             "desc_en": "Slightly decrease fatigue, then very slightly decrease velocity of runners ahead when positioned toward the back upon approaching mid-race. (Mile)",
             "desc_jp": "レース中盤が迫ったどこかで後方だと持久力をわずかに回復し前のウマ娘の速度をちょっと下げる＜マイル＞",
             "icon_id": 20021,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20021.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_20021.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -63,15 +101,53 @@
                     "effects": [
                         {
                             "type": 9,
-                            "value": 150
+                            "value": 150,
+                            "name": "Stamina Recovery",
+                            "formatted_value": "0.015",
+                            "display_text": "Stamina Recovery (0.015)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         },
                         {
                             "target": 9,
                             "target_details": 18,
                             "type": 21,
-                            "value": -500
+                            "value": -500,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.05",
+                            "display_text": "Decrease Current Speed (-0.05)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls ahead of you",
+                            "target_name_id": "Semua Uma Musume lawan di depan"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "type": 9,
+                    "value": 150,
+                    "name": "Stamina Recovery",
+                    "formatted_value": "0.015",
+                    "display_text": "Stamina Recovery (0.015)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
+                },
+                {
+                    "target": 9,
+                    "target_details": 18,
+                    "type": 21,
+                    "value": -500,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.05",
+                    "display_text": "Decrease Current Speed (-0.05)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls ahead of you",
+                    "target_name_id": "Semua Uma Musume lawan di depan"
                 }
             ]
         },
@@ -84,10 +160,10 @@
             "desc_en": "Increase fatigue for rushed runners behind when positioned toward the front mid-race.",
             "desc_jp": "レース中盤に前方にいるとき後ろのウマ娘が掛かるとその持久力を減少させる",
             "icon_id": 30052,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30052.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30052.png",
             "rarity": 2,
             "rarity_type": "gold",
-            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "rarity_label": "Skill Langka (Gold / レア)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -99,9 +175,31 @@
                             "target": 20,
                             "target_details": 10,
                             "type": 9,
-                            "value": -300
+                            "value": -300,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.03",
+                            "display_text": "Stamina Drain (-0.03)",
+                            "is_debuff": true,
+                            "target_name": "Rushing enemies behind you",
+                            "target_name_id": "Lawan yang sedang panik / tergesa-gesa (kakari) di belakang"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 20,
+                    "target_details": 10,
+                    "type": 9,
+                    "value": -300,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.03",
+                    "display_text": "Stamina Drain (-0.03)",
+                    "is_debuff": true,
+                    "target_name": "Rushing enemies behind you",
+                    "target_name_id": "Lawan yang sedang panik / tergesa-gesa (kakari) di belakang"
                 }
             ]
         },
@@ -114,10 +212,10 @@
             "desc_en": "Slightly increase fatigue for rushed runners behind when positioned toward the front mid-race.",
             "desc_jp": "レース中盤に前方にいるとき後ろのウマ娘が掛かるとその持久力をわずかに減少させる",
             "icon_id": 30051,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30051.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -129,9 +227,31 @@
                             "target": 20,
                             "target_details": 10,
                             "type": 9,
-                            "value": -100
+                            "value": -100,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.01",
+                            "display_text": "Stamina Drain (-0.01)",
+                            "is_debuff": true,
+                            "target_name": "Rushing enemies behind you",
+                            "target_name_id": "Lawan yang sedang panik / tergesa-gesa (kakari) di belakang"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 20,
+                    "target_details": 10,
+                    "type": 9,
+                    "value": -100,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.01",
+                    "display_text": "Stamina Drain (-0.01)",
+                    "is_debuff": true,
+                    "target_name": "Rushing enemies behind you",
+                    "target_name_id": "Lawan yang sedang panik / tergesa-gesa (kakari) di belakang"
                 }
             ]
         },
@@ -144,10 +264,10 @@
             "desc_en": "Slightly increase fatigue for rushed runners ahead when positioned toward the back mid-race.",
             "desc_jp": "レース中盤に後方にいるとき前のウマ娘が掛かるとその持久力をわずかに減少させる",
             "icon_id": 30051,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30051.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -159,9 +279,31 @@
                             "target": 19,
                             "target_details": 10,
                             "type": 9,
-                            "value": -100
+                            "value": -100,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.01",
+                            "display_text": "Stamina Drain (-0.01)",
+                            "is_debuff": true,
+                            "target_name": "Rushing enemies ahead of you",
+                            "target_name_id": "Lawan yang sedang panik / tergesa-gesa (kakari) di depan"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 19,
+                    "target_details": 10,
+                    "type": 9,
+                    "value": -100,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.01",
+                    "display_text": "Stamina Drain (-0.01)",
+                    "is_debuff": true,
+                    "target_name": "Rushing enemies ahead of you",
+                    "target_name_id": "Lawan yang sedang panik / tergesa-gesa (kakari) di depan"
                 }
             ]
         },
@@ -174,10 +316,10 @@
             "desc_en": "Increase time needed for front runners to calm down when they become rushed.",
             "desc_jp": "作戦が逃げのウマ娘が掛かると落ち着くまで時間がかかる",
             "icon_id": 30041,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30041.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30041.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "debuff",
             "condition_groups": [
@@ -189,9 +331,31 @@
                             "target": 21,
                             "target_details": 1,
                             "type": 13,
-                            "value": 50000
+                            "value": 50000,
+                            "name": "Increase Rush Time",
+                            "formatted_value": "5 s",
+                            "display_text": "Increase Rush Time (5 s)",
+                            "is_debuff": true,
+                            "target_name": "Rushing enemy Front Runners",
+                            "target_name_id": "Front Runner (pelari depan / 逃げ) lawan yang sedang panik / kakari"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 21,
+                    "target_details": 1,
+                    "type": 13,
+                    "value": 50000,
+                    "name": "Increase Rush Time",
+                    "formatted_value": "5 s",
+                    "display_text": "Increase Rush Time (5 s)",
+                    "is_debuff": true,
+                    "target_name": "Rushing enemy Front Runners",
+                    "target_name_id": "Front Runner (pelari depan / 逃げ) lawan yang sedang panik / kakari"
                 }
             ]
         },
@@ -204,10 +368,10 @@
             "desc_en": "Increase time needed for pace chasers to calm down when they become rushed.",
             "desc_jp": "作戦が先行のウマ娘が掛かると落ち着くまで時間がかかる",
             "icon_id": 30041,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30041.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30041.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "debuff",
             "condition_groups": [
@@ -219,9 +383,31 @@
                             "target": 21,
                             "target_details": 2,
                             "type": 13,
-                            "value": 50000
+                            "value": 50000,
+                            "name": "Increase Rush Time",
+                            "formatted_value": "5 s",
+                            "display_text": "Increase Rush Time (5 s)",
+                            "is_debuff": true,
+                            "target_name": "Rushing enemy Pace Chasers",
+                            "target_name_id": "Pace Chaser (pelari penguntit / 先行) lawan yang sedang panik / kakari"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 21,
+                    "target_details": 2,
+                    "type": 13,
+                    "value": 50000,
+                    "name": "Increase Rush Time",
+                    "formatted_value": "5 s",
+                    "display_text": "Increase Rush Time (5 s)",
+                    "is_debuff": true,
+                    "target_name": "Rushing enemy Pace Chasers",
+                    "target_name_id": "Pace Chaser (pelari penguntit / 先行) lawan yang sedang panik / kakari"
                 }
             ]
         },
@@ -234,10 +420,10 @@
             "desc_en": "Increase time needed for late surgers to calm down when they become rushed.",
             "desc_jp": "作戦が差しのウマ娘が掛かると落ち着くまで時間がかかる",
             "icon_id": 30041,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30041.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30041.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "debuff",
             "condition_groups": [
@@ -249,9 +435,31 @@
                             "target": 21,
                             "target_details": 3,
                             "type": 13,
-                            "value": 50000
+                            "value": 50000,
+                            "name": "Increase Rush Time",
+                            "formatted_value": "5 s",
+                            "display_text": "Increase Rush Time (5 s)",
+                            "is_debuff": true,
+                            "target_name": "Rushing enemy Late Surgers",
+                            "target_name_id": "Late Surger (pelari penyalip / 差し) lawan yang sedang panik / kakari"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 21,
+                    "target_details": 3,
+                    "type": 13,
+                    "value": 50000,
+                    "name": "Increase Rush Time",
+                    "formatted_value": "5 s",
+                    "display_text": "Increase Rush Time (5 s)",
+                    "is_debuff": true,
+                    "target_name": "Rushing enemy Late Surgers",
+                    "target_name_id": "Late Surger (pelari penyalip / 差し) lawan yang sedang panik / kakari"
                 }
             ]
         },
@@ -264,10 +472,10 @@
             "desc_en": "Increase time needed for end closers to calm down when they become rushed.",
             "desc_jp": "作戦が追込のウマ娘が掛かると落ち着くまで時間がかかる",
             "icon_id": 30041,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30041.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30041.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "debuff",
             "condition_groups": [
@@ -279,9 +487,31 @@
                             "target": 21,
                             "target_details": 4,
                             "type": 13,
-                            "value": 50000
+                            "value": 50000,
+                            "name": "Increase Rush Time",
+                            "formatted_value": "5 s",
+                            "display_text": "Increase Rush Time (5 s)",
+                            "is_debuff": true,
+                            "target_name": "Rushing enemy End Closers",
+                            "target_name_id": "End Closer (pelari penutup / 追込) lawan yang sedang panik / kakari"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 21,
+                    "target_details": 4,
+                    "type": 13,
+                    "value": 50000,
+                    "name": "Increase Rush Time",
+                    "formatted_value": "5 s",
+                    "display_text": "Increase Rush Time (5 s)",
+                    "is_debuff": true,
+                    "target_name": "Rushing enemy End Closers",
+                    "target_name_id": "End Closer (pelari penutup / 追込) lawan yang sedang panik / kakari"
                 }
             ]
         },
@@ -294,10 +524,10 @@
             "desc_en": "Slightly increase fatigue for front runners early-race.",
             "desc_jp": "レース序盤のどこかで作戦が逃げのウマ娘をけん制して持久力をわずかに減少させる",
             "icon_id": 30051,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30051.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -309,9 +539,31 @@
                             "target": 18,
                             "target_details": 1,
                             "type": 9,
-                            "value": -100
+                            "value": -100,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.01",
+                            "display_text": "Stamina Drain (-0.01)",
+                            "is_debuff": true,
+                            "target_name": "All enemy Front Runners",
+                            "target_name_id": "Semua Front Runner (pelari depan / 逃げ) lawan"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 18,
+                    "target_details": 1,
+                    "type": 9,
+                    "value": -100,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.01",
+                    "display_text": "Stamina Drain (-0.01)",
+                    "is_debuff": true,
+                    "target_name": "All enemy Front Runners",
+                    "target_name_id": "Semua Front Runner (pelari depan / 逃げ) lawan"
                 }
             ]
         },
@@ -324,10 +576,10 @@
             "desc_en": "Slightly increase fatigue for front runners mid-race.",
             "desc_jp": "レース中盤のどこかで作戦が逃げのウマ娘を焦らせて持久力をわずかに減少させる",
             "icon_id": 30051,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30051.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -339,9 +591,31 @@
                             "target": 18,
                             "target_details": 1,
                             "type": 9,
-                            "value": -100
+                            "value": -100,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.01",
+                            "display_text": "Stamina Drain (-0.01)",
+                            "is_debuff": true,
+                            "target_name": "All enemy Front Runners",
+                            "target_name_id": "Semua Front Runner (pelari depan / 逃げ) lawan"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 18,
+                    "target_details": 1,
+                    "type": 9,
+                    "value": -100,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.01",
+                    "display_text": "Stamina Drain (-0.01)",
+                    "is_debuff": true,
+                    "target_name": "All enemy Front Runners",
+                    "target_name_id": "Semua Front Runner (pelari depan / 逃げ) lawan"
                 }
             ]
         },
@@ -354,10 +628,10 @@
             "desc_en": "Slightly decrease velocity of front runners late-race.",
             "desc_jp": "レース終盤のどこかで作戦が逃げのウマ娘をためらわせて速度をわずかに下げる",
             "icon_id": 30011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30011.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -369,9 +643,31 @@
                             "target": 18,
                             "target_details": 1,
                             "type": 21,
-                            "value": -1500
+                            "value": -1500,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.15",
+                            "display_text": "Decrease Current Speed (-0.15)",
+                            "is_debuff": true,
+                            "target_name": "All enemy Front Runners",
+                            "target_name_id": "Semua Front Runner (pelari depan / 逃げ) lawan"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 18,
+                    "target_details": 1,
+                    "type": 21,
+                    "value": -1500,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.15",
+                    "display_text": "Decrease Current Speed (-0.15)",
+                    "is_debuff": true,
+                    "target_name": "All enemy Front Runners",
+                    "target_name_id": "Semua Front Runner (pelari depan / 逃げ) lawan"
                 }
             ]
         },
@@ -384,10 +680,10 @@
             "desc_en": "Slightly increase fatigue for pace chasers early-race.",
             "desc_jp": "レース序盤のどこかで作戦が先行のウマ娘をけん制して持久力をわずかに減少させる",
             "icon_id": 30051,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30051.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -399,9 +695,31 @@
                             "target": 18,
                             "target_details": 2,
                             "type": 9,
-                            "value": -100
+                            "value": -100,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.01",
+                            "display_text": "Stamina Drain (-0.01)",
+                            "is_debuff": true,
+                            "target_name": "All enemy Pace Chasers",
+                            "target_name_id": "Semua Pace Chaser (pelari penguntit / 先行) lawan"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 18,
+                    "target_details": 2,
+                    "type": 9,
+                    "value": -100,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.01",
+                    "display_text": "Stamina Drain (-0.01)",
+                    "is_debuff": true,
+                    "target_name": "All enemy Pace Chasers",
+                    "target_name_id": "Semua Pace Chaser (pelari penguntit / 先行) lawan"
                 }
             ]
         },
@@ -414,10 +732,10 @@
             "desc_en": "Slightly increase fatigue for pace chasers mid-race.",
             "desc_jp": "レース中盤のどこかで作戦が先行のウマ娘を焦らせて持久力をわずかに減少させる",
             "icon_id": 30051,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30051.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -429,9 +747,31 @@
                             "target": 18,
                             "target_details": 2,
                             "type": 9,
-                            "value": -100
+                            "value": -100,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.01",
+                            "display_text": "Stamina Drain (-0.01)",
+                            "is_debuff": true,
+                            "target_name": "All enemy Pace Chasers",
+                            "target_name_id": "Semua Pace Chaser (pelari penguntit / 先行) lawan"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 18,
+                    "target_details": 2,
+                    "type": 9,
+                    "value": -100,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.01",
+                    "display_text": "Stamina Drain (-0.01)",
+                    "is_debuff": true,
+                    "target_name": "All enemy Pace Chasers",
+                    "target_name_id": "Semua Pace Chaser (pelari penguntit / 先行) lawan"
                 }
             ]
         },
@@ -444,10 +784,10 @@
             "desc_en": "Slightly decrease velocity of pace chasers late-race.",
             "desc_jp": "レース終盤のどこかで作戦が先行のウマ娘をためらわせて速度をわずかに下げる",
             "icon_id": 30011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30011.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -459,9 +799,31 @@
                             "target": 18,
                             "target_details": 2,
                             "type": 21,
-                            "value": -1500
+                            "value": -1500,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.15",
+                            "display_text": "Decrease Current Speed (-0.15)",
+                            "is_debuff": true,
+                            "target_name": "All enemy Pace Chasers",
+                            "target_name_id": "Semua Pace Chaser (pelari penguntit / 先行) lawan"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 18,
+                    "target_details": 2,
+                    "type": 21,
+                    "value": -1500,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.15",
+                    "display_text": "Decrease Current Speed (-0.15)",
+                    "is_debuff": true,
+                    "target_name": "All enemy Pace Chasers",
+                    "target_name_id": "Semua Pace Chaser (pelari penguntit / 先行) lawan"
                 }
             ]
         },
@@ -474,10 +836,10 @@
             "desc_en": "Slightly increase fatigue for late surgers early-race.",
             "desc_jp": "レース序盤のどこかで作戦が差しのウマ娘をけん制して持久力をわずかに減少させる",
             "icon_id": 30051,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30051.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -489,9 +851,31 @@
                             "target": 18,
                             "target_details": 3,
                             "type": 9,
-                            "value": -100
+                            "value": -100,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.01",
+                            "display_text": "Stamina Drain (-0.01)",
+                            "is_debuff": true,
+                            "target_name": "All enemy Late Surgers",
+                            "target_name_id": "Semua Late Surger (pelari penyalip / 差し) lawan"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 18,
+                    "target_details": 3,
+                    "type": 9,
+                    "value": -100,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.01",
+                    "display_text": "Stamina Drain (-0.01)",
+                    "is_debuff": true,
+                    "target_name": "All enemy Late Surgers",
+                    "target_name_id": "Semua Late Surger (pelari penyalip / 差し) lawan"
                 }
             ]
         },
@@ -504,10 +888,10 @@
             "desc_en": "Slightly increase fatigue for late surgers mid-race.",
             "desc_jp": "レース中盤のどこかで作戦が差しのウマ娘を焦らせて持久力をわずかに減少させる",
             "icon_id": 30051,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30051.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -519,9 +903,31 @@
                             "target": 18,
                             "target_details": 3,
                             "type": 9,
-                            "value": -100
+                            "value": -100,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.01",
+                            "display_text": "Stamina Drain (-0.01)",
+                            "is_debuff": true,
+                            "target_name": "All enemy Late Surgers",
+                            "target_name_id": "Semua Late Surger (pelari penyalip / 差し) lawan"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 18,
+                    "target_details": 3,
+                    "type": 9,
+                    "value": -100,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.01",
+                    "display_text": "Stamina Drain (-0.01)",
+                    "is_debuff": true,
+                    "target_name": "All enemy Late Surgers",
+                    "target_name_id": "Semua Late Surger (pelari penyalip / 差し) lawan"
                 }
             ]
         },
@@ -534,10 +940,10 @@
             "desc_en": "Slightly decrease velocity of late surgers late-race.",
             "desc_jp": "レース終盤のどこかで作戦が差しのウマ娘をためらわせて速度をわずかに下げる",
             "icon_id": 30011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30011.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -549,9 +955,31 @@
                             "target": 18,
                             "target_details": 3,
                             "type": 21,
-                            "value": -1500
+                            "value": -1500,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.15",
+                            "display_text": "Decrease Current Speed (-0.15)",
+                            "is_debuff": true,
+                            "target_name": "All enemy Late Surgers",
+                            "target_name_id": "Semua Late Surger (pelari penyalip / 差し) lawan"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 18,
+                    "target_details": 3,
+                    "type": 21,
+                    "value": -1500,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.15",
+                    "display_text": "Decrease Current Speed (-0.15)",
+                    "is_debuff": true,
+                    "target_name": "All enemy Late Surgers",
+                    "target_name_id": "Semua Late Surger (pelari penyalip / 差し) lawan"
                 }
             ]
         },
@@ -564,10 +992,10 @@
             "desc_en": "Slightly increase fatigue for end closers early-race.",
             "desc_jp": "レース序盤のどこかで作戦が追込のウマ娘をけん制して持久力をわずかに減少させる",
             "icon_id": 30051,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30051.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -579,9 +1007,31 @@
                             "target": 18,
                             "target_details": 4,
                             "type": 9,
-                            "value": -100
+                            "value": -100,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.01",
+                            "display_text": "Stamina Drain (-0.01)",
+                            "is_debuff": true,
+                            "target_name": "All enemy End Closers",
+                            "target_name_id": "Semua End Closer (pelari penutup / 追込) lawan"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 18,
+                    "target_details": 4,
+                    "type": 9,
+                    "value": -100,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.01",
+                    "display_text": "Stamina Drain (-0.01)",
+                    "is_debuff": true,
+                    "target_name": "All enemy End Closers",
+                    "target_name_id": "Semua End Closer (pelari penutup / 追込) lawan"
                 }
             ]
         },
@@ -594,10 +1044,10 @@
             "desc_en": "Slightly increase fatigue for end closers mid-race.",
             "desc_jp": "レース中盤のどこかで作戦が追込のウマ娘を焦らせて持久力をわずかに減少させる",
             "icon_id": 30051,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30051.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -609,9 +1059,31 @@
                             "target": 18,
                             "target_details": 4,
                             "type": 9,
-                            "value": -100
+                            "value": -100,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.01",
+                            "display_text": "Stamina Drain (-0.01)",
+                            "is_debuff": true,
+                            "target_name": "All enemy End Closers",
+                            "target_name_id": "Semua End Closer (pelari penutup / 追込) lawan"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 18,
+                    "target_details": 4,
+                    "type": 9,
+                    "value": -100,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.01",
+                    "display_text": "Stamina Drain (-0.01)",
+                    "is_debuff": true,
+                    "target_name": "All enemy End Closers",
+                    "target_name_id": "Semua End Closer (pelari penutup / 追込) lawan"
                 }
             ]
         },
@@ -624,10 +1096,10 @@
             "desc_en": "Slightly decrease velocity of end closers late-race.",
             "desc_jp": "レース終盤のどこかで作戦が追込のウマ娘をためらわせて速度をわずかに下げる",
             "icon_id": 30011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30011.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -639,9 +1111,31 @@
                             "target": 18,
                             "target_details": 4,
                             "type": 21,
-                            "value": -1500
+                            "value": -1500,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.15",
+                            "display_text": "Decrease Current Speed (-0.15)",
+                            "is_debuff": true,
+                            "target_name": "All enemy End Closers",
+                            "target_name_id": "Semua End Closer (pelari penutup / 追込) lawan"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 18,
+                    "target_details": 4,
+                    "type": 21,
+                    "value": -1500,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.15",
+                    "display_text": "Decrease Current Speed (-0.15)",
+                    "is_debuff": true,
+                    "target_name": "All enemy End Closers",
+                    "target_name_id": "Semua End Closer (pelari penutup / 追込) lawan"
                 }
             ]
         },
@@ -654,10 +1148,10 @@
             "desc_en": "Intimidate runners behind when positioned toward the front early-race. (Sprint)",
             "desc_jp": "レース序盤のどこかで前方だと後ろのウマ娘の速度を下げる＜短距離＞",
             "icon_id": 30012,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30012.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30012.png",
             "rarity": 2,
             "rarity_type": "gold",
-            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "rarity_label": "Skill Langka (Gold / レア)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -669,9 +1163,31 @@
                             "target": 10,
                             "target_details": 18,
                             "type": 21,
-                            "value": -2500
+                            "value": -2500,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.25",
+                            "display_text": "Decrease Current Speed (-0.25)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls behind you",
+                            "target_name_id": "Semua Uma Musume lawan di belakang"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 10,
+                    "target_details": 18,
+                    "type": 21,
+                    "value": -2500,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.25",
+                    "display_text": "Decrease Current Speed (-0.25)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls behind you",
+                    "target_name_id": "Semua Uma Musume lawan di belakang"
                 }
             ]
         },
@@ -684,10 +1200,10 @@
             "desc_en": "Moderately intimidate runners behind when positioned toward the front early-race. (Sprint)",
             "desc_jp": "レース序盤のどこかで前方だと後ろのウマ娘の速度を少し下げる＜短距離＞",
             "icon_id": 30011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30011.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -699,9 +1215,31 @@
                             "target": 10,
                             "target_details": 18,
                             "type": 21,
-                            "value": -2000
+                            "value": -2000,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.2",
+                            "display_text": "Decrease Current Speed (-0.2)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls behind you",
+                            "target_name_id": "Semua Uma Musume lawan di belakang"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 10,
+                    "target_details": 18,
+                    "type": 21,
+                    "value": -2000,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.2",
+                    "display_text": "Decrease Current Speed (-0.2)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls behind you",
+                    "target_name_id": "Semua Uma Musume lawan di belakang"
                 }
             ]
         },
@@ -714,10 +1252,10 @@
             "desc_en": "Slightly cause panic in and very slightly dull movement for runners ahead when positioned toward the back early-race. (Sprint)",
             "desc_jp": "レース序盤のどこかで後方だと前のウマ娘の持久力をわずかに減少させ加速力をちょっと下げる＜短距離＞",
             "icon_id": 30051,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30051.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -729,15 +1267,55 @@
                             "target": 9,
                             "target_details": 18,
                             "type": 9,
-                            "value": -100
+                            "value": -100,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.01",
+                            "display_text": "Stamina Drain (-0.01)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls ahead of you",
+                            "target_name_id": "Semua Uma Musume lawan di depan"
                         },
                         {
                             "target": 9,
                             "target_details": 18,
                             "type": 31,
-                            "value": -500
+                            "value": -500,
+                            "name": "Decrease Acceleration",
+                            "formatted_value": "-0.05",
+                            "display_text": "Decrease Acceleration (-0.05)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls ahead of you",
+                            "target_name_id": "Semua Uma Musume lawan di depan"
                         }
-                    ]
+                    ],
+                    "base_duration": "1.2 s"
+                }
+            ],
+            "base_duration": "1.2 s",
+            "effects": [
+                {
+                    "target": 9,
+                    "target_details": 18,
+                    "type": 9,
+                    "value": -100,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.01",
+                    "display_text": "Stamina Drain (-0.01)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls ahead of you",
+                    "target_name_id": "Semua Uma Musume lawan di depan"
+                },
+                {
+                    "target": 9,
+                    "target_details": 18,
+                    "type": 31,
+                    "value": -500,
+                    "name": "Decrease Acceleration",
+                    "formatted_value": "-0.05",
+                    "display_text": "Decrease Acceleration (-0.05)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls ahead of you",
+                    "target_name_id": "Semua Uma Musume lawan di depan"
                 }
             ]
         },
@@ -750,10 +1328,10 @@
             "desc_en": "Slightly steal velocity from runners behind when positioned toward the front mid-race. (Mile)",
             "desc_jp": "レース中盤のどこかで3番手以内だと後ろのウマ娘の速度をわずかに下げ自分の速度がわずかに上がる＜マイル＞",
             "icon_id": 30011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30011.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -765,13 +1343,51 @@
                             "target": 10,
                             "target_details": 5,
                             "type": 21,
-                            "value": -1500
+                            "value": -1500,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.15",
+                            "display_text": "Decrease Current Speed (-0.15)",
+                            "is_debuff": true,
+                            "target_name": "Five closest girls behind you",
+                            "target_name_id": "5 pelari terdekat di belakang"
                         },
                         {
                             "type": 27,
-                            "value": 1500
+                            "value": 1500,
+                            "name": "Increase Target Speed",
+                            "formatted_value": "0.15",
+                            "display_text": "Increase Target Speed (0.15)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 10,
+                    "target_details": 5,
+                    "type": 21,
+                    "value": -1500,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.15",
+                    "display_text": "Decrease Current Speed (-0.15)",
+                    "is_debuff": true,
+                    "target_name": "Five closest girls behind you",
+                    "target_name_id": "5 pelari terdekat di belakang"
+                },
+                {
+                    "type": 27,
+                    "value": 1500,
+                    "name": "Increase Target Speed",
+                    "formatted_value": "0.15",
+                    "display_text": "Increase Target Speed (0.15)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
                 }
             ]
         },
@@ -784,10 +1400,10 @@
             "desc_en": "Dull movement for runners ahead when positioned toward the back early-race. (Mile)",
             "desc_jp": "レース序盤のどこかで後方だと前のウマ娘の加速力を下げる＜マイル＞",
             "icon_id": 30022,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30022.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30022.png",
             "rarity": 2,
             "rarity_type": "gold",
-            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "rarity_label": "Skill Langka (Gold / レア)",
             "is_inherited": false,
             "category": "debuff",
             "condition_groups": [
@@ -799,9 +1415,31 @@
                             "target": 9,
                             "target_details": 18,
                             "type": 31,
-                            "value": -3000
+                            "value": -3000,
+                            "name": "Decrease Acceleration",
+                            "formatted_value": "-0.3",
+                            "display_text": "Decrease Acceleration (-0.3)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls ahead of you",
+                            "target_name_id": "Semua Uma Musume lawan di depan"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 9,
+                    "target_details": 18,
+                    "type": 31,
+                    "value": -3000,
+                    "name": "Decrease Acceleration",
+                    "formatted_value": "-0.3",
+                    "display_text": "Decrease Acceleration (-0.3)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls ahead of you",
+                    "target_name_id": "Semua Uma Musume lawan di depan"
                 }
             ]
         },
@@ -814,10 +1452,10 @@
             "desc_en": "Slightly dull movement for runners ahead when positioned toward the back early-race. (Mile)",
             "desc_jp": "レース序盤のどこかで後方だと前のウマ娘の加速力をわずかに下げる＜マイル＞",
             "icon_id": 30021,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30021.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30021.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "debuff",
             "condition_groups": [
@@ -829,9 +1467,31 @@
                             "target": 9,
                             "target_details": 18,
                             "type": 31,
-                            "value": -1000
+                            "value": -1000,
+                            "name": "Decrease Acceleration",
+                            "formatted_value": "-0.1",
+                            "display_text": "Decrease Acceleration (-0.1)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls ahead of you",
+                            "target_name_id": "Semua Uma Musume lawan di depan"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 9,
+                    "target_details": 18,
+                    "type": 31,
+                    "value": -1000,
+                    "name": "Decrease Acceleration",
+                    "formatted_value": "-0.1",
+                    "display_text": "Decrease Acceleration (-0.1)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls ahead of you",
+                    "target_name_id": "Semua Uma Musume lawan di depan"
                 }
             ]
         },
@@ -844,10 +1504,10 @@
             "desc_en": "Decrease velocity of runners ahead when positioned toward the back late-race. (Medium)",
             "desc_jp": "レース終盤のどこかで後方だと前のウマ娘の速度を下げる＜中距離＞",
             "icon_id": 30012,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30012.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30012.png",
             "rarity": 2,
             "rarity_type": "gold",
-            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "rarity_label": "Skill Langka (Gold / レア)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -859,9 +1519,31 @@
                             "target": 9,
                             "target_details": 18,
                             "type": 21,
-                            "value": -2500
+                            "value": -2500,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.25",
+                            "display_text": "Decrease Current Speed (-0.25)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls ahead of you",
+                            "target_name_id": "Semua Uma Musume lawan di depan"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 9,
+                    "target_details": 18,
+                    "type": 21,
+                    "value": -2500,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.25",
+                    "display_text": "Decrease Current Speed (-0.25)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls ahead of you",
+                    "target_name_id": "Semua Uma Musume lawan di depan"
                 }
             ]
         },
@@ -874,10 +1556,10 @@
             "desc_en": "Slightly decrease velocity of runners ahead when positioned toward the back late-race. (Medium)",
             "desc_jp": "レース終盤のどこかで後方だと前のウマ娘の速度をわずかに下げる＜中距離＞",
             "icon_id": 30011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30011.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -889,9 +1571,31 @@
                             "target": 9,
                             "target_details": 18,
                             "type": 21,
-                            "value": -1500
+                            "value": -1500,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.15",
+                            "display_text": "Decrease Current Speed (-0.15)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls ahead of you",
+                            "target_name_id": "Semua Uma Musume lawan di depan"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 9,
+                    "target_details": 18,
+                    "type": 21,
+                    "value": -1500,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.15",
+                    "display_text": "Decrease Current Speed (-0.15)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls ahead of you",
+                    "target_name_id": "Semua Uma Musume lawan di depan"
                 }
             ]
         },
@@ -904,10 +1608,10 @@
             "desc_en": "Disturb runners directly ahead mid-race. (Medium)",
             "desc_jp": "レース中盤に前が詰まると前のウマ娘の持久力を減少させる＜中距離＞",
             "icon_id": 30052,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30052.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30052.png",
             "rarity": 2,
             "rarity_type": "gold",
-            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "rarity_label": "Skill Langka (Gold / レア)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -919,9 +1623,31 @@
                             "target": 9,
                             "target_details": 18,
                             "type": 9,
-                            "value": -300
+                            "value": -300,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.03",
+                            "display_text": "Stamina Drain (-0.03)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls ahead of you",
+                            "target_name_id": "Semua Uma Musume lawan di depan"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 9,
+                    "target_details": 18,
+                    "type": 9,
+                    "value": -300,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.03",
+                    "display_text": "Stamina Drain (-0.03)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls ahead of you",
+                    "target_name_id": "Semua Uma Musume lawan di depan"
                 }
             ]
         },
@@ -934,10 +1660,10 @@
             "desc_en": "Slightly disturb runners directly ahead mid-race. (Medium)",
             "desc_jp": "レース中盤に前が詰まると前のウマ娘の持久力をわずかに減少させる＜中距離＞",
             "icon_id": 30051,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30051.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -949,9 +1675,31 @@
                             "target": 9,
                             "target_details": 18,
                             "type": 9,
-                            "value": -100
+                            "value": -100,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.01",
+                            "display_text": "Stamina Drain (-0.01)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls ahead of you",
+                            "target_name_id": "Semua Uma Musume lawan di depan"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 9,
+                    "target_details": 18,
+                    "type": 9,
+                    "value": -100,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.01",
+                    "display_text": "Stamina Drain (-0.01)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls ahead of you",
+                    "target_name_id": "Semua Uma Musume lawan di depan"
                 }
             ]
         },
@@ -964,10 +1712,10 @@
             "desc_en": "Slightly steal endurance from runners ahead when positioned toward the back mid-race. (Long)",
             "desc_jp": "レース中盤のどこかで5番手以降だと前5人までのウマ娘の持久力をわずかに減少させ自分の持久力を少し回復する＜長距離＞",
             "icon_id": 30052,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30052.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30052.png",
             "rarity": 2,
             "rarity_type": "gold",
-            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "rarity_label": "Skill Langka (Gold / レア)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -979,13 +1727,51 @@
                             "target": 9,
                             "target_details": 5,
                             "type": 9,
-                            "value": -100
+                            "value": -100,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.01",
+                            "display_text": "Stamina Drain (-0.01)",
+                            "is_debuff": true,
+                            "target_name": "Five closest girls ahead of you",
+                            "target_name_id": "5 pelari terdekat di depan"
                         },
                         {
                             "type": 9,
-                            "value": 350
+                            "value": 350,
+                            "name": "Stamina Recovery",
+                            "formatted_value": "0.035",
+                            "display_text": "Stamina Recovery (0.035)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 9,
+                    "target_details": 5,
+                    "type": 9,
+                    "value": -100,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.01",
+                    "display_text": "Stamina Drain (-0.01)",
+                    "is_debuff": true,
+                    "target_name": "Five closest girls ahead of you",
+                    "target_name_id": "5 pelari terdekat di depan"
+                },
+                {
+                    "type": 9,
+                    "value": 350,
+                    "name": "Stamina Recovery",
+                    "formatted_value": "0.035",
+                    "display_text": "Stamina Recovery (0.035)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
                 }
             ]
         },
@@ -998,10 +1784,10 @@
             "desc_en": "Very slightly steal endurance from runners ahead when positioned toward the back mid-race. (Long)",
             "desc_jp": "レース中盤のどこかで5番手以降だと前5人までのウマ娘の持久力をちょっと減少させ自分の持久力をわずかに回復する＜長距離＞",
             "icon_id": 30051,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30051.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -1013,13 +1799,51 @@
                             "target": 9,
                             "target_details": 5,
                             "type": 9,
-                            "value": -50
+                            "value": -50,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.005",
+                            "display_text": "Stamina Drain (-0.005)",
+                            "is_debuff": true,
+                            "target_name": "Five closest girls ahead of you",
+                            "target_name_id": "5 pelari terdekat di depan"
                         },
                         {
                             "type": 9,
-                            "value": 150
+                            "value": 150,
+                            "name": "Stamina Recovery",
+                            "formatted_value": "0.015",
+                            "display_text": "Stamina Recovery (0.015)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 9,
+                    "target_details": 5,
+                    "type": 9,
+                    "value": -50,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.005",
+                    "display_text": "Stamina Drain (-0.005)",
+                    "is_debuff": true,
+                    "target_name": "Five closest girls ahead of you",
+                    "target_name_id": "5 pelari terdekat di depan"
+                },
+                {
+                    "type": 9,
+                    "value": 150,
+                    "name": "Stamina Recovery",
+                    "formatted_value": "0.015",
+                    "display_text": "Stamina Recovery (0.015)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
                 }
             ]
         },
@@ -1032,10 +1856,10 @@
             "desc_en": "Narrow the field of view for runners ahead late-race. (Long)",
             "desc_jp": "レース終盤のどこかで前のウマ娘の視野が狭くなる＜長距離＞",
             "icon_id": 30072,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30072.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30072.png",
             "rarity": 2,
             "rarity_type": "gold",
-            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "rarity_label": "Skill Langka (Gold / レア)",
             "is_inherited": false,
             "category": "vision",
             "condition_groups": [
@@ -1047,9 +1871,31 @@
                             "target": 9,
                             "target_details": 18,
                             "type": 8,
-                            "value": -100000
+                            "value": -100000,
+                            "name": "Decrease Field of View",
+                            "formatted_value": "-10",
+                            "display_text": "Decrease Field of View (-10)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls ahead of you",
+                            "target_name_id": "Semua Uma Musume lawan di depan"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 9,
+                    "target_details": 18,
+                    "type": 8,
+                    "value": -100000,
+                    "name": "Decrease Field of View",
+                    "formatted_value": "-10",
+                    "display_text": "Decrease Field of View (-10)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls ahead of you",
+                    "target_name_id": "Semua Uma Musume lawan di depan"
                 }
             ]
         },
@@ -1062,10 +1908,10 @@
             "desc_en": "Moderately narrow the field of view for runners ahead late-race. (Long)",
             "desc_jp": "レース終盤のどこかで前のウマ娘の視野が少し狭くなる＜長距離＞",
             "icon_id": 30071,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30071.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30071.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "vision",
             "condition_groups": [
@@ -1077,9 +1923,31 @@
                             "target": 9,
                             "target_details": 18,
                             "type": 8,
-                            "value": -50000
+                            "value": -50000,
+                            "name": "Decrease Field of View",
+                            "formatted_value": "-5",
+                            "display_text": "Decrease Field of View (-5)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls ahead of you",
+                            "target_name_id": "Semua Uma Musume lawan di depan"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 9,
+                    "target_details": 18,
+                    "type": 8,
+                    "value": -50000,
+                    "name": "Decrease Field of View",
+                    "formatted_value": "-5",
+                    "display_text": "Decrease Field of View (-5)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls ahead of you",
+                    "target_name_id": "Semua Uma Musume lawan di depan"
                 }
             ]
         },
@@ -1092,10 +1960,10 @@
             "desc_en": "Slightly dull movement for runners ahead when not in the lead early-race. (Front Runner)",
             "desc_jp": "レース序盤のどこかで2番手以降だと前のウマ娘の加速力をわずかに下げる＜作戦・逃げ＞",
             "icon_id": 30021,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30021.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30021.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "debuff",
             "condition_groups": [
@@ -1107,9 +1975,31 @@
                             "target": 9,
                             "target_details": 18,
                             "type": 31,
-                            "value": -1000
+                            "value": -1000,
+                            "name": "Decrease Acceleration",
+                            "formatted_value": "-0.1",
+                            "display_text": "Decrease Acceleration (-0.1)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls ahead of you",
+                            "target_name_id": "Semua Uma Musume lawan di depan"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 9,
+                    "target_details": 18,
+                    "type": 31,
+                    "value": -1000,
+                    "name": "Decrease Acceleration",
+                    "formatted_value": "-0.1",
+                    "display_text": "Decrease Acceleration (-0.1)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls ahead of you",
+                    "target_name_id": "Semua Uma Musume lawan di depan"
                 }
             ]
         },
@@ -1122,10 +2012,10 @@
             "desc_en": "Moderately narrow the field of view for runners behind when positioned toward the front late-race. (Pace Chaser)",
             "desc_jp": "レース終盤のどこかで前方だと後ろのウマ娘の視野が少し狭くなる＜作戦・先行＞",
             "icon_id": 30072,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30072.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30072.png",
             "rarity": 2,
             "rarity_type": "gold",
-            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "rarity_label": "Skill Langka (Gold / レア)",
             "is_inherited": false,
             "category": "vision",
             "condition_groups": [
@@ -1137,9 +2027,31 @@
                             "target": 10,
                             "target_details": 18,
                             "type": 8,
-                            "value": -50000
+                            "value": -50000,
+                            "name": "Decrease Field of View",
+                            "formatted_value": "-5",
+                            "display_text": "Decrease Field of View (-5)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls behind you",
+                            "target_name_id": "Semua Uma Musume lawan di belakang"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 10,
+                    "target_details": 18,
+                    "type": 8,
+                    "value": -50000,
+                    "name": "Decrease Field of View",
+                    "formatted_value": "-5",
+                    "display_text": "Decrease Field of View (-5)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls behind you",
+                    "target_name_id": "Semua Uma Musume lawan di belakang"
                 }
             ]
         },
@@ -1152,10 +2064,10 @@
             "desc_en": "Slightly narrow the field of view for runners behind when positioned toward the front late-race. (Pace Chaser)",
             "desc_jp": "レース終盤のどこかで前方だと後ろのウマ娘の視野がわずかに狭くなる＜作戦・先行＞",
             "icon_id": 30071,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30071.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30071.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "vision",
             "condition_groups": [
@@ -1167,9 +2079,31 @@
                             "target": 10,
                             "target_details": 18,
                             "type": 8,
-                            "value": -30000
+                            "value": -30000,
+                            "name": "Decrease Field of View",
+                            "formatted_value": "-3",
+                            "display_text": "Decrease Field of View (-3)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls behind you",
+                            "target_name_id": "Semua Uma Musume lawan di belakang"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 10,
+                    "target_details": 18,
+                    "type": 8,
+                    "value": -30000,
+                    "name": "Decrease Field of View",
+                    "formatted_value": "-3",
+                    "display_text": "Decrease Field of View (-3)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls behind you",
+                    "target_name_id": "Semua Uma Musume lawan di belakang"
                 }
             ]
         },
@@ -1182,10 +2116,10 @@
             "desc_en": "Startle other runners late-race. (Late Surger)",
             "desc_jp": "レース終盤のどこかで後方だと目を付けたウマ娘の持久力を減少させる＜作戦・差し＞",
             "icon_id": 30052,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30052.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30052.png",
             "rarity": 2,
             "rarity_type": "gold",
-            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "rarity_label": "Skill Langka (Gold / レア)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -1197,9 +2131,31 @@
                             "target": 4,
                             "target_details": 18,
                             "type": 9,
-                            "value": -300
+                            "value": -300,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.03",
+                            "display_text": "Stamina Drain (-0.03)",
+                            "is_debuff": true,
+                            "target_name": "All enemies within the field of view",
+                            "target_name_id": "Semua lawan dalam bidang pandang"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 4,
+                    "target_details": 18,
+                    "type": 9,
+                    "value": -300,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.03",
+                    "display_text": "Stamina Drain (-0.03)",
+                    "is_debuff": true,
+                    "target_name": "All enemies within the field of view",
+                    "target_name_id": "Semua lawan dalam bidang pandang"
                 }
             ]
         },
@@ -1212,10 +2168,10 @@
             "desc_en": "Slightly startle other runners late-race. (Late Surger)",
             "desc_jp": "レース終盤のどこかで後方だと目を付けたウマ娘の持久力をわずかに減少させる＜作戦・差し＞",
             "icon_id": 30051,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30051.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30051.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -1227,9 +2183,31 @@
                             "target": 4,
                             "target_details": 18,
                             "type": 9,
-                            "value": -100
+                            "value": -100,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.01",
+                            "display_text": "Stamina Drain (-0.01)",
+                            "is_debuff": true,
+                            "target_name": "All enemies within the field of view",
+                            "target_name_id": "Semua lawan dalam bidang pandang"
                         }
-                    ]
+                    ],
+                    "base_duration": "Instant effect"
+                }
+            ],
+            "base_duration": "Instant effect",
+            "effects": [
+                {
+                    "target": 4,
+                    "target_details": 18,
+                    "type": 9,
+                    "value": -100,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.01",
+                    "display_text": "Stamina Drain (-0.01)",
+                    "is_debuff": true,
+                    "target_name": "All enemies within the field of view",
+                    "target_name_id": "Semua lawan dalam bidang pandang"
                 }
             ]
         },
@@ -1242,10 +2220,10 @@
             "desc_en": "Unnerve runners in focus late-race. (End Closer)",
             "desc_jp": "レース終盤のどこかで2番手以降だと目を付けたウマ娘の速度を下げる＜作戦・追込＞",
             "icon_id": 30012,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30012.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30012.png",
             "rarity": 2,
             "rarity_type": "gold",
-            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "rarity_label": "Skill Langka (Gold / レア)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -1257,9 +2235,31 @@
                             "target": 4,
                             "target_details": 18,
                             "type": 21,
-                            "value": -2500
+                            "value": -2500,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.25",
+                            "display_text": "Decrease Current Speed (-0.25)",
+                            "is_debuff": true,
+                            "target_name": "All enemies within the field of view",
+                            "target_name_id": "Semua lawan dalam bidang pandang"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 4,
+                    "target_details": 18,
+                    "type": 21,
+                    "value": -2500,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.25",
+                    "display_text": "Decrease Current Speed (-0.25)",
+                    "is_debuff": true,
+                    "target_name": "All enemies within the field of view",
+                    "target_name_id": "Semua lawan dalam bidang pandang"
                 }
             ]
         },
@@ -1272,10 +2272,10 @@
             "desc_en": "Slightly unnerve runners in focus late-race. (End Closer)",
             "desc_jp": "レース終盤のどこかで2番手以降だと目を付けたウマ娘の速度をわずかに下げる＜作戦・追込＞",
             "icon_id": 30011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30011.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -1287,9 +2287,31 @@
                             "target": 4,
                             "target_details": 18,
                             "type": 21,
-                            "value": -1500
+                            "value": -1500,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.15",
+                            "display_text": "Decrease Current Speed (-0.15)",
+                            "is_debuff": true,
+                            "target_name": "All enemies within the field of view",
+                            "target_name_id": "Semua lawan dalam bidang pandang"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 4,
+                    "target_details": 18,
+                    "type": 21,
+                    "value": -1500,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.15",
+                    "display_text": "Decrease Current Speed (-0.15)",
+                    "is_debuff": true,
+                    "target_name": "All enemies within the field of view",
+                    "target_name_id": "Semua lawan dalam bidang pandang"
                 }
             ]
         },
@@ -1302,10 +2324,10 @@
             "desc_en": "When positioned toward the front mid-race, increase velocity and slightly decrease the velocity of runners behind the user. (Medium)",
             "desc_jp": "レース中盤のどこかで3番手以内だと後ろのウマ娘の速度をわずかに下げ自分の速度が上がる＜中距離＞",
             "icon_id": 20012,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20012.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_20012.png",
             "rarity": 2,
             "rarity_type": "gold",
-            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "rarity_label": "Skill Langka (Gold / レア)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -1315,15 +2337,53 @@
                     "effects": [
                         {
                             "type": 27,
-                            "value": 3500
+                            "value": 3500,
+                            "name": "Increase Target Speed",
+                            "formatted_value": "0.35",
+                            "display_text": "Increase Target Speed (0.35)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         },
                         {
                             "target": 10,
                             "target_details": 5,
                             "type": 21,
-                            "value": -1500
+                            "value": -1500,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.15",
+                            "display_text": "Decrease Current Speed (-0.15)",
+                            "is_debuff": true,
+                            "target_name": "Five closest girls behind you",
+                            "target_name_id": "5 pelari terdekat di belakang"
                         }
-                    ]
+                    ],
+                    "base_duration": "1.8 s"
+                }
+            ],
+            "base_duration": "1.8 s",
+            "effects": [
+                {
+                    "type": 27,
+                    "value": 3500,
+                    "name": "Increase Target Speed",
+                    "formatted_value": "0.35",
+                    "display_text": "Increase Target Speed (0.35)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
+                },
+                {
+                    "target": 10,
+                    "target_details": 5,
+                    "type": 21,
+                    "value": -1500,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.15",
+                    "display_text": "Decrease Current Speed (-0.15)",
+                    "is_debuff": true,
+                    "target_name": "Five closest girls behind you",
+                    "target_name_id": "5 pelari terdekat di belakang"
                 }
             ]
         },
@@ -1336,10 +2396,10 @@
             "desc_en": "When positioned toward the front mid-race, slightly increase velocity and minimally decrease the velocity of runners behind the user. (Medium)",
             "desc_jp": "レース中盤のどこかで3番手以内だと後ろのウマ娘の速度をほんのわずかに下げ自分の速度がわずかに上がる＜中距離＞",
             "icon_id": 20011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_20011.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -1349,15 +2409,53 @@
                     "effects": [
                         {
                             "type": 27,
-                            "value": 1500
+                            "value": 1500,
+                            "name": "Increase Target Speed",
+                            "formatted_value": "0.15",
+                            "display_text": "Increase Target Speed (0.15)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         },
                         {
                             "target": 10,
                             "target_details": 5,
                             "type": 21,
-                            "value": -350
+                            "value": -350,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.035",
+                            "display_text": "Decrease Current Speed (-0.035)",
+                            "is_debuff": true,
+                            "target_name": "Five closest girls behind you",
+                            "target_name_id": "5 pelari terdekat di belakang"
                         }
-                    ]
+                    ],
+                    "base_duration": "1.8 s"
+                }
+            ],
+            "base_duration": "1.8 s",
+            "effects": [
+                {
+                    "type": 27,
+                    "value": 1500,
+                    "name": "Increase Target Speed",
+                    "formatted_value": "0.15",
+                    "display_text": "Increase Target Speed (0.15)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
+                },
+                {
+                    "target": 10,
+                    "target_details": 5,
+                    "type": 21,
+                    "value": -350,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.035",
+                    "display_text": "Decrease Current Speed (-0.035)",
+                    "is_debuff": true,
+                    "target_name": "Five closest girls behind you",
+                    "target_name_id": "5 pelari terdekat di belakang"
                 }
             ]
         },
@@ -1370,10 +2468,10 @@
             "desc_en": "Slightly decrease the velocity of a runner directly behind the skill user when leading early-race. (Dirt)",
             "desc_jp": "レース序盤に先頭で後ろのウマ娘との差が1バ身以内だとすぐ後ろのウマ娘の速度をわずかに下げる＜ダート＞",
             "icon_id": 30011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30011.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -1385,9 +2483,31 @@
                             "target": 10,
                             "target_details": 1,
                             "type": 21,
-                            "value": -1500
+                            "value": -1500,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.15",
+                            "display_text": "Decrease Current Speed (-0.15)",
+                            "is_debuff": true,
+                            "target_name": "Closest girl behind you",
+                            "target_name_id": "1 pelari terdekat di belakang"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 10,
+                    "target_details": 1,
+                    "type": 21,
+                    "value": -1500,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.15",
+                    "display_text": "Decrease Current Speed (-0.15)",
+                    "is_debuff": true,
+                    "target_name": "Closest girl behind you",
+                    "target_name_id": "1 pelari terdekat di belakang"
                 }
             ]
         },
@@ -1400,10 +2520,10 @@
             "desc_en": "Slightly intimidate a runner who used a recovery skill in the second half of the race. (Dirt)",
             "desc_jp": "レース後半にスキルで持久力を回復したライバルのウマ娘1人の速度をわずかに下げる＜ダート＞",
             "icon_id": 30011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_30011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_30011.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "stamina",
             "condition_groups": [
@@ -1415,9 +2535,31 @@
                             "target": 23,
                             "target_details": 1,
                             "type": 21,
-                            "value": -1500
+                            "value": -1500,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.15",
+                            "display_text": "Decrease Current Speed (-0.15)",
+                            "is_debuff": true,
+                            "target_name": "Girl who triggered this skill",
+                            "target_name_id": "Pelari yang memicu skill ini"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "target": 23,
+                    "target_details": 1,
+                    "type": 21,
+                    "value": -1500,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.15",
+                    "display_text": "Decrease Current Speed (-0.15)",
+                    "is_debuff": true,
+                    "target_name": "Girl who triggered this skill",
+                    "target_name_id": "Pelari yang memicu skill ini"
                 }
             ]
         },
@@ -1430,10 +2572,10 @@
             "desc_en": "When positioned midpack or further back on the final corner, slightly decrease the velocity of 3 runners ahead and 3 behind. Increase skill user's velocity. (Late Surger)",
             "desc_jp": "最終コーナーのどこかで中団以降だと前後3人ずつのウマ娘の速度をわずかに下げ自分の速度が上がる＜作戦・差し＞",
             "icon_id": 20012,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20012.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_20012.png",
             "rarity": 2,
             "rarity_type": "gold",
-            "rarity_label": "Skill Langka (Gold \/ レア)",
+            "rarity_label": "Skill Langka (Gold / レア)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -1443,21 +2585,77 @@
                     "effects": [
                         {
                             "type": 27,
-                            "value": 3500
+                            "value": 3500,
+                            "name": "Increase Target Speed",
+                            "formatted_value": "0.35",
+                            "display_text": "Increase Target Speed (0.35)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         },
                         {
                             "target": 9,
                             "target_details": 3,
                             "type": 21,
-                            "value": -1500
+                            "value": -1500,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.15",
+                            "display_text": "Decrease Current Speed (-0.15)",
+                            "is_debuff": true,
+                            "target_name": "Three closest girls ahead of you",
+                            "target_name_id": "3 pelari terdekat di depan"
                         },
                         {
                             "target": 10,
                             "target_details": 3,
                             "type": 21,
-                            "value": -1500
+                            "value": -1500,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.15",
+                            "display_text": "Decrease Current Speed (-0.15)",
+                            "is_debuff": true,
+                            "target_name": "Three closest girls behind you",
+                            "target_name_id": "3 pelari terdekat di belakang"
                         }
-                    ]
+                    ],
+                    "base_duration": "1.8 s"
+                }
+            ],
+            "base_duration": "1.8 s",
+            "effects": [
+                {
+                    "type": 27,
+                    "value": 3500,
+                    "name": "Increase Target Speed",
+                    "formatted_value": "0.35",
+                    "display_text": "Increase Target Speed (0.35)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
+                },
+                {
+                    "target": 9,
+                    "target_details": 3,
+                    "type": 21,
+                    "value": -1500,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.15",
+                    "display_text": "Decrease Current Speed (-0.15)",
+                    "is_debuff": true,
+                    "target_name": "Three closest girls ahead of you",
+                    "target_name_id": "3 pelari terdekat di depan"
+                },
+                {
+                    "target": 10,
+                    "target_details": 3,
+                    "type": 21,
+                    "value": -1500,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.15",
+                    "display_text": "Decrease Current Speed (-0.15)",
+                    "is_debuff": true,
+                    "target_name": "Three closest girls behind you",
+                    "target_name_id": "3 pelari terdekat di belakang"
                 }
             ]
         },
@@ -1470,10 +2668,10 @@
             "desc_en": "When positioned midpack or further back on the final corner, minimally decrease the velocity of 3 runners ahead and 3 behind. Slightly increase skill user's velocity. (Late Surger)",
             "desc_jp": "最終コーナーのどこかで中団以降だと前後3人ずつのウマ娘の速度をほんのわずかに下げ自分の速度がわずかに上がる＜作戦・差し＞",
             "icon_id": 20011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_20011.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -1483,21 +2681,77 @@
                     "effects": [
                         {
                             "type": 27,
-                            "value": 1500
+                            "value": 1500,
+                            "name": "Increase Target Speed",
+                            "formatted_value": "0.15",
+                            "display_text": "Increase Target Speed (0.15)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         },
                         {
                             "target": 9,
                             "target_details": 3,
                             "type": 21,
-                            "value": -350
+                            "value": -350,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.035",
+                            "display_text": "Decrease Current Speed (-0.035)",
+                            "is_debuff": true,
+                            "target_name": "Three closest girls ahead of you",
+                            "target_name_id": "3 pelari terdekat di depan"
                         },
                         {
                             "target": 10,
                             "target_details": 3,
                             "type": 21,
-                            "value": -350
+                            "value": -350,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.035",
+                            "display_text": "Decrease Current Speed (-0.035)",
+                            "is_debuff": true,
+                            "target_name": "Three closest girls behind you",
+                            "target_name_id": "3 pelari terdekat di belakang"
                         }
-                    ]
+                    ],
+                    "base_duration": "1.8 s"
+                }
+            ],
+            "base_duration": "1.8 s",
+            "effects": [
+                {
+                    "type": 27,
+                    "value": 1500,
+                    "name": "Increase Target Speed",
+                    "formatted_value": "0.15",
+                    "display_text": "Increase Target Speed (0.15)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
+                },
+                {
+                    "target": 9,
+                    "target_details": 3,
+                    "type": 21,
+                    "value": -350,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.035",
+                    "display_text": "Decrease Current Speed (-0.035)",
+                    "is_debuff": true,
+                    "target_name": "Three closest girls ahead of you",
+                    "target_name_id": "3 pelari terdekat di depan"
+                },
+                {
+                    "target": 10,
+                    "target_details": 3,
+                    "type": 21,
+                    "value": -350,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.035",
+                    "display_text": "Decrease Current Speed (-0.035)",
+                    "is_debuff": true,
+                    "target_name": "Three closest girls behind you",
+                    "target_name_id": "3 pelari terdekat di belakang"
                 }
             ]
         },
@@ -1510,10 +2764,10 @@
             "desc_en": "Chaser・If you're not in the front at a random point during the Final Corner, your speed will slightly increase, and the speed of the closest three girls in front and three girls behind you will slightly decrease",
             "desc_jp": "最終コーナーのどこかで中団以降だと前後3人ずつのウマ娘の速度をほんのわずかに下げ自分の速度がわずかに上がる＜作戦・追込＞",
             "icon_id": 20011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_20011.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -1523,21 +2777,77 @@
                     "effects": [
                         {
                             "type": 27,
-                            "value": 1500
+                            "value": 1500,
+                            "name": "Increase Target Speed",
+                            "formatted_value": "0.15",
+                            "display_text": "Increase Target Speed (0.15)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         },
                         {
                             "target": 9,
                             "target_details": 3,
                             "type": 21,
-                            "value": -350
+                            "value": -350,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.035",
+                            "display_text": "Decrease Current Speed (-0.035)",
+                            "is_debuff": true,
+                            "target_name": "Three closest girls ahead of you",
+                            "target_name_id": "3 pelari terdekat di depan"
                         },
                         {
                             "target": 10,
                             "target_details": 3,
                             "type": 21,
-                            "value": -350
+                            "value": -350,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.035",
+                            "display_text": "Decrease Current Speed (-0.035)",
+                            "is_debuff": true,
+                            "target_name": "Three closest girls behind you",
+                            "target_name_id": "3 pelari terdekat di belakang"
                         }
-                    ]
+                    ],
+                    "base_duration": "1.8 s"
+                }
+            ],
+            "base_duration": "1.8 s",
+            "effects": [
+                {
+                    "type": 27,
+                    "value": 1500,
+                    "name": "Increase Target Speed",
+                    "formatted_value": "0.15",
+                    "display_text": "Increase Target Speed (0.15)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
+                },
+                {
+                    "target": 9,
+                    "target_details": 3,
+                    "type": 21,
+                    "value": -350,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.035",
+                    "display_text": "Decrease Current Speed (-0.035)",
+                    "is_debuff": true,
+                    "target_name": "Three closest girls ahead of you",
+                    "target_name_id": "3 pelari terdekat di depan"
+                },
+                {
+                    "target": 10,
+                    "target_details": 3,
+                    "type": 21,
+                    "value": -350,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.035",
+                    "display_text": "Decrease Current Speed (-0.035)",
+                    "is_debuff": true,
+                    "target_name": "Three closest girls behind you",
+                    "target_name_id": "3 pelari terdekat di belakang"
                 }
             ]
         },
@@ -1550,10 +2860,10 @@
             "desc_en": "Chaser・Medium・If you're not in the front at a random point during the Middle Leg, your speed will slightly increase, and you will slightly lower speed of the five closest girls in front of you",
             "desc_jp": "レース中盤のどこかで中団以降だと前のウマ娘の速度をほんのわずかに下げ自分の速度がわずかに上がる＜追込・中距離＞",
             "icon_id": 20011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_20011.png",
             "rarity": 1,
             "rarity_type": "white",
-            "rarity_label": "Skill Normal (White \/ ノーマル)",
+            "rarity_label": "Skill Normal (White / ノーマル)",
             "is_inherited": false,
             "category": "speed",
             "condition_groups": [
@@ -1563,15 +2873,53 @@
                     "effects": [
                         {
                             "type": 27,
-                            "value": 1500
+                            "value": 1500,
+                            "name": "Increase Target Speed",
+                            "formatted_value": "0.15",
+                            "display_text": "Increase Target Speed (0.15)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         },
                         {
                             "target": 9,
                             "target_details": 5,
                             "type": 21,
-                            "value": -350
+                            "value": -350,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.035",
+                            "display_text": "Decrease Current Speed (-0.035)",
+                            "is_debuff": true,
+                            "target_name": "Five closest girls ahead of you",
+                            "target_name_id": "5 pelari terdekat di depan"
                         }
-                    ]
+                    ],
+                    "base_duration": "1.8 s"
+                }
+            ],
+            "base_duration": "1.8 s",
+            "effects": [
+                {
+                    "type": 27,
+                    "value": 1500,
+                    "name": "Increase Target Speed",
+                    "formatted_value": "0.15",
+                    "display_text": "Increase Target Speed (0.15)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
+                },
+                {
+                    "target": 9,
+                    "target_details": 5,
+                    "type": 21,
+                    "value": -350,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.035",
+                    "display_text": "Decrease Current Speed (-0.035)",
+                    "is_debuff": true,
+                    "target_name": "Five closest girls ahead of you",
+                    "target_name_id": "5 pelari terdekat di depan"
                 }
             ]
         },
@@ -1584,10 +2932,10 @@
             "desc_en": "When positioned midpack in the second half of the race, very slightly increase velocity steadily and very minimally intimidate runners ahead.",
             "desc_jp": "レース後半に中団から『お友達』を追って速度を少し上げ続け前のウマ娘の速度をちょっと下げ続ける",
             "icon_id": 20011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_20011.png",
             "rarity": 1,
             "rarity_type": "inherited",
-            "rarity_label": "Skill Unik (Warisan \/ 継承)",
+            "rarity_label": "Skill Unik (Warisan / 継承)",
             "is_inherited": true,
             "category": "inherited",
             "condition_groups": [
@@ -1597,15 +2945,53 @@
                     "effects": [
                         {
                             "type": 27,
-                            "value": 500
+                            "value": 500,
+                            "name": "Increase Target Speed",
+                            "formatted_value": "0.05",
+                            "display_text": "Increase Target Speed (0.05)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         },
                         {
                             "target": 9,
                             "target_details": 5,
                             "type": 21,
-                            "value": -250
+                            "value": -250,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.025",
+                            "display_text": "Decrease Current Speed (-0.025)",
+                            "is_debuff": true,
+                            "target_name": "Five closest girls ahead of you",
+                            "target_name_id": "5 pelari terdekat di depan"
                         }
-                    ]
+                    ],
+                    "base_duration": "3.6 s"
+                }
+            ],
+            "base_duration": "3.6 s",
+            "effects": [
+                {
+                    "type": 27,
+                    "value": 500,
+                    "name": "Increase Target Speed",
+                    "formatted_value": "0.05",
+                    "display_text": "Increase Target Speed (0.05)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
+                },
+                {
+                    "target": 9,
+                    "target_details": 5,
+                    "type": 21,
+                    "value": -250,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.025",
+                    "display_text": "Decrease Current Speed (-0.025)",
+                    "is_debuff": true,
+                    "target_name": "Five closest girls ahead of you",
+                    "target_name_id": "5 pelari terdekat di depan"
                 }
             ]
         },
@@ -1618,10 +3004,10 @@
             "desc_en": "If the skill user ran calmly, very slightly surge ahead and very minimally intimidate the first 4 runners when positioned toward the back at the start of late-race.",
             "desc_jp": "掛からず終盤突入時に後方だと少し前に出て先頭から4人までのウマ娘の速度をちょっと下げる",
             "icon_id": 20011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_20011.png",
             "rarity": 1,
             "rarity_type": "inherited",
-            "rarity_label": "Skill Unik (Warisan \/ 継承)",
+            "rarity_label": "Skill Unik (Warisan / 継承)",
             "is_inherited": true,
             "category": "inherited",
             "condition_groups": [
@@ -1631,15 +3017,53 @@
                     "effects": [
                         {
                             "type": 22,
-                            "value": 500
+                            "value": 500,
+                            "name": "Increase Current Speed",
+                            "formatted_value": "0.05",
+                            "display_text": "Increase Current Speed (0.05)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         },
                         {
                             "target": 7,
                             "target_details": 5,
                             "type": 21,
-                            "value": -250
+                            "value": -250,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.025",
+                            "display_text": "Decrease Current Speed (-0.025)",
+                            "is_debuff": true,
+                            "target_name": "Five closest girls",
+                            "target_name_id": "5 pelari terdekat"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "type": 22,
+                    "value": 500,
+                    "name": "Increase Current Speed",
+                    "formatted_value": "0.05",
+                    "display_text": "Increase Current Speed (0.05)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
+                },
+                {
+                    "target": 7,
+                    "target_details": 5,
+                    "type": 21,
+                    "value": -250,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.025",
+                    "display_text": "Decrease Current Speed (-0.025)",
+                    "is_debuff": true,
+                    "target_name": "Five closest girls",
+                    "target_name_id": "5 pelari terdekat"
                 }
             ]
         },
@@ -1652,10 +3076,10 @@
             "desc_en": "Minimally increase velocity sometime in the second half of the race and activate 1 rare skill regardless of its conditions.",
             "desc_jp": "レース後半どっかで速度がわずかに上がりついでに使えそうなレアスキルを2つ条件を無視して発動させる",
             "icon_id": 20011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_20011.png",
             "rarity": 1,
             "rarity_type": "inherited",
-            "rarity_label": "Skill Unik (Warisan \/ 継承)",
+            "rarity_label": "Skill Unik (Warisan / 継承)",
             "is_inherited": true,
             "category": "inherited",
             "condition_groups": [
@@ -1665,13 +3089,49 @@
                     "effects": [
                         {
                             "type": 27,
-                            "value": 350
+                            "value": 350,
+                            "name": "Increase Target Speed",
+                            "formatted_value": "0.035",
+                            "display_text": "Increase Target Speed (0.035)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         },
                         {
                             "type": 37,
-                            "value": 10000
+                            "value": 10000,
+                            "name": "Use Random Rare Skills",
+                            "formatted_value": "1",
+                            "display_text": "Use Random Rare Skills (1)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "type": 27,
+                    "value": 350,
+                    "name": "Increase Target Speed",
+                    "formatted_value": "0.035",
+                    "display_text": "Increase Target Speed (0.035)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
+                },
+                {
+                    "type": 37,
+                    "value": 10000,
+                    "name": "Use Random Rare Skills",
+                    "formatted_value": "1",
+                    "display_text": "Use Random Rare Skills (1)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
                 }
             ]
         },
@@ -1684,10 +3144,10 @@
             "desc_en": "Slightly drain endurance from runners in front and very slightly increase velocity when well-positioned mid-race.",
             "desc_jp": "レース中盤で好位置だと前のウマ娘の持久力をちょっと減少させ自分の持久力を回復し速度が少し上がる",
             "icon_id": 20021,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20021.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_20021.png",
             "rarity": 1,
             "rarity_type": "inherited",
-            "rarity_label": "Skill Unik (Warisan \/ 継承)",
+            "rarity_label": "Skill Unik (Warisan / 継承)",
             "is_inherited": true,
             "category": "inherited",
             "condition_groups": [
@@ -1697,19 +3157,73 @@
                     "effects": [
                         {
                             "type": 9,
-                            "value": 150
+                            "value": 150,
+                            "name": "Stamina Recovery",
+                            "formatted_value": "0.015",
+                            "display_text": "Stamina Recovery (0.015)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         },
                         {
                             "target": 9,
                             "target_details": 18,
                             "type": 9,
-                            "value": -25
+                            "value": -25,
+                            "name": "Stamina Drain",
+                            "formatted_value": "-0.0025",
+                            "display_text": "Stamina Drain (-0.0025)",
+                            "is_debuff": true,
+                            "target_name": "All enemy girls ahead of you",
+                            "target_name_id": "Semua Uma Musume lawan di depan"
                         },
                         {
                             "type": 27,
-                            "value": 500
+                            "value": 500,
+                            "name": "Increase Target Speed",
+                            "formatted_value": "0.05",
+                            "display_text": "Increase Target Speed (0.05)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "type": 9,
+                    "value": 150,
+                    "name": "Stamina Recovery",
+                    "formatted_value": "0.015",
+                    "display_text": "Stamina Recovery (0.015)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
+                },
+                {
+                    "target": 9,
+                    "target_details": 18,
+                    "type": 9,
+                    "value": -25,
+                    "name": "Stamina Drain",
+                    "formatted_value": "-0.0025",
+                    "display_text": "Stamina Drain (-0.0025)",
+                    "is_debuff": true,
+                    "target_name": "All enemy girls ahead of you",
+                    "target_name_id": "Semua Uma Musume lawan di depan"
+                },
+                {
+                    "type": 27,
+                    "value": 500,
+                    "name": "Increase Target Speed",
+                    "formatted_value": "0.05",
+                    "display_text": "Increase Target Speed (0.05)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
                 }
             ]
         },
@@ -1722,10 +3236,10 @@
             "desc_en": "Slightly increase velocity and very minimally intimidate up to 2 runners ahead and up to 2 runners behind when positioned toward the front upon entering the final straight.",
             "desc_jp": "最終直線に入ったとき先団だと速度が上がり前2人後ろ2人までのウマ娘の速度をちょっと下げる",
             "icon_id": 20011,
-            "icon_url": "https:\/\/gametora.com\/images\/umamusume\/skill_icons\/utx_ico_skill_20011.png",
+            "icon_url": "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_20011.png",
             "rarity": 1,
             "rarity_type": "inherited",
-            "rarity_label": "Skill Unik (Warisan \/ 継承)",
+            "rarity_label": "Skill Unik (Warisan / 継承)",
             "is_inherited": true,
             "category": "inherited",
             "condition_groups": [
@@ -1735,21 +3249,77 @@
                     "effects": [
                         {
                             "type": 27,
-                            "value": 1500
+                            "value": 1500,
+                            "name": "Increase Target Speed",
+                            "formatted_value": "0.15",
+                            "display_text": "Increase Target Speed (0.15)",
+                            "is_debuff": false,
+                            "target_name": null,
+                            "target_name_id": null
                         },
                         {
                             "target": 9,
                             "target_details": 2,
                             "type": 21,
-                            "value": -250
+                            "value": -250,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.025",
+                            "display_text": "Decrease Current Speed (-0.025)",
+                            "is_debuff": true,
+                            "target_name": "Two closest girls ahead of you",
+                            "target_name_id": "2 pelari terdekat di depan"
                         },
                         {
                             "target": 10,
                             "target_details": 2,
                             "type": 21,
-                            "value": -250
+                            "value": -250,
+                            "name": "Decrease Current Speed",
+                            "formatted_value": "-0.025",
+                            "display_text": "Decrease Current Speed (-0.025)",
+                            "is_debuff": true,
+                            "target_name": "Two closest girls behind you",
+                            "target_name_id": "2 pelari terdekat di belakang"
                         }
-                    ]
+                    ],
+                    "base_duration": "3 s"
+                }
+            ],
+            "base_duration": "3 s",
+            "effects": [
+                {
+                    "type": 27,
+                    "value": 1500,
+                    "name": "Increase Target Speed",
+                    "formatted_value": "0.15",
+                    "display_text": "Increase Target Speed (0.15)",
+                    "is_debuff": false,
+                    "target_name": null,
+                    "target_name_id": null
+                },
+                {
+                    "target": 9,
+                    "target_details": 2,
+                    "type": 21,
+                    "value": -250,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.025",
+                    "display_text": "Decrease Current Speed (-0.025)",
+                    "is_debuff": true,
+                    "target_name": "Two closest girls ahead of you",
+                    "target_name_id": "2 pelari terdekat di depan"
+                },
+                {
+                    "target": 10,
+                    "target_details": 2,
+                    "type": 21,
+                    "value": -250,
+                    "name": "Decrease Current Speed",
+                    "formatted_value": "-0.025",
+                    "display_text": "Decrease Current Speed (-0.025)",
+                    "is_debuff": true,
+                    "target_name": "Two closest girls behind you",
+                    "target_name_id": "2 pelari terdekat di belakang"
                 }
             ]
         }

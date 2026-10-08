@@ -330,4 +330,36 @@ class SkillConditionTranslatorTest extends TestCase
         $this->assertStringContainsString('2,5 meter di depan', $infrontCond['note']);
         $this->assertStringContainsString('1/18 lebar lintasan', $infrontCond['note']);
     }
+
+    /**
+     * Test translation of running_style_temptation_opponent_count_* and is_temptation conditions.
+     */
+    public function test_translate_running_style_temptation_opponent_conditions(): void
+    {
+        // 1. Sashi (Late Surger / 差し)
+        $sashiFormula = 'running_style_temptation_opponent_count_sashi>=1&is_temptation==0';
+        $sashiRes = SkillConditionTranslator::translate($sashiFormula);
+        $this->assertStringContainsString('Late Surger', $sashiRes['summary']);
+        $this->assertStringContainsString('panik / tergesa-gesa (kakari)', $sashiRes['summary']);
+        $this->assertSame('Terdapat minimal 1 pelari Late Surger (pelari penyalip / 差し) lawan yang sedang panik / tergesa-gesa (kakari)', $sashiRes['branches'][0]['conditions'][0]['text']);
+        $this->assertSame('Tidak sedang panik / tergesa-gesa (kakari)', $sashiRes['branches'][0]['conditions'][1]['text']);
+
+        // 2. Nige (Front Runner / 逃げ)
+        $nigeFormula = 'running_style_temptation_opponent_count_nige>=1';
+        $nigeRes = SkillConditionTranslator::translate($nigeFormula);
+        $this->assertStringContainsString('Front Runner', $nigeRes['summary']);
+        $this->assertSame('Terdapat minimal 1 pelari Front Runner (pelari depan / 逃げ) lawan yang sedang panik / tergesa-gesa (kakari)', $nigeRes['branches'][0]['conditions'][0]['text']);
+
+        // 3. Senko (Pace Chaser / 先行)
+        $senkoFormula = 'running_style_temptation_opponent_count_senko>=1';
+        $senkoRes = SkillConditionTranslator::translate($senkoFormula);
+        $this->assertStringContainsString('Pace Chaser', $senkoRes['summary']);
+        $this->assertSame('Terdapat minimal 1 pelari Pace Chaser (pelari penguntit / 先行) lawan yang sedang panik / tergesa-gesa (kakari)', $senkoRes['branches'][0]['conditions'][0]['text']);
+
+        // 4. Oikomi (End Closer / 追込)
+        $oikomiFormula = 'running_style_temptation_opponent_count_oikomi>=1';
+        $oikomiRes = SkillConditionTranslator::translate($oikomiFormula);
+        $this->assertStringContainsString('End Closer', $oikomiRes['summary']);
+        $this->assertSame('Terdapat minimal 1 pelari End Closer (pelari penutup / 追込) lawan yang sedang panik / tergesa-gesa (kakari)', $oikomiRes['branches'][0]['conditions'][0]['text']);
+    }
 }

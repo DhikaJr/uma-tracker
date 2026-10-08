@@ -573,6 +573,53 @@ class SkillConditionTranslator
 
                 return self::makeClauseResult($raw, $field, $op, $val, $text, 'status', 'alert-circle');
 
+            case 'is_temptation':
+                $text = $intVal === 1
+                    ? 'Sedang mengalami panik / tergesa-gesa (kakari)'
+                    : 'Tidak sedang panik / tergesa-gesa (kakari)';
+
+                return self::makeClauseResult($raw, $field, $op, $val, $text, 'status', 'alert-circle');
+
+            case 'temptation_count_infront':
+                return self::makeClauseResult($raw, $field, $op, $val, "Terdapat {$op} {$val} pelari di depan yang mengalami panik/kakari", 'status', 'alert-circle');
+
+            case 'temptation_count_behind':
+                return self::makeClauseResult($raw, $field, $op, $val, "Terdapat {$op} {$val} pelari di belakang yang mengalami panik/kakari", 'status', 'alert-circle');
+
+            case 'temptation_opponent_count_infront':
+                return self::makeClauseResult($raw, $field, $op, $val, "Terdapat {$op} {$val} pelari lawan di depan yang mengalami panik/kakari", 'status', 'alert-circle');
+
+            case 'temptation_opponent_count_behind':
+                return self::makeClauseResult($raw, $field, $op, $val, "Terdapat {$op} {$val} pelari lawan di belakang yang mengalami panik/kakari", 'status', 'alert-circle');
+
+            case 'running_style_temptation_opponent_count_nige':
+                $text = ($op === '>=' && $intVal === 1)
+                    ? 'Terdapat minimal 1 pelari Front Runner (pelari depan / 逃げ) lawan yang sedang panik / tergesa-gesa (kakari)'
+                    : "Jumlah pelari Front Runner (pelari depan / 逃げ) lawan yang sedang panik / tergesa-gesa (kakari) {$op} {$val}";
+
+                return self::makeClauseResult($raw, $field, $op, $val, $text, 'strategy', 'alert-circle', 'Jumlah pelari Front Runner (逃げ) lawan yang saat ini sedang mengalami status panik (kakari) di dalam balapan.');
+
+            case 'running_style_temptation_opponent_count_senko':
+                $text = ($op === '>=' && $intVal === 1)
+                    ? 'Terdapat minimal 1 pelari Pace Chaser (pelari penguntit / 先行) lawan yang sedang panik / tergesa-gesa (kakari)'
+                    : "Jumlah pelari Pace Chaser (pelari penguntit / 先行) lawan yang sedang panik / tergesa-gesa (kakari) {$op} {$val}";
+
+                return self::makeClauseResult($raw, $field, $op, $val, $text, 'strategy', 'alert-circle', 'Jumlah pelari Pace Chaser (先行) lawan yang saat ini sedang mengalami status panik (kakari) di dalam balapan.');
+
+            case 'running_style_temptation_opponent_count_sashi':
+                $text = ($op === '>=' && $intVal === 1)
+                    ? 'Terdapat minimal 1 pelari Late Surger (pelari penyalip / 差し) lawan yang sedang panik / tergesa-gesa (kakari)'
+                    : "Jumlah pelari Late Surger (pelari penyalip / 差し) lawan yang sedang panik / tergesa-gesa (kakari) {$op} {$val}";
+
+                return self::makeClauseResult($raw, $field, $op, $val, $text, 'strategy', 'alert-circle', 'Jumlah pelari Late Surger (差し) lawan yang saat ini sedang mengalami status panik (kakari) di dalam balapan.');
+
+            case 'running_style_temptation_opponent_count_oikomi':
+                $text = ($op === '>=' && $intVal === 1)
+                    ? 'Terdapat minimal 1 pelari End Closer (pelari penutup / 追込) lawan yang sedang panik / tergesa-gesa (kakari)'
+                    : "Jumlah pelari End Closer (pelari penutup / 追込) lawan yang sedang panik / tergesa-gesa (kakari) {$op} {$val}";
+
+                return self::makeClauseResult($raw, $field, $op, $val, $text, 'strategy', 'alert-circle', 'Jumlah pelari End Closer (追込) lawan yang saat ini sedang mengalami status panik (kakari) di dalam balapan.');
+
             case 'motivation':
                 $moodNames = [
                     1 => 'Sangat Buruk (Terrible / 絶不調)',
