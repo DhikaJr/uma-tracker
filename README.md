@@ -52,6 +52,11 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
 - **Ringkasan Rekor Skenario & Modal Rincian Karakter**:
   - Statistik agregat per skenario mencakup rata-rata perolehan fans, rekor tertinggi (*Max*), dan performa terendah (*Min*).
   - Setiap kartu skenario yang tercatat dapat diklik untuk memunculkan modal dialog rincian karakter apa saja yang karirnya pernah dicatat pada skenario tersebut serta total akumulasi fans yang diraih pada masing-masing skenario.
+- **Modal Analitik Penggunaan Karakter Per Skenario (`CharacterScenarioDetailModal`)**:
+  - Setiap kartu karakter pada daftar *Character Performance Breakdown* di Fans Tracker dapat diklik untuk membuka modal dialog statistik komprehensif.
+  - Menyajikan sebaran performa karakter per skenario latihan: jumlah sesi latihan, persentase kontribusi sesi, total perolehan fans, rata-rata fans, rekor tertinggi (*Max*), rekor terendah (*Min*), dan *Best Rank* tertinggi yang diraih, dilengkapi kontrol pencarian skenario, opsi pengurutan, serta riwayat 5 sesi terakhir.
+- **Normalisasi Alias Nama & Resolusi Thumbnail GameTora**:
+  - Engine pencocokan gambar karakter (`resolveCharacterImage`) menormalisasi alias nama berkategori kurung siku `[...]` maupun kurung bulat `(...)` (seperti `Oguri Cap (Anime Collab)` dan `Inari One (Fall Festival)`), memastikan thumbnail avatar resmi GameTora tampil akurat tanpa fallback inisial teks.
 
 ### 3. Visualisasi Data & Dashboard Analytics (Recharts)
 - **Tab Khusus "Analytics" pada Navigasi**: Dashboard analitik interaktif berbasis pustaka grafik **Recharts**:
@@ -122,6 +127,10 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
   - Tampilan eksplisit "Belum diumumkan" untuk parameter yang belum dirilis dan badge kontras "Acak" untuk kondisi random resmi.
   - Filter tipe kompetisi (Semua, CM, LoH) dan filter tahun pelaksanaan.
   - Dialog modal rincian lengkap beserta tautan sumber resmi Cygames JP yang dapat diklik langsung.
+- **Status Waktu Hari Ini, Deteksi Event Sedang Berlangsung & Bar Simulasi Tanggal**:
+  - Menampilkan tanggal acuan saat ini (*active reference date*) dan mendeteksi secara dinamis apakah event berstatus sedang berlangsung, berlangsung nanti (disertai hitung mundur hari), atau telah selesai.
+  - Event yang berstatus aktif/sedang berlangsung secara otomatis disorot dengan warna bingkai dan bayangan persis seperti saat kartu di-hover (`border-amber-400 shadow-md` untuk Champions Meeting dan `border-indigo-400 shadow-md` untuk League of Heroes) serta badge berkedip *"Event Sedang Berlangsung"*.
+  - Bar simulasi tanggal interaktif dengan pemilih tanggal native (`<input type="date">`) dan preset uji instan (misal: simulasi tanggal *20 Oktober 2026* untuk Champions Meeting Classic) guna memverifikasi perilaku antarmuka secara visual dan langsung.
 
 ### 9. Sistem Pencadangan Data Teruji (Backup Schema v2.0)
 - **Integritas Data Transaksional**:

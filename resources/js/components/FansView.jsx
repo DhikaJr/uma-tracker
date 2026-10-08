@@ -23,6 +23,7 @@ import DeleteConfirmModal from './DeleteConfirmModal';
 import CareerOcrZone from './CareerOcrZone';
 import EditCareerRunModal from './EditCareerRunModal';
 import ScenarioDetailModal from './ScenarioDetailModal';
+import CharacterScenarioDetailModal from './CharacterScenarioDetailModal';
 import { formatIndonesianDate } from '../utils/dateHelper';
 
 // Categorized Rank Tiers for quick selection
@@ -122,6 +123,7 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
         loading: false,
     });
     const [selectedScenarioForDetail, setSelectedScenarioForDetail] = useState(null);
+    const [selectedCharacterForDetail, setSelectedCharacterForDetail] = useState(null);
 
     // Form State
     const [form, setForm] = useState({
@@ -1099,15 +1101,53 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
             {/* Character Performance Breakdown Cards */}
             {stats?.character_stats?.length > 0 && (
                 <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Users className="w-5 h-5 text-emerald-600" />
-                        <h2 className="text-base font-black text-slate-900">Character Performance Breakdown</h2>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
+                        <div className="flex items-center gap-2">
+                            <Users className="w-5 h-5 text-emerald-600" />
+                            <h2 className="text-base font-black text-slate-900">Character Performance Breakdown</h2>
+                        </div>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                            Klik kartu karakter untuk melihat rincian performa per skenario
+                        </span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {stats.character_stats.map((char, idx) => (
-                            <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:border-emerald-300 transition-colors">
-                                <div className="font-black text-sm text-slate-900 truncate" title={char.uma_name}>{char.uma_name}</div>
-                                <div className="text-xs text-slate-500 mt-0.5">{char.runs_count} runs completed</div>
+                            <div
+                                key={idx}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => setSelectedCharacterForDetail(char.uma_name)}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedCharacterForDetail(char.uma_name); }}
+                                className="p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                                title={`Klik untuk melihat detail performa ${char.uma_name} per skenario`}
+                            >
+                                <div>
+                                    <div className="flex items-start justify-between gap-2.5">
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            {char.image_url ? (
+                                                <img
+                                                    src={char.image_url}
+                                                    alt={char.uma_name}
+                                                    className="w-9 h-9 rounded-xl object-cover object-top border border-slate-200 dark:border-slate-700 shrink-0 shadow-2xs"
+                                                    loading="lazy"
+                                                />
+                                            ) : (
+                                                <div className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-black text-xs flex items-center justify-center shrink-0">
+                                                    {char.uma_name.slice(0, 2).toUpperCase()}
+                                                </div>
+                                            )}
+                                            <div className="min-w-0">
+                                                <div className="font-black text-sm text-slate-900 group-hover:text-emerald-600 transition-colors truncate" title={char.uma_name}>
+                                                    {char.uma_name}
+                                                </div>
+                                                <div className="text-xs text-slate-500 mt-0.5">
+                                                    {char.runs_count} runs completed
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all shrink-0 mt-1" />
+                                    </div>
+                                </div>
                                 <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-800 grid grid-cols-3 gap-1 text-xs">
                                     <div>
                                         <span className="text-[10px] text-slate-400 uppercase font-bold block">Min Record</span>
@@ -1609,6 +1649,13 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                 isOpen={!!selectedScenarioForDetail}
                 scenarioName={selectedScenarioForDetail}
                 onClose={() => setSelectedScenarioForDetail(null)}
+            />
+
+            {/* Character Scenario Performance Detail Modal */}
+            <CharacterScenarioDetailModal
+                isOpen={!!selectedCharacterForDetail}
+                umaName={selectedCharacterForDetail}
+                onClose={() => setSelectedCharacterForDetail(null)}
             />
         </div>
     );

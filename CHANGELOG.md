@@ -30,6 +30,27 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
 - **Otomasi Pengujian (PHPUnit Feature Tests)**:
   - Rangkaian pengujian komprehensif pada `tests/Feature/CompetitionEventTest.php` (8 skenario tes, 92 assertion) mencakup integritas seeder, idempotensi, pengurutan kronologis, preservasi nilai `null` dan `random`, isolasi aturan khusus `no_debuff`, serta penanganan respon 404.
 
+### 📊 Statistik Karakter Per Skenario & Resolusi Avatar Karakter
+- **Modal Analitik Penggunaan Karakter Per Skenario (`CharacterScenarioDetailModal`)**:
+  - Setiap kartu pada daftar *Character Performance Breakdown* di halaman Fans Tracker kini interaktif dan dapat diklik.
+  - Membuka modal dialog komprehensif yang menampilkan statistik rinci penggunaan karakter tersebut di setiap skenario latihan: jumlah sesi latihan (*runs count*), persentase terhadap total sesi, total perolehan fans, rata-rata fans per run, performa rekor tertinggi (*Max*) dan terendah (*Min*), serta *Best Rank* tertinggi yang diraih.
+  - Dilengkapi fitur pencarian skenario, kontrol pengurutan multi-kriteria (berdasarkan sesi, total fans, rata-rata fans, dan nama skenario), serta ringkasan metrik global dan 5 sesi latihan terakhir.
+- **Normalisasi Alias Nama & Perbaikan Ikon Avatar Karakter**:
+  - Memperbaiki kegagalan pemuatan thumbnail avatar karakter pada alias nama seperti `Oguri Cap (Anime Collab)` dan `Inari One (Fall Festival)` yang sebelumnya jatuh ke fallback inisial teks ("OG", "IN").
+  - Mengimplementasikan resolver gambar cerdas `resolveCharacterImage` pada backend (`CareerController.php`) yang membersihkan kurung alias baik format kurung siku `[...]` maupun kurung bulat `(...)` via regex multi-format, serta mendukung fallback bertahap (exact, case-insensitive, base-name matching, dan prefix matching) ke katalog GameTora.
+
+### ⏱️ Indikator Waktu Hari Ini, Deteksi Status Event & Simulasi Tanggal Kompetisi
+- **Deteksi Otomatis Event Sedang Berlangsung vs Berlangsung Nanti**:
+  - Memperbarui komponen `CompetitionEventsView.jsx` dengan kalkulasi rentang jadwal adaptif (`getEventScheduleRange` & `getEventStatus`) berbasis tanggal acuan aktif (`activeDate`).
+  - Menandai event yang sedang berlangsung dengan warna bingkai dan bayangan yang persis seperti saat kartu di-hover (`border-amber-400 shadow-md` untuk Champions Meeting dan `border-indigo-400 shadow-md` untuk League of Heroes), aksen ring bercahaya, serta badge berkedip tegas: **"Event Sedang Berlangsung"**.
+  - Menampilkan badge **"Berlangsung Nanti"** disertai hitung mundur selisih hari untuk event di masa depan, serta penanda **"Telah Selesai"** untuk event masa lalu.
+- **Bar Simulasi Tanggal Interaktif**:
+  - Menampilkan tanggal acuan saat ini (misal: *8 Oktober 2026*) lengkap dengan input pemilih tanggal (`<input type="date">`) dan preset uji cepat:
+    - *Uji 20 Okt 2026 (CM Classic)*: Menguji aktivasi langsung status sedang berlangsung pada Champions Meeting CLASSIC Kyoto 2200m.
+    - *Uji Akhir Nov 2026 (LoH)*: Menguji aktivasi periode League of Heroes Kyoto 3000m.
+    - *Uji Akhir Des 2026*: Menguji aktivasi periode Champions Meeting LONG Nakayama 2500m.
+    - *Reset Hari Ini*: Mengembalikan tanggal acuan ke waktu asli secara instan.
+
 ## [Versi 2.4.1] - 5 Oktober 2026
 
 ### 👗 Standardisasi Varian Kostum Gacha & Pembersihan Karakter Tanpa Kostum

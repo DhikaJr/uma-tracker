@@ -267,6 +267,19 @@ class CareerController extends Controller
             ->orderBy('avg_fans', 'desc')
             ->get();
 
+        $catalogItems = UmaCatalogItem::where('type', 'character')->get(['name', 'gametora_id', 'raw_data']);
+        $characterStats = $characterStats->map(function ($c) use ($catalogItems) {
+            return [
+                'uma_name' => $c->uma_name,
+                'image_url' => $this->resolveCharacterImage($c->uma_name, $catalogItems),
+                'runs_count' => (int) $c->runs_count,
+                'total_fans' => (int) $c->total_fans,
+                'avg_fans' => (int) $c->avg_fans,
+                'min_fans' => (int) $c->min_fans,
+                'max_fans' => (int) $c->max_fans,
+            ];
+        });
+
         $manualRuns = CareerRun::where('training_type', 'manual')->count();
         $independentRuns = CareerRun::where('training_type', 'independent')->count();
 
@@ -285,6 +298,58 @@ class CareerController extends Controller
             'daily_trends' => $dailyTrends,
             'top_umas' => $topUmas,
         ]);
+    }
+
+    /**
+     * Resolve character avatar image URL from catalog items using flexible name matching.
+     * Handles bare names ("Oguri Cap"), epithets with brackets ("Oguri Cap [Starry Nocturne]"),
+     * and parenthetical aliases/variants ("Oguri Cap (Anime Collab)", "Inari One (Fall Festival)").
+     */
+    protected function resolveCharacterImage(string $umaName, $catalogItems): ?string
+    {
+        // 1. Exact match on full name
+        $matched = $catalogItems->first(fn ($c) => $c->name === $umaName);
+
+        // 2. Case-insensitive exact match
+        if (! $matched) {
+            $matched = $catalogItems->first(fn ($c) => strcasecmp($c->name, $umaName) === 0);
+        }
+
+        // 3. Clean base name match: strip anything in brackets [...] and parentheses (...)
+        $stripPattern = '/\s*[\(\[].*?[\)\]]/u';
+        $cleanUmaName = trim(preg_replace($stripPattern, '', $umaName) ?? $umaName);
+
+        if (! $matched && $cleanUmaName !== '') {
+            $matched = $catalogItems->first(function ($c) use ($stripPattern, $cleanUmaName) {
+                $cleanCatalog = trim(preg_replace($stripPattern, '', $c->name) ?? $c->name);
+
+                return strcasecmp($cleanCatalog, $cleanUmaName) === 0;
+            });
+        }
+
+        // 4. Prefix / partial match
+        if (! $matched && $cleanUmaName !== '' && mb_strlen($cleanUmaName) >= 3) {
+            $matched = $catalogItems->first(function ($c) use ($cleanUmaName) {
+                return stripos($c->name, $cleanUmaName) === 0;
+            });
+        }
+
+        if (! $matched || ! is_array($matched->raw_data)) {
+            return null;
+        }
+
+        $raw = $matched->raw_data;
+        if (! empty($raw['image_url'])) {
+            return (string) $raw['image_url'];
+        }
+
+        $charId = $raw['char_id'] ?? null;
+        $cardId = $raw['card_id'] ?? $matched->gametora_id ?? null;
+        if ($charId && $cardId) {
+            return "https://gametora.com/images/umamusume/characters/thumb/chara_stand_{$charId}_{$cardId}.png";
+        }
+
+        return $raw['icon'] ?? $raw['thumb'] ?? null;
     }
 
     /**
@@ -338,25 +403,7 @@ class CareerController extends Controller
         $catalogItems = UmaCatalogItem::where('type', 'character')->get(['name', 'gametora_id', 'raw_data']);
 
         $characters = $charStats->map(function ($item) use ($catalogItems, $scenario) {
-            $baseName = trim(explode(' [', $item->uma_name)[0]);
-            $matchedCatalog = $catalogItems->first(fn ($c) => $c->name === $item->uma_name)
-                ?: $catalogItems->first(fn ($c) => trim(explode(' [', $c->name)[0]) === $baseName);
-
-            $imageUrl = null;
-            if ($matchedCatalog && is_array($matchedCatalog->raw_data)) {
-                $raw = $matchedCatalog->raw_data;
-                if (! empty($raw['image_url'])) {
-                    $imageUrl = (string) $raw['image_url'];
-                } else {
-                    $charId = $raw['char_id'] ?? null;
-                    $cardId = $raw['card_id'] ?? $matchedCatalog->gametora_id ?? null;
-                    if ($charId && $cardId) {
-                        $imageUrl = "https://gametora.com/images/umamusume/characters/thumb/chara_stand_{$charId}_{$cardId}.png";
-                    } else {
-                        $imageUrl = $raw['icon'] ?? $raw['thumb'] ?? null;
-                    }
-                }
-            }
+            $imageUrl = $this->resolveCharacterImage($item->uma_name, $catalogItems);
 
             // Find best rank achieved
             $bestRun = CareerRun::where('scenario', $scenario)
@@ -402,6 +449,125 @@ class CareerController extends Controller
             'min_fans' => $minFans,
             'max_fans' => $maxFans,
             'characters' => $characters,
+            'recent_runs' => $recentRuns,
+        ]);
+    }
+
+    /**
+     * Get character training detail across all scenarios and recent runs.
+     */
+    public function characterDetail(Request $request): JsonResponse
+    {
+        $umaName = $request->query('uma_name');
+        if (! $umaName) {
+            return response()->json([
+                'message' => 'Parameter uma_name wajib diisi.',
+            ], 422);
+        }
+
+        $runsQuery = CareerRun::where('uma_name', $umaName);
+        $totalRuns = (clone $runsQuery)->count();
+
+        if ($totalRuns === 0) {
+            return response()->json([
+                'uma_name' => $umaName,
+                'image_url' => null,
+                'total_runs' => 0,
+                'total_fans' => 0,
+                'avg_fans' => 0,
+                'min_fans' => 0,
+                'max_fans' => 0,
+                'best_rank' => null,
+                'scenarios' => [],
+                'recent_runs' => [],
+            ]);
+        }
+
+        $totalFans = (int) (clone $runsQuery)->sum('fans_gained');
+        $avgFans = (int) round($totalFans / $totalRuns);
+        $minFans = (int) (clone $runsQuery)->min('fans_gained');
+        $maxFans = (int) (clone $runsQuery)->max('fans_gained');
+
+        $catalogItems = UmaCatalogItem::where('type', 'character')->get(['name', 'gametora_id', 'raw_data']);
+        $imageUrl = $this->resolveCharacterImage($umaName, $catalogItems);
+
+        // Find overall best rank and score
+        $bestRun = (clone $runsQuery)
+            ->whereNotNull('final_rank')
+            ->orderBy('evaluation_score', 'desc')
+            ->orderBy('fans_gained', 'desc')
+            ->first();
+        $bestRank = $bestRun?->final_rank;
+        if (! $bestRank) {
+            $maxScore = (clone $runsQuery)->max('evaluation_score');
+            if ($maxScore) {
+                $bestRank = UmaCatalog::getRankFromScore((int) $maxScore);
+            }
+        }
+
+        // Scenario breakdown for this character
+        $scenarioStats = (clone $runsQuery)
+            ->select(
+                'scenario',
+                DB::raw('COUNT(*) as runs_count'),
+                DB::raw('SUM(fans_gained) as total_fans'),
+                DB::raw('ROUND(AVG(fans_gained)) as avg_fans'),
+                DB::raw('MIN(fans_gained) as min_fans'),
+                DB::raw('MAX(fans_gained) as max_fans'),
+                DB::raw('MAX(evaluation_score) as max_score')
+            )
+            ->groupBy('scenario')
+            ->orderBy('total_fans', 'desc')
+            ->get();
+
+        $scenarios = $scenarioStats->map(function ($item) use ($umaName, $totalRuns) {
+            $bestScRun = CareerRun::where('uma_name', $umaName)
+                ->where('scenario', $item->scenario)
+                ->whereNotNull('final_rank')
+                ->orderBy('evaluation_score', 'desc')
+                ->orderBy('fans_gained', 'desc')
+                ->first();
+
+            $bestScRank = $bestScRun?->final_rank;
+            if (! $bestScRank && ! empty($item->max_score)) {
+                $bestScRank = UmaCatalog::getRankFromScore((int) $item->max_score);
+            }
+            if (! $bestScRank) {
+                $bestScRank = 'G';
+            }
+
+            $percentage = $totalRuns > 0 ? round(($item->runs_count / $totalRuns) * 100, 1) : 0;
+
+            return [
+                'scenario' => $item->scenario,
+                'runs_count' => (int) $item->runs_count,
+                'percentage' => $percentage,
+                'total_fans' => (int) $item->total_fans,
+                'avg_fans' => (int) $item->avg_fans,
+                'min_fans' => (int) $item->min_fans,
+                'max_fans' => (int) $item->max_fans,
+                'best_score' => $item->max_score ? (int) $item->max_score : null,
+                'best_rank' => $bestScRank,
+            ];
+        });
+
+        // Recent runs for this character (up to 25)
+        $recentRuns = (clone $runsQuery)
+            ->orderBy('run_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->take(25)
+            ->get();
+
+        return response()->json([
+            'uma_name' => $umaName,
+            'image_url' => $imageUrl,
+            'total_runs' => $totalRuns,
+            'total_fans' => $totalFans,
+            'avg_fans' => $avgFans,
+            'min_fans' => $minFans,
+            'max_fans' => $maxFans,
+            'best_rank' => $bestRank ?: 'G',
+            'scenarios' => $scenarios,
             'recent_runs' => $recentRuns,
         ]);
     }

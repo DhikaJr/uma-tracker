@@ -22,8 +22,14 @@ import {
     Zap,
     ChevronRight,
     SlidersHorizontal,
-    Info
+    Info,
+    Clock,
+    Calendar,
+    RotateCcw,
+    PlayCircle,
+    History
 } from 'lucide-react';
+import { formatIndonesianDate } from '../utils/dateHelper';
 
 // Formatters and label dictionaries (Bilingual ID & JP)
 const SURFACE_MAP = {
@@ -73,13 +79,99 @@ const TRACK_CONDITION_MAP = {
     heavy: { label: 'Buruk / Becek', sub: 'Heavy / 不良' },
 };
 
+/**
+ * Calculates start and end dates (YYYY-MM-DD) for a competition event.
+ */
+function getEventScheduleRange(event) {
+    if (event.start_date) {
+        const start = new Date(event.start_date);
+        // CM / LoH official duration in Cygames game: lasts ~6 days
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        return {
+            startStr: event.start_date,
+            endStr: end.toISOString().slice(0, 10),
+            startDate: start,
+            endDate: end,
+            hasExactStart: true,
+        };
+    }
+
+    const y = event.year;
+    const m = String(event.month).padStart(2, '0');
+    let startDay = 1;
+    let endDay = 10;
+
+    if (event.period === 'late') {
+        startDay = 21;
+        endDay = new Date(y, event.month, 0).getDate();
+    } else if (event.period === 'mid') {
+        startDay = 11;
+        endDay = 20;
+    } else if (event.period === 'early') {
+        startDay = 1;
+        endDay = 10;
+    } else {
+        startDay = 1;
+        endDay = new Date(y, event.month, 0).getDate();
+    }
+
+    const startStr = `${y}-${m}-${String(startDay).padStart(2, '0')}`;
+    const endStr = `${y}-${m}-${String(endDay).padStart(2, '0')}`;
+
+    return {
+        startStr,
+        endStr,
+        startDate: new Date(startStr),
+        endDate: new Date(endStr),
+        hasExactStart: false,
+    };
+}
+
+/**
+ * Returns event status relative to active reference date:
+ * 'ongoing' | 'upcoming' | 'past'
+ */
+function getEventStatus(event, activeDateStr) {
+    const range = getEventScheduleRange(event);
+    if (activeDateStr >= range.startStr && activeDateStr <= range.endStr) {
+        return {
+            status: 'ongoing',
+            label: 'Event Sedang Berlangsung',
+            range,
+        };
+    }
+    if (activeDateStr < range.startStr) {
+        const refDate = new Date(activeDateStr);
+        const diffMs = range.startDate.getTime() - refDate.getTime();
+        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        return {
+            status: 'upcoming',
+            label: 'Berlangsung Nanti',
+            diffDays: diffDays > 0 ? diffDays : null,
+            range,
+        };
+    }
+    return {
+        status: 'past',
+        label: 'Telah Selesai',
+        range,
+    };
+}
+
 export default function CompetitionEventsView({ onNotify }) {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [typeFilter, setTypeFilter] = useState('all'); // 'all' | 'champions_meeting' | 'league_of_heroes'
     const [yearFilter, setYearFilter] = useState('all'); // 'all' | '2026' | '2027'
+    const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'ongoing' | 'upcoming' | 'past'
     const [selectedEvent, setSelectedEvent] = useState(null);
+
+    // Today's real date and simulation state
+    const todayRealStr = new Date().toISOString().slice(0, 10);
+    const [activeDate, setActiveDate] = useState(todayRealStr);
+    const isSimulated = activeDate !== todayRealStr;
 
     const fetchEvents = async () => {
         setLoading(true);
@@ -110,15 +202,21 @@ export default function CompetitionEventsView({ onNotify }) {
         return events.filter((ev) => {
             if (typeFilter !== 'all' && ev.event_type !== typeFilter) return false;
             if (yearFilter !== 'all' && String(ev.year) !== yearFilter) return false;
+            if (statusFilter !== 'all') {
+                const s = getEventStatus(ev, activeDate).status;
+                if (s !== statusFilter) return false;
+            }
             return true;
         });
-    }, [events, typeFilter, yearFilter]);
+    }, [events, typeFilter, yearFilter, statusFilter, activeDate]);
 
-    // Statistics
+    // Statistics based on active date
     const cmCount = events.filter(e => e.event_type === 'champions_meeting').length;
     const lohCount = events.filter(e => e.event_type === 'league_of_heroes').length;
+    const ongoingCount = events.filter(e => getEventStatus(e, activeDate).status === 'ongoing').length;
+    const upcomingCount = events.filter(e => getEventStatus(e, activeDate).status === 'upcoming').length;
+    const pastCount = events.filter(e => getEventStatus(e, activeDate).status === 'past').length;
     const confirmedTracks = events.filter(e => e.venue && e.distance).length;
-    const pendingTracks = events.length - confirmedTracks;
 
     return (
         <div className="space-y-6 sm:space-y-8 animate-fadeIn">
@@ -158,6 +256,102 @@ export default function CompetitionEventsView({ onNotify }) {
                 </div>
             </div>
 
+            {/* Date Reference & Simulation Bar */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                    <div className={`p-2.5 rounded-2xl ${isSimulated ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-slate-950 shadow-md shadow-amber-500/20' : 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20'} shrink-0`}>
+                        <CalendarDays className="w-5 h-5 sm:w-6 sm:h-6" />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                {isSimulated ? 'Tanggal Acuan (Simulasi Pengujian)' : 'Waktu Hari Ini'}
+                            </span>
+                            {isSimulated ? (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300">
+                                    Mode Uji Tanggal Aktif
+                                </span>
+                            ) : (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300">
+                                    Hari Ini (Real)
+                                </span>
+                            )}
+                        </div>
+                        <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2 mt-0.5">
+                            <span>{formatIndonesianDate(activeDate, 'long')}</span>
+                            <span className="font-mono text-xs font-semibold text-slate-400">({activeDate})</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Date picker input & Quick Simulation Presets */}
+                <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                    <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-200">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <input
+                            type="date"
+                            value={activeDate}
+                            onChange={(e) => {
+                                if (e.target.value) setActiveDate(e.target.value);
+                            }}
+                            className="bg-transparent text-slate-800 dark:text-slate-100 font-mono text-xs focus:outline-none cursor-pointer"
+                            title="Pilih tanggal acuan untuk simulasi event"
+                        />
+                    </div>
+
+                    {/* Quick Simulation Presets */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        {isSimulated && (
+                            <button
+                                type="button"
+                                onClick={() => setActiveDate(todayRealStr)}
+                                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                                title="Kembalikan ke tanggal hari ini asli"
+                            >
+                                <RotateCcw className="w-3 h-3" />
+                                <span>Reset Hari Ini</span>
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => setActiveDate('2026-10-20')}
+                            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                activeDate === '2026-10-20'
+                                    ? 'bg-amber-500 text-slate-950 font-black shadow-xs ring-2 ring-amber-400'
+                                    : 'bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60'
+                            }`}
+                            title="Uji simulasi tanggal 20 Oktober 2026 (CM Classic Mulai)"
+                        >
+                            <span>Uji 20 Okt 2026 (CM Classic)</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveDate('2026-11-25')}
+                            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                activeDate === '2026-11-25'
+                                    ? 'bg-indigo-600 text-white font-black shadow-xs ring-2 ring-indigo-400'
+                                    : 'bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/60'
+                            }`}
+                            title="Uji simulasi periode LoH Akhir November 2026"
+                        >
+                            <span>Uji Akhir Nov 2026 (LoH)</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveDate('2026-12-25')}
+                            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                activeDate === '2026-12-25'
+                                    ? 'bg-amber-500 text-slate-950 font-black shadow-xs ring-2 ring-amber-400'
+                                    : 'bg-slate-100 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                            }`}
+                            title="Uji simulasi periode CM Long Akhir Desember 2026"
+                        >
+                            <span>Akhir Des 2026</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             {/* Integrity Notice Banner */}
             <div className="p-4 rounded-2xl bg-gradient-to-r from-sky-50 via-indigo-50/50 to-blue-50 dark:from-sky-950/40 dark:via-indigo-950/30 dark:to-blue-950/40 border border-sky-200/80 dark:border-sky-800/60 shadow-xs">
                 <div className="flex items-start gap-3">
@@ -187,28 +381,38 @@ export default function CompetitionEventsView({ onNotify }) {
                     </div>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800/80 border border-amber-200 dark:border-amber-800/60 shadow-2xs">
-                    <div className="flex items-center justify-between text-amber-600 dark:text-amber-400 text-[11px] font-bold uppercase tracking-wider">
-                        <span>Champions Meeting</span>
-                        <Trophy className="w-4 h-4 text-amber-500" />
+                {/* Sedang Berlangsung KPI */}
+                <div className={`p-3.5 rounded-2xl shadow-2xs transition-all ${
+                    ongoingCount > 0 
+                        ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-2 border-emerald-500' 
+                        : 'bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700'
+                }`}>
+                    <div className={`flex items-center justify-between text-[11px] font-bold uppercase tracking-wider ${
+                        ongoingCount > 0 ? 'text-emerald-700 dark:text-emerald-300 font-black' : 'text-slate-400'
+                    }`}>
+                        <span>Sedang Berlangsung</span>
+                        <PlayCircle className={`w-4 h-4 ${ongoingCount > 0 ? 'text-emerald-600 dark:text-emerald-400 animate-pulse' : 'text-slate-400'}`} />
                     </div>
-                    <div className="text-xl sm:text-2xl font-black text-amber-700 dark:text-amber-300 mt-1">
-                        {cmCount} <span className="text-xs font-semibold text-slate-500">Penyelenggaraan</span>
+                    <div className={`text-xl sm:text-2xl font-black mt-1 ${
+                        ongoingCount > 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-900 dark:text-white'
+                    }`}>
+                        {ongoingCount} <span className="text-xs font-semibold text-slate-500">Event Aktif</span>
                     </div>
                 </div>
 
+                {/* Berlangsung Nanti KPI */}
                 <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800/80 border border-indigo-200 dark:border-indigo-800/60 shadow-2xs">
                     <div className="flex items-center justify-between text-indigo-600 dark:text-indigo-400 text-[11px] font-bold uppercase tracking-wider">
-                        <span>League of Heroes</span>
-                        <Shield className="w-4 h-4 text-indigo-500" />
+                        <span>Berlangsung Nanti</span>
+                        <Clock className="w-4 h-4 text-indigo-500" />
                     </div>
                     <div className="text-xl sm:text-2xl font-black text-indigo-700 dark:text-indigo-300 mt-1">
-                        {lohCount} <span className="text-xs font-semibold text-slate-500">Penyelenggaraan</span>
+                        {upcomingCount} <span className="text-xs font-semibold text-slate-500">Event Mendatang</span>
                     </div>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800/80 border border-emerald-200 dark:border-emerald-800/60 shadow-2xs">
-                    <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 text-[11px] font-bold uppercase tracking-wider">
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-2xs">
+                    <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold uppercase tracking-wider">
                         <span>Kondisi Trek Penuh</span>
                         <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                     </div>
@@ -261,6 +465,33 @@ export default function CompetitionEventsView({ onNotify }) {
                     >
                         <span>League of Heroes</span>
                         <span className="text-[10px] opacity-75">({lohCount})</span>
+                    </button>
+
+                    {/* Status Filter */}
+                    <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 mx-1 hidden sm:block" />
+                    <button
+                        type="button"
+                        onClick={() => setStatusFilter(statusFilter === 'ongoing' ? 'all' : 'ongoing')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                            statusFilter === 'ongoing'
+                                ? 'bg-emerald-600 text-white font-black shadow-xs'
+                                : 'text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950/40'
+                        }`}
+                    >
+                        <span>Sedang Berlangsung</span>
+                        <span className="text-[10px] opacity-75">({ongoingCount})</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setStatusFilter(statusFilter === 'upcoming' ? 'all' : 'upcoming')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                            statusFilter === 'upcoming'
+                                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-black shadow-xs'
+                                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        }`}
+                    >
+                        <span>Berlangsung Nanti</span>
+                        <span className="text-[10px] opacity-75">({upcomingCount})</span>
                     </button>
                 </div>
 
@@ -318,6 +549,7 @@ export default function CompetitionEventsView({ onNotify }) {
                             key={event.id || idx} 
                             event={event} 
                             index={idx + 1}
+                            activeDate={activeDate}
                             onOpenDetail={() => setSelectedEvent(event)}
                         />
                     ))}
@@ -328,6 +560,7 @@ export default function CompetitionEventsView({ onNotify }) {
             {selectedEvent && (
                 <CompetitionEventDetailModal
                     event={selectedEvent}
+                    activeDate={activeDate}
                     onClose={() => setSelectedEvent(null)}
                 />
             )}
@@ -336,7 +569,7 @@ export default function CompetitionEventsView({ onNotify }) {
 }
 
 // Subcomponent: Event Card
-function EventCard({ event, index, onOpenDetail }) {
+function EventCard({ event, index, onOpenDetail, activeDate }) {
     const isCM = event.event_type === 'champions_meeting';
     const isLoH = event.event_type === 'league_of_heroes';
 
@@ -349,13 +582,28 @@ function EventCard({ event, index, onOpenDetail }) {
     // Check special rules
     const hasNoDebuff = event.special_rule === 'no_debuff';
 
+    // Status relative to active reference date
+    const eventStatus = getEventStatus(event, activeDate);
+    const isOngoing = eventStatus.status === 'ongoing';
+    const isUpcoming = eventStatus.status === 'upcoming';
+    const isPast = eventStatus.status === 'past';
+
+    // Card border and shadow styling:
+    // When isOngoing is TRUE, apply the exact same active color as hover:
+    // CM -> border-amber-400 with shadow-md
+    // LoH -> border-indigo-400 with shadow-md
+    // Plus ring and subtle tinted background to highlight active state
+    const cardBorderAndShadowClass = isOngoing
+        ? isCM
+            ? 'border-amber-400 dark:border-amber-400 shadow-md ring-2 ring-amber-400/50 bg-amber-500/5 dark:bg-amber-500/10'
+            : 'border-indigo-400 dark:border-indigo-400 shadow-md ring-2 ring-indigo-400/50 bg-indigo-500/5 dark:bg-indigo-500/10'
+        : isCM
+            ? 'border-amber-200/90 dark:border-amber-800/40 hover:border-amber-400 hover:shadow-md bg-white dark:bg-slate-800/90 shadow-xs'
+            : 'border-indigo-200/90 dark:border-indigo-800/40 hover:border-indigo-400 hover:shadow-md bg-white dark:bg-slate-800/90 shadow-xs';
+
     return (
-        <div className={`p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-800/90 border transition-all duration-200 shadow-xs hover:shadow-md ${
-            isCM 
-                ? 'border-amber-200/90 dark:border-amber-800/40 hover:border-amber-400' 
-                : 'border-indigo-200/90 dark:border-indigo-800/40 hover:border-indigo-400'
-        }`}>
-            {/* Header: Badge, Title, Date Label, Special Rule */}
+        <div className={`p-4 sm:p-5 rounded-3xl border transition-all duration-200 ${cardBorderAndShadowClass}`}>
+            {/* Header: Badge, Title, Date Label, Special Rule, Status Badge */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-slate-100 dark:border-slate-700/60">
                 <div className="flex flex-wrap items-center gap-2">
                     {/* Index Sequence */}
@@ -374,6 +622,29 @@ function EventCard({ event, index, onOpenDetail }) {
                         <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-gradient-to-r from-indigo-600 to-purple-600 text-white flex items-center gap-1.5 shadow-2xs">
                             <Shield className="w-3.5 h-3.5" />
                             <span>League of Heroes</span>
+                        </span>
+                    )}
+
+                    {/* Status Badge */}
+                    {isOngoing && (
+                        <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-emerald-600 text-white flex items-center gap-1.5 shadow-xs ring-1 ring-emerald-400/30">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-200 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                            </span>
+                            <span>Event Sedang Berlangsung</span>
+                        </span>
+                    )}
+                    {isUpcoming && (
+                        <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>Berlangsung Nanti{eventStatus.diffDays ? ` (${eventStatus.diffDays} hari lagi)` : ''}</span>
+                        </span>
+                    )}
+                    {isPast && (
+                        <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Telah Selesai</span>
                         </span>
                     )}
 
@@ -583,7 +854,7 @@ function RandomBadge() {
 }
 
 // Modal Dialog: Full Event Details
-function CompetitionEventDetailModal({ event, onClose }) {
+function CompetitionEventDetailModal({ event, onClose, activeDate }) {
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.key === 'Escape') onClose();
@@ -595,6 +866,8 @@ function CompetitionEventDetailModal({ event, onClose }) {
     const isCM = event.event_type === 'champions_meeting';
     const isLoH = event.event_type === 'league_of_heroes';
     const hasNoDebuff = event.special_rule === 'no_debuff';
+
+    const eventStatus = activeDate ? getEventStatus(event, activeDate) : null;
 
     const conditions = [
         { label: 'Lokasi (Venue)', value: event.venue ? `${event.venue} (競馬場)` : null },
@@ -652,13 +925,29 @@ function CompetitionEventDetailModal({ event, onClose }) {
                         : 'bg-gradient-to-r from-indigo-700 via-purple-700 to-indigo-800'
                 }`}>
                     <div>
-                        <div className="flex items-center gap-2 mb-1.5">
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-white/20 backdrop-blur-xs uppercase tracking-wider">
                                 {isCM ? 'Champions Meeting' : 'League of Heroes'}
                             </span>
                             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-black/20">
                                 {event.date_label}
                             </span>
+                            {eventStatus?.status === 'ongoing' && (
+                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-500 text-white flex items-center gap-1 shadow-xs">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                                    <span>Event Sedang Berlangsung</span>
+                                </span>
+                            )}
+                            {eventStatus?.status === 'upcoming' && (
+                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-white/15 text-white">
+                                    Berlangsung Nanti{eventStatus.diffDays ? ` (${eventStatus.diffDays} hari lagi)` : ''}
+                                </span>
+                            )}
+                            {eventStatus?.status === 'past' && (
+                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-black/40 text-slate-300">
+                                    Telah Selesai
+                                </span>
+                            )}
                         </div>
                         <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
                             {event.event_name}

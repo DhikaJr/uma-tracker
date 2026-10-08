@@ -8,6 +8,7 @@ use App\Models\CircleSnapshot;
 use App\Models\GachaBanner;
 use App\Models\GachaPity;
 use App\Models\GachaPull;
+use App\Models\UmaCatalogItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -2125,5 +2126,137 @@ class UmaTrackerApiTest extends TestCase
         // Check recent runs count
         $recentRuns = $response->json('recent_runs');
         $this->assertCount(3, $recentRuns);
+    }
+
+    public function test_character_detail_endpoint_returns_scenario_breakdown_and_recent_runs(): void
+    {
+        CareerRun::query()->delete();
+
+        // Create runs for Oguri Cap across two scenarios
+        CareerRun::create([
+            'uma_name' => 'Oguri Cap',
+            'scenario' => 'URA Finals',
+            'starting_fans' => 0,
+            'ending_fans' => 400000,
+            'fans_gained' => 400000,
+            'evaluation_score' => 19500,
+            'final_rank' => 'UA6',
+            'run_date' => '2026-10-01',
+        ]);
+        CareerRun::create([
+            'uma_name' => 'Oguri Cap',
+            'scenario' => 'URA Finals',
+            'starting_fans' => 0,
+            'ending_fans' => 500000,
+            'fans_gained' => 500000,
+            'evaluation_score' => 21000,
+            'final_rank' => 'UA8',
+            'run_date' => '2026-10-02',
+        ]);
+        CareerRun::create([
+            'uma_name' => 'Oguri Cap',
+            'scenario' => 'Aoharu Hai',
+            'starting_fans' => 0,
+            'ending_fans' => 300000,
+            'fans_gained' => 300000,
+            'evaluation_score' => 18000,
+            'final_rank' => 'UA4',
+            'run_date' => '2026-10-03',
+        ]);
+
+        // Validation error if uma_name is missing
+        $resError = $this->getJson('/api/career/character-detail');
+        $resError->assertStatus(422);
+
+        // Success response
+        $response = $this->getJson('/api/career/character-detail?uma_name=Oguri+Cap');
+        $response->assertStatus(200)
+            ->assertJsonPath('uma_name', 'Oguri Cap')
+            ->assertJsonPath('total_runs', 3)
+            ->assertJsonPath('total_fans', 1200000)
+            ->assertJsonPath('avg_fans', 400000)
+            ->assertJsonPath('min_fans', 300000)
+            ->assertJsonPath('max_fans', 500000)
+            ->assertJsonPath('best_rank', 'UA8');
+
+        $scenarios = $response->json('scenarios');
+        $this->assertCount(2, $scenarios);
+
+        // Sorted by total_fans desc: URA Finals (900k) > Aoharu Hai (300k)
+        $this->assertSame('URA Finals', $scenarios[0]['scenario']);
+        $this->assertSame(2, $scenarios[0]['runs_count']);
+        $this->assertSame(900000, $scenarios[0]['total_fans']);
+        $this->assertSame(450000, $scenarios[0]['avg_fans']);
+        $this->assertSame('UA8', $scenarios[0]['best_rank']);
+        $this->assertEquals(66.7, $scenarios[0]['percentage']);
+
+        $this->assertSame('Aoharu Hai', $scenarios[1]['scenario']);
+        $this->assertSame(1, $scenarios[1]['runs_count']);
+        $this->assertSame(300000, $scenarios[1]['total_fans']);
+        $this->assertSame('UA4', $scenarios[1]['best_rank']);
+        $this->assertEquals(33.3, $scenarios[1]['percentage']);
+
+        // Check recent runs count
+        $recentRuns = $response->json('recent_runs');
+        $this->assertCount(3, $recentRuns);
+    }
+
+    public function test_character_avatar_resolution_with_parentheses_aliases(): void
+    {
+        // Seed catalog item for Oguri Cap and Inari One
+        UmaCatalogItem::updateOrCreate(
+            ['type' => 'character', 'name' => 'Oguri Cap [Ashen Miracle]'],
+            [
+                'rarity' => 'SSR',
+                'raw_data' => [
+                    'image_url' => 'https://gametora.com/images/umamusume/characters/thumb/chara_stand_1006_100601.png',
+                ],
+            ]
+        );
+        UmaCatalogItem::updateOrCreate(
+            ['type' => 'character', 'name' => 'Inari One [Edomurasaki]'],
+            [
+                'rarity' => 'SSR',
+                'raw_data' => [
+                    'image_url' => 'https://gametora.com/images/umamusume/characters/thumb/chara_stand_1034_103401.png',
+                ],
+            ]
+        );
+
+        CareerRun::query()->delete();
+        CareerRun::create([
+            'uma_name' => 'Oguri Cap (Anime Collab)',
+            'scenario' => 'URA Finals',
+            'fans_gained' => 450000,
+            'evaluation_score' => 20000,
+            'final_rank' => 'UA6',
+            'run_date' => '2026-10-01',
+        ]);
+        CareerRun::create([
+            'uma_name' => 'Inari One (Fall Festival)',
+            'scenario' => 'URA Finals',
+            'fans_gained' => 420000,
+            'evaluation_score' => 19000,
+            'final_rank' => 'UA5',
+            'run_date' => '2026-10-01',
+        ]);
+
+        // Scenario detail endpoint should resolve avatar URLs for both aliases
+        $scRes = $this->getJson('/api/career/scenario-detail?scenario=URA+Finals');
+        $scRes->assertStatus(200);
+        $chars = collect($scRes->json('characters'));
+
+        $oguri = $chars->firstWhere('uma_name', 'Oguri Cap (Anime Collab)');
+        $this->assertNotNull($oguri);
+        $this->assertSame('https://gametora.com/images/umamusume/characters/thumb/chara_stand_1006_100601.png', $oguri['image_url']);
+
+        $inari = $chars->firstWhere('uma_name', 'Inari One (Fall Festival)');
+        $this->assertNotNull($inari);
+        $this->assertSame('https://gametora.com/images/umamusume/characters/thumb/chara_stand_1034_103401.png', $inari['image_url']);
+
+        // Character detail endpoint should also resolve avatar URL
+        $charRes = $this->getJson('/api/career/character-detail?uma_name='.urlencode('Oguri Cap (Anime Collab)'));
+        $charRes->assertStatus(200)
+            ->assertJsonPath('image_url', 'https://gametora.com/images/umamusume/characters/thumb/chara_stand_1006_100601.png');
     }
 }

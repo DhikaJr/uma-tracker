@@ -304,19 +304,28 @@ export default function ScenarioDetailModal({
                                                     >
                                                         {/* Top Row: Avatar & Name */}
                                                         <div className="flex items-start justify-between gap-3">
-                                                            <div className="flex items-center gap-2.5 min-w-0">
-                                                                {char.image_url ? (
-                                                                    <img
-                                                                        src={char.image_url}
-                                                                        alt={char.uma_name}
-                                                                        className="w-11 h-11 rounded-xl object-cover object-top shrink-0 border border-slate-200 dark:border-slate-700 shadow-2xs"
-                                                                        loading="lazy"
-                                                                    />
-                                                                ) : (
-                                                                    <div className="w-11 h-11 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 flex items-center justify-center font-black text-sm shrink-0">
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                <div className="relative w-11 h-11 shrink-0">
+                                                                    {char.image_url ? (
+                                                                        <img
+                                                                            src={char.image_url}
+                                                                            alt={char.uma_name}
+                                                                            className="w-11 h-11 rounded-xl object-cover object-top border border-slate-200 dark:border-slate-700 shadow-2xs"
+                                                                            loading="lazy"
+                                                                            onError={(e) => {
+                                                                                e.currentTarget.style.display = 'none';
+                                                                                const next = e.currentTarget.nextElementSibling;
+                                                                                if (next) next.style.display = 'flex';
+                                                                            }}
+                                                                        />
+                                                                    ) : null}
+                                                                    <div
+                                                                        className="w-11 h-11 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 flex items-center justify-center font-black text-sm shrink-0"
+                                                                        style={{ display: char.image_url ? 'none' : 'flex' }}
+                                                                    >
                                                                         {char.uma_name.slice(0, 2).toUpperCase()}
                                                                     </div>
-                                                                )}
+                                                                </div>
                                                                 <div className="min-w-0">
                                                                     <div className="font-black text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate" title={char.uma_name}>
                                                                         {char.uma_name}
