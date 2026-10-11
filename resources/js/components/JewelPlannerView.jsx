@@ -124,9 +124,17 @@ export default function JewelPlannerView({ onNotify }) {
             if (res.ok) {
                 const data = await res.json();
                 if (data.config) {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    let targetDate = data.config.target_date;
+                    // Jika target date di database sudah lewat atau hari ini, default ke 30 hari ke depan
+                    if (!targetDate || targetDate <= todayStr) {
+                        targetDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                    }
+
                     setConfig(prev => ({
                         ...prev,
                         ...data.config,
+                        target_date: targetDate,
                         character_tickets: data.config.character_tickets ?? data.config.single_tickets ?? 5,
                         support_tickets: data.config.support_tickets ?? 5,
                         target_banner_type: data.config.target_banner_type ?? 'character',
@@ -219,7 +227,7 @@ export default function JewelPlannerView({ onNotify }) {
 
         // 2. Projected Incomes
         // F2P Dailies & Routine
-        const dailyMissions = config.f2p_daily_missions ? diffDays * 30 : 0;
+        const dailyMissions = config.f2p_daily_missions ? diffDays * 50 : 0;
         const loginBonus = config.f2p_login_bonus ? Math.floor(diffDays * (110 / 8)) : 0;
         const stadiumRate = STADIUM_RATES[config.stadium_class] ?? 250;
         const stadiumCarats = stadiumRate * diffWeeks;
@@ -265,9 +273,11 @@ export default function JewelPlannerView({ onNotify }) {
         const pakaliveCarats = (parseInt(config.pakalive_streams_count, 10) || 0) * 1500;
         const totalPveCarats = storyCarats + legendCarats + g1Carats + pakaliveCarats;
 
-        // Paid Passes
-        const dailyPackPaid = config.daily_jewel_pack ? Math.max(1, Math.ceil(diffDays / 30)) * 500 : 0;
-        const dailyPackFree = config.daily_jewel_pack ? diffDays * 50 : 0;
+        // Paid Passes (Daily Jewel Pack: 500 Paid Carat + 50 Free Carat/hari = 2.000 Carat / 30 hari pack)
+        const dailyPackCount = Math.max(1, Math.ceil(diffDays / 30));
+        const dailyPackPaid = config.daily_jewel_pack ? dailyPackCount * 500 : 0;
+        const dailyPackDays = Math.max(diffDays, dailyPackCount * 30);
+        const dailyPackFree = config.daily_jewel_pack ? dailyPackDays * 50 : 0;
         const dailyPackCarats = dailyPackPaid + dailyPackFree;
         const trainerPassCarats = config.trainer_pass ? monthsCount * 1700 : 0;
         const trainerPassPaid = config.trainer_pass ? monthsCount * 350 : 0;
@@ -915,12 +925,37 @@ export default function JewelPlannerView({ onNotify }) {
                                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-bold text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                                     />
                                 </div>
-                                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex justify-between">
-                                    <span>Rentang Waktu:</span>
-                                    <span className="font-mono font-bold text-emerald-600">
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center justify-between flex-wrap gap-1">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-[10px] text-slate-400">Pilihan cepat:</span>
+                                        {[
+                                            { days: 30, label: '+30 Hari (1 Bln)' },
+                                            { days: 60, label: '+60 Hari (2 Bln)' },
+                                            { days: 90, label: '+90 Hari (3 Bln)' },
+                                        ].map((item) => (
+                                            <button
+                                                key={item.days}
+                                                type="button"
+                                                onClick={() => {
+                                                    const d = new Date(Date.now() + item.days * 24 * 60 * 60 * 1000);
+                                                    setConfig({ ...config, target_date: d.toISOString().split('T')[0] });
+                                                }}
+                                                className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                                            >
+                                                {item.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                                         {calculation.diffDays} Hari ({calculation.diffWeeks} Minggu)
                                     </span>
                                 </div>
+                                {calculation.diffDays === 0 && (
+                                    <div className="mt-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] flex items-center gap-1.5">
+                                        <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
+                                        <span>Target adalah hari ini (0 hari). Pilih tanggal target di masa depan atau klik pilihan cepat di atas untuk menghitung akumulasi harian.</span>
+                                    </div>
+                                )}
                             </div>
 
                             <div>
@@ -989,6 +1024,15 @@ export default function JewelPlannerView({ onNotify }) {
 
                         {expandedAccordion.f2p && (
                             <div className="p-6 space-y-4 border-t border-slate-100 dark:border-slate-800">
+                                {calculation.diffDays === 0 && (
+                                    <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs flex items-center gap-2">
+                                        <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
+                                        <span>
+                                            Rentang waktu saat ini <strong>0 Hari</strong>. Estimasi harian bernilai 0 karena target banner adalah hari ini. Silakan atur tanggal target banner mendatang di atas.
+                                        </span>
+                                    </div>
+                                )}
+
                                 <div className="flex items-center justify-between">
                                     <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200">
                                         <input
@@ -997,7 +1041,7 @@ export default function JewelPlannerView({ onNotify }) {
                                             onChange={(e) => setConfig({ ...config, f2p_daily_missions: e.target.checked })}
                                             className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
                                         />
-                                        <span>Daily Missions (30 Carats / Hari)</span>
+                                        <span>Daily Missions (50 Carats / Hari)</span>
                                     </label>
                                     <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">
                                         +{calculation.dailyMissions.toLocaleString()}
@@ -1458,12 +1502,19 @@ export default function JewelPlannerView({ onNotify }) {
                                             <span>Daily Jewel Pack (30 Hari)</span>
                                         </label>
                                         <span className="text-[11px] text-slate-400 pl-6.5 block">
-                                            500 Paid Carat saat aktivasi + 50 Free Carat setiap hari
+                                            500 Paid Carat saat aktivasi + 50 Free Carat setiap hari (Total 2.000 Carat / 30 hari)
                                         </span>
                                     </div>
-                                    <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">
-                                        +{calculation.dailyPackCarats.toLocaleString()}
-                                    </span>
+                                    <div className="text-right">
+                                        <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400 block">
+                                            +{calculation.dailyPackCarats.toLocaleString()}
+                                        </span>
+                                        {config.daily_jewel_pack && (
+                                            <span className="text-[10px] font-mono text-slate-400 block">
+                                                ({calculation.dailyPackPaid.toLocaleString()} Paid + {calculation.dailyPackFree.toLocaleString()} Free)
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">

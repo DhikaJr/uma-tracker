@@ -2,6 +2,23 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.7.1] - 11 Oktober 2026
+
+### 💎 Penyempurnaan Jewel Planner & Auto-Fill Kalkulator Pengorbanan Jewel
+- **Auto-Fill Penuh Saldo Modal Awal (Tanpa Input Manual)**:
+  - Kolom **Jewel yang Tersedia** pada modul Kalkulator Pengorbanan Jewel ([`JewelSacrificeCalculator.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/JewelSacrificeCalculator.jsx)) kini terisi 100% otomatis (*auto-fill*) dan tersinkronisasi langsung secara real-time dari *Saldo Aset Saat Ini* (`Free Carats + Paid Carats`), mengeliminasi kebutuhan input angka manual dan opsi tombol pintasan yang redundan.
+  - Menampilkan badge status hijau *Auto-fill dari Saldo Aset Saat Ini (Free + Paid Carats)* beserta kalkulasi ekuivalen kapasitas pull gacha.
+- **Kalibrasi Hadiah Misi Harian Server JP (50 Carats / Hari)**:
+  - Memperbarui rasio perolehan reward dari Daily Missions dari semula 30 Carats menjadi **50 Carats / hari** sesuai standar hadiah resmi terkini Uma Musume JP pada kalkulasi backend ([`PlannerController.php`](file:///c:/Projects/uma-tracker/app/Http/Controllers/Api/PlannerController.php)) dan tampilan frontend ([`JewelPlannerView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/JewelPlannerView.jsx)).
+- **Perhitungan Komprehensif Daily Jewel Pack (Free Carats Harian)**:
+  - Menyempurnakan formula kalkulasi langganan *Daily Jewel Pack (30 Hari)* di Accordion E agar tidak hanya menghitung 500 Paid Carats awal, melainkan mengikutsertakan bonus harian **50 Free Carats / hari** (1.500 Free Carats per 30 hari).
+  - Total perolehan kini terhitung penuh **2.000 Carats per 30 hari** ($500\text{ Paid} + 1.500\text{ Free}$) dengan rincian saldo berbayar dan gratis yang transparan.
+- **Penanganan Cerdas Tanggal Target & Tombol Rentang Waktu Cepat**:
+  - Menyelesaikan kendala nilai proyeksi harian bernilai `+0 Carat` akibat tanggal target tersimpan yang telah lampau/hari ini (`diffDays = 0`).
+  - Sistem otomatis memajukan tanggal target minimal 30 hari ke depan apabila data yang tersimpan di basis data telah kadaluwarsa saat konfigurasi dimuat.
+  - Menambahkan tombol pilihan cepat rentang target waktu di samping pemilih tanggal: **+30 Hari (1 Bln)**, **+60 Hari (2 Bln)**, dan **+90 Hari (3 Bln)**.
+  - Menampilkan banner peringatan kontekstual apabila pengguna memilih target hari ini (`0 Hari`) yang menjelaskan bahwa akumulasi harian memerlukan rentang tanggal mendatang.
+
 ## [Versi 2.7.0] - 11 Oktober 2026
 
 ### 💎 Kalkulator Pengorbanan Jewel (Farming vs Gacha Planner)

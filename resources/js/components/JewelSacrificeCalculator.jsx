@@ -25,14 +25,14 @@ const FEATURE_INFO = {
     available_jewels: {
         id: 'available_jewels',
         title: 'Jewel yang Tersedia (Carat / ジュエル)',
-        badge: 'Saldo Modal Awal',
+        badge: 'Saldo Terisi Otomatis',
         badgeColor: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
-        summary: 'Jumlah total Jewel (Free Carat + Paid Carat) dari saldo aset saat ini yang dialokasikan sebelum dikurangi pengeluaran aktivitas farming.',
+        summary: 'Jumlah total Jewel (Free Carat + Paid Carat) yang terisi otomatis langsung dari Saldo Aset Saat Ini.',
         description: 'Di game Uma Musume JP, Jewel (Carat) adalah mata uang utama untuk melakukan tarikan gacha karakter dan support card, pemulihan TP/RP, serta berbagai fitur optimasi pelatihan kompetitif.',
         details: [
             {
-                label: 'Sinkronisasi Otomatis dengan Saldo Aset',
-                text: 'Secara default, angka ini langsung disinkronkan dengan total Free Carats + Paid Carats pada card Saldo Aset Saat Ini di atas.',
+                label: 'Sinkronisasi Otomatis 100%',
+                text: 'Angka ini terisi otomatis dan tersinkronisasi secara realtime dari total Free Carats + Paid Carats pada card Saldo Aset Saat Ini tanpa perlu diinput manual.',
             },
             {
                 label: 'Ketentuan Gacha Server JP',
@@ -44,8 +44,8 @@ const FEATURE_INFO = {
             },
         ],
         mechanics: [
-            'Saldo modal dapat diisi bebas secara manual atau disinkronkan langsung dari tabungan saldo aset planner.',
-            'Pengeluaran farming akan mengurangi saldo ini secara langsung untuk menampilkan proyeksi sisa gacha.',
+            'Saldo modal diambil langsung secara dinamis dari data Saldo Aset Saat Ini.',
+            'Pengeluaran farming akan mengurangi saldo ini untuk menampilkan sisa alokasi gacha.',
         ],
         source: {
             name: 'GameWith & KamiGame Uma Musume Database',
@@ -326,21 +326,13 @@ function InfoModal({ featureKey, onClose }) {
  * with popups explaining each feature and real-time reactive calculations matching the design.
  */
 export default function JewelSacrificeCalculator({ currentCarats = 140000 }) {
-    // Determine initial jewels: use currentCarats from Saldo Aset Saat Ini (defaults to 140000 if not set)
-    const initialJewels = typeof currentCarats === 'number' && currentCarats > 0 ? currentCarats : 140000;
+    // Jewel yang tersedia auto-fill langsung dari Saldo Aset Saat Ini (Free + Paid Carats)
+    const availableJewels = typeof currentCarats === 'number' ? currentCarats : 140000;
 
-    // Inputs (Defaults match the user's current asset balance & standard simulation counts)
-    const [availableJewels, setAvailableJewels] = useState(initialJewels);
+    // Inputs (Defaults match standard simulation counts)
     const [rerollCount, setRerollCount] = useState(50);
     const [sparkSelectionCount, setSparkSelectionCount] = useState(30);
     const [abilityPtCount, setAbilityPtCount] = useState(400);
-
-    // Synchronize availableJewels whenever currentCarats from "Saldo Aset Saat Ini" changes
-    useEffect(() => {
-        if (typeof currentCarats === 'number' && currentCarats > 0) {
-            setAvailableJewels(currentCarats);
-        }
-    }, [currentCarats]);
 
     // Active popup for info
     const [activeInfoModal, setActiveInfoModal] = useState(null);
@@ -357,9 +349,8 @@ export default function JewelSacrificeCalculator({ currentCarats = 140000 }) {
     const pullsLost = Math.floor(totalFarmingCost / 150);
     const tenPullsLost = (totalFarmingCost / 1500).toFixed(1);
 
-    // Reset handler
+    // Reset handler (kembalikan input simulasi ke 0)
     const handleReset = () => {
-        setAvailableJewels(typeof currentCarats === 'number' && currentCarats > 0 ? currentCarats : 140000);
         setRerollCount(0);
         setSparkSelectionCount(0);
         setAbilityPtCount(0);
@@ -367,7 +358,6 @@ export default function JewelSacrificeCalculator({ currentCarats = 140000 }) {
 
     // Preset to image example (50 rerolls, 30 spark selections, 400 ability pt)
     const handleSetExamplePreset = () => {
-        setAvailableJewels(typeof currentCarats === 'number' && currentCarats > 0 ? currentCarats : 140000);
         setRerollCount(50);
         setSparkSelectionCount(30);
         setAbilityPtCount(400);
@@ -406,31 +396,31 @@ export default function JewelSacrificeCalculator({ currentCarats = 140000 }) {
                 <div className="flex items-center gap-1.5 self-end sm:self-auto">
                     <button
                         type="button"
+                        onClick={handleReset}
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 transition-colors cursor-pointer flex items-center gap-1"
+                        title="Reset seluruh input farming ke 0"
+                    >
+                        <RotateCcw className="w-3 h-3" />
+                        <span>Reset</span>
+                    </button>
+                    <button
+                        type="button"
                         onClick={handleSetExamplePreset}
-                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 transition-colors cursor-pointer"
                         title="Terapkan preset simulasi default (50 reroll, 30 spark, 400 Pt)"
                     >
                         Preset Contoh (4.900)
                     </button>
-                    {currentCarats > 0 && currentCarats !== availableJewels && (
-                        <button
-                            type="button"
-                            onClick={() => setAvailableJewels(currentCarats)}
-                            className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 transition-colors cursor-pointer"
-                            title="Gunakan saldo Jewel yang tercatat pada modal tabungan di atas"
-                        >
-                            Pakai Saldo ({currentCarats.toLocaleString()})
-                        </button>
-                    )}
                 </div>
             </div>
 
             {/* Form Fields: All in Text Box / Number Inputs (NO Sliders) */}
             <div className="space-y-4">
-                {/* 1. Jewel yang tersedia */}
+                {/* 1. Jewel yang tersedia (Auto-fill dari Saldo Aset Saat Ini) */}
                 <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                         <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                            <Coins className="w-3.5 h-3.5 text-amber-500" />
                             <span>Jewel yang tersedia</span>
                             <button
                                 type="button"
@@ -442,48 +432,29 @@ export default function JewelSacrificeCalculator({ currentCarats = 140000 }) {
                             </button>
                         </label>
                         <span className="text-xs font-mono font-black text-slate-900 dark:text-white">
-                            {availableJewels.toLocaleString()}
+                            {availableJewels.toLocaleString('id-ID')} <span className="text-[10px] font-bold text-slate-500">Jewel</span>
                         </span>
                     </div>
 
-                    <div className="relative">
-                        <input
-                            type="text"
-                            inputMode="numeric"
-                            value={availableJewels ? availableJewels.toLocaleString('id-ID') : ''}
-                            onChange={(e) => handleNumberChange(setAvailableJewels, e.target.value)}
-                            placeholder="0"
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-bold text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                        />
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none">
-                            Jewel
+                    {/* Auto-filled synchronized display card */}
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/70 flex items-center justify-between gap-2">
+                        <div className="space-y-0.5">
+                            <div className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>Auto-fill dari Saldo Aset Saat Ini</span>
+                            </div>
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">
+                                Tersinkronisasi otomatis dari Free Carats + Paid Carats
+                            </span>
                         </div>
-                    </div>
-
-                    {/* Quick shortcuts with active highlight */}
-                    <div className="flex items-center gap-1.5 pt-0.5 flex-wrap">
-                        <span className="text-[10px] text-slate-400">Pilihan cepat:</span>
-                        {[
-                            ...(currentCarats > 0 ? [{ val: currentCarats, label: `Saldo (${currentCarats.toLocaleString()})` }] : []),
-                            { val: 3000, label: '3.000' },
-                            { val: 30000, label: '30.000 (1x Spark)' },
-                            { val: 75000, label: '75.000' },
-                            { val: 140000, label: '140.000' },
-                            { val: 150000, label: '150.000' },
-                        ].map((item) => (
-                            <button
-                                key={item.val}
-                                type="button"
-                                onClick={() => setAvailableJewels(item.val)}
-                                className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold transition-all cursor-pointer ${
-                                    availableJewels === item.val
-                                        ? 'bg-emerald-500 text-white shadow-2xs'
-                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                                }`}
-                            >
-                                {item.label}
-                            </button>
-                        ))}
+                        <div className="text-right shrink-0">
+                            <div className="text-base font-black font-mono text-emerald-600 dark:text-emerald-400">
+                                {availableJewels.toLocaleString('id-ID')}
+                            </div>
+                            <span className="text-[10px] font-mono text-slate-400 block font-bold">
+                                {Math.floor(availableJewels / 150)} Pulls Gacha
+                            </span>
+                        </div>
                     </div>
                 </div>
 

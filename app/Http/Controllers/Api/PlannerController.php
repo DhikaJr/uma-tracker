@@ -30,7 +30,7 @@ class PlannerController extends Controller
             'target_date' => Carbon::now()->addDays(30)->format('Y-m-d'),
             'spark_goal_multiplier' => 1.0, // 0.5 (100 pulls), 1.0 (200 pulls), 2.0 (400 pulls)
             'include_predictions' => true,  // true: hitung spark dengan prediksi, false: hanya aset saat ini
-            'f2p_daily_missions' => true,   // 30 carats/day
+            'f2p_daily_missions' => true,   // 50 carats/day
             'f2p_login_bonus' => true,      // 110 carats / 8 days (~13.75 carats/day)
             'f2p_training_pass' => true,    // Free Training Pass: 500 carats/month
             'stadium_class' => 6,           // Class 6: 250/wk, Class 5: 200/wk, Class 4: 150/wk, Class 3: 100/wk, Class 2: 70/wk, Class 1: 50/wk
@@ -61,6 +61,14 @@ class PlannerController extends Controller
             $decoded = json_decode($raw, true);
             if (is_array($decoded)) {
                 $config = array_merge($config, $decoded);
+            }
+        }
+
+        // Jika target_date di database sudah lampau, majukan 30 hari ke depan agar kalkulasi harian tidak 0
+        if (isset($config['target_date'])) {
+            $targetCarbon = Carbon::parse((string) $config['target_date']);
+            if ($targetCarbon->isPast() && ! $targetCarbon->isToday()) {
+                $config['target_date'] = Carbon::now()->addDays(30)->format('Y-m-d');
             }
         }
 
