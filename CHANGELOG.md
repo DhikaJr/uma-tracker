@@ -2,6 +2,33 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.7.0] - 11 Oktober 2026
+
+### 💎 Kalkulator Pengorbanan Jewel (Farming vs Gacha Planner)
+- **Komponen Baru Kalkulator Pengorbanan Jewel**:
+  - Menambahkan modul kalkulator simulasi pengeluaran Jewel ([`JewelSacrificeCalculator.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/JewelSacrificeCalculator.jsx)) pada menu perencana ([`JewelPlannerView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/JewelPlannerView.jsx)) tepat di bawah kartu *Target Banner & Spark*.
+  - Menghitung dampak pengeluaran Jewel/Carat untuk aktivitas farming kompetitif terhadap sisa alokasi tabungan gacha karakter & support card.
+- **Input Berbasis Text Box Interaktif (Tanpa Slider)**:
+  - Seluruh parameter input dirancang dalam bentuk text box numerik yang responsif dan presisi:
+    - **Jewel yang Tersedia**: Secara otomatis terisi dan tersinkronisasi langsung dari *Saldo Aset Saat Ini* (Free Carats + Paid Carats), dilengkapi tombol pintasan saldo dan preset cepat (`3.000`, `30.000`, `75.000`, `140.000`, `150.000`).
+    - **Jumlah Reroll Faktor (因子再獲得)**: Simulasi biaya 30 Jewel per reroll untuk pengundian ulang faktor indukan di akhir pelatihan (gratis bagi pemilik *Factor Re-acquire Pass* seharga 500 JPY/bulan).
+    - **Jumlah Penggunaan Spark Selection (因子指定)**: Simulasi biaya 100 Jewel per penggunaan untuk penguncian kategori faktor spesifik Blue Stat / Red Aptitude (gratis bagi pemilik *Factor Designation Pass* atau tiket).
+    - **Ability Pt yang Dibeli (トレーナーアビリティ)**: Simulasi penambalan kekurangan Ability Pt dengan rasio resmi 1 Jewel = 1 Ability Pt.
+- **Ikon Info & Modal Popup Detail Penjelasan Fitur**:
+  - Setiap kolom input dilengkapi tombol ikon info (ℹ️) yang memunculkan modal dialog popup komprehensif berlatar belakang gelap/terang:
+    - Ringkasan fungsi, penjelasan mekanisme game, rincian biaya resmi, dan tips efisiensi.
+    - Lencana verifikasi sumber dari komunitas terpercaya (**GameWith** dan **KamiGame**).
+- **Sinkronisasi Pembaruan Resmi Cygames ([News #3497](https://umamusume.jp/news/detail?id=3497))**:
+  - Menyelaraskan penjelasan Trainer Ability dengan pengumuman resmi Cygames per 14 Oktober 2026 (11:30 JST):
+    - Penyesuaian durasi efektif 1x aktivasi dari semula 1 jam menjadi **12 menit**.
+    - Penurunan kebutuhan Ability Pt hingga 80% (rasio 1/5) untuk 8 jenis buff: *勉強家付与* (40pt &rarr; 8pt), *メンタルガード付与* (10pt &rarr; 2pt), *リカバリー精神付与* (10pt &rarr; 2pt), *相性ボーナス上昇* (10pt &rarr; 2pt), *固有因子発動* (15pt &rarr; 3pt), *汎用因子追加抽選* (20pt &rarr; 4pt), *獲得因子強化* (20pt &rarr; 4pt), dan *レース再挑戦回数増加* (5pt &rarr; 1pt).
+    - Catatan rencana implementasi fitur aktivasi otomatis (*Auto-Activate*) sebelum akhir tahun 2026 dan tautan resmi Cygames JP.
+- **Metrik Real-Time & Ekuivalensi Tarikan Gacha**:
+  - **Total Jewel untuk Farming**: Dihitung secara real-time dan disorot dengan angka merah tebal.
+  - **Sisa Jewel untuk Gacha**: Dihitung otomatis $\max(0, \text{Jewel Tersedia} - \text{Total Farming})$ dan disorot dengan angka hijau tebal.
+  - **Ekuivalensi Gacha Server JP**: Menginformasikan secara akurat jumlah tarikan tunggal (150 Jewel/pull) atau 10-pull (1.500 Jewel/10-pull) yang terkorbankan dari modal gacha trainer.
+  - **Tombol Reset Simulasi**: Mengembalikan nilai input ke saldo awal aset secara instan.
+
 ## [Versi 2.6.3] - 8 Oktober 2026
 
 ### 🏁 Layout Sirkuit & Fase Balapan Resmi (Official Racetrack Layout & Phases)

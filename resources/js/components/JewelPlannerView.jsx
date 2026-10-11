@@ -24,6 +24,7 @@ import {
     ArrowRight,
     ShoppingBag
 } from 'lucide-react';
+import JewelSacrificeCalculator from './JewelSacrificeCalculator';
 
 const STADIUM_RATES = {
     6: 250,
@@ -951,6 +952,9 @@ export default function JewelPlannerView({ onNotify }) {
                             </div>
                         </div>
                     </div>
+
+                    {/* 3. Kalkulator Pengorbanan Jewel (Farming vs Gacha) */}
+                    <JewelSacrificeCalculator currentCarats={calculation.currentCarats} />
                 </div>
 
                 {/* Right Column (7 Cols): Income Accordions */}

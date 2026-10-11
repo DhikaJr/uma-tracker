@@ -86,6 +86,12 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
   - Penargetan banner terpisah (Karakter vs Support Card) dengan pilihan kuota spark 0.5x (100 pulls), 1.0x (200 pulls), dan 2.0x (400 pulls).
   - Proyeksi tabungan hingga target tanggal banner tercapai berdasarkan rutinitas misi harian, login bonus, arena mingguan, dan reward kompetitif.
   - Konfigurasi tersimpan persisten di basis data melalui endpoint `/api/planner/config`.
+- **Kalkulator Pengorbanan Jewel (Farming vs Gacha Planner)**:
+  - Modul simulasi pemotongan modal Jewel/Carat akibat pengeluaran aktivitas farming kompetitif terhadap sisa alokasi gacha impian.
+  - **Input Berbasis Text Box (Tanpa Slider)**: Parameter interaktif dan presisi mencakup Jewel yang tersedia (otomatis tersinkronisasi dari Saldo Aset Saat Ini), frekuensi Reroll Faktor (30 Jewel/reroll), frekuensi Spark Selection (100 Jewel/penggunaan penguncian faktor spesifik), serta pembelian Ability Pt (1 Jewel/Pt).
+  - **Ikon Info & Modal Popup Terverifikasi**: Menjelaskan fungsi, mekanisme resmi, dan biaya berdasarkan database **GameWith** dan **KamiGame**.
+  - **Sinkronisasi Pembaruan Resmi Cygames ([News #3497](https://umamusume.jp/news/detail?id=3497))**: Memuat spesifikasi resmi per 14 Oktober 2026 (pemendekan durasi 1x aktivasi Trainer Ability menjadi 12 menit dan penurunan kebutuhan Ability Pt hingga 80% / rasio 1/5 untuk 8 jenis buff).
+  - **Kalkulasi & Ekuivalensi Real-Time**: Menghitung total biaya farming, sisa saldo gacha, serta konversi riil tarikan gacha server JP (150 Jewel/pull) yang terkorbankan.
 
 ### 6. Koleksi Karakter & Support Card (Server JP)
 - **Katalog Koleksi Karakter**:
