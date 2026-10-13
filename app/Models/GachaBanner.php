@@ -250,4 +250,18 @@ class GachaBanner extends Model
     {
         return $this->category === 'twinkle' || str_contains(mb_strtolower($this->name ?? ''), 'twinkle collection');
     }
+
+    /**
+     * Get official Cygames announcement provenance URL if available.
+     */
+    public function getProvenanceUrl(): ?string
+    {
+        if (! $this->gametora_id) {
+            return null;
+        }
+
+        $url = AppSetting::getValue("select_pickup_provenance_{$this->gametora_id}");
+
+        return is_string($url) && $url !== '' ? $url : null;
+    }
 }

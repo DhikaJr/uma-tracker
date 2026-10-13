@@ -16,7 +16,8 @@ import {
     MapPin,
     Route,
     Clock,
-    PlayCircle
+    PlayCircle,
+    ExternalLink
 } from 'lucide-react';
 import { 
     ResponsiveContainer, 
@@ -489,15 +490,29 @@ export default function DashboardView({
                                         {/* Featured Items List (Satu Kotak Penuh per Baris) */}
                                         {banner.featured_items?.length > 0 && (
                                             <div className="mt-2.5 pt-2.5 border-t border-slate-200/60 dark:border-slate-800 space-y-1.5">
-                                                <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-amber-300">
-                                                    <Sparkles className="w-3 h-3 text-amber-500 dark:text-amber-400 shrink-0" />
-                                                    <span>
-                                                        {banner.category === 'twinkle' || /twinkle\s*collection/i.test(banner.name || '')
-                                                            ? 'Lineup Karakter B3 (Rate Rata 0.375% • Tanpa Rate-Up):'
-                                                            : banner.category === 'select_rate_up' || /select\s*pick\s*up/i.test(banner.name || '')
-                                                                ? 'Featured Rate-Up (Pilihan 2 dari 10 SSR):'
-                                                                : 'Featured Rate-Up:'}
-                                                    </span>
+                                                <div className="flex items-center justify-between gap-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-amber-300">
+                                                    <div className="flex items-center gap-1">
+                                                        <Sparkles className="w-3 h-3 text-amber-500 dark:text-amber-400 shrink-0" />
+                                                        <span>
+                                                            {banner.category === 'twinkle' || /twinkle\s*collection/i.test(banner.name || '')
+                                                                ? 'Lineup Karakter B3 (Rate Rata 0.375% • Tanpa Rate-Up):'
+                                                                : banner.category === 'select_rate_up' || /select\s*pick\s*up/i.test(banner.name || '')
+                                                                    ? 'Lineup Kandidat (Pilihan 2 dari 10 SSR):'
+                                                                    : 'Featured Rate-Up:'}
+                                                        </span>
+                                                    </div>
+                                                    {banner.provenance_url && (
+                                                        <a
+                                                            href={banner.provenance_url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            title="Lihat pengumuman kanonikal resmi di portal Cygames JP"
+                                                            className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline shrink-0 normal-case"
+                                                        >
+                                                            <span>Berita Cygames</span>
+                                                            <ExternalLink className="w-2.5 h-2.5" />
+                                                        </a>
+                                                    )}
                                                 </div>
                                                 <div className="flex flex-col gap-1.5 w-full">
                                                     {banner.featured_items.map((item, idx) => {

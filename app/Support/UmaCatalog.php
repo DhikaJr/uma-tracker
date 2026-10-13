@@ -2243,7 +2243,7 @@ class UmaCatalog
     }
 
     /**
-     * Official 10 SSR Candidate lineups for all 9 Select Pick Up Support Card Gacha in 2026.
+     * Official 10 SSR Candidate lineups for all 10 Select Pick Up Support Card Gacha in 2026.
      *
      * @return array<string, array{name: string, gametora_id: int, start_date: string, end_date: string, candidates: array<int, string>}>
      */
@@ -2412,6 +2412,24 @@ class UmaCatalog
                     'SSR [一杯のノスタルジア] Tazuna Hayakawa (Friend)',
                 ],
             ],
+            '2026-10-13' => [
+                'name' => 'Select Pick Up (Oct 2026)',
+                'gametora_id' => 30477,
+                'start_date' => '2026-10-13',
+                'end_date' => '2026-10-26',
+                'candidates' => [
+                    'SSR [永久の誓い、永久の輝き] Satono Diamond (Speed)',
+                    'SSR [刀光散らしてClash！] Tap Dance City (Speed)',
+                    'SSR [心覚えし、京の華] Air Groove (Speed)',
+                    'SSR [天才的ユートピア] Tokai Teio (Speed)',
+                    'SSR [吉兆招福チョコ来たる] Matikanefukukitaru (Speed)',
+                    'SSR [賑やかな未来を乗せて走れ！] Sakura Chiyono O (Stamina)',
+                    'SSR [故郷に錦を飾るんでい！] Inari One (Stamina)',
+                    'SSR [気まぐれ渡り星] Stay Gold (Guts)',
+                    'SSR [Innovator] Forever Young (Intelligence)',
+                    'SSR [一杯のノスタルジア] Tazuna Hayakawa (Friend)',
+                ],
+            ],
         ];
     }
 
@@ -2428,7 +2446,7 @@ class UmaCatalog
         // 2. Delete stale duplicate Feb 2026 support banner (20031)
         GachaBanner::where('gametora_id', 20031)->delete();
 
-        // 3. Upsert all 9 official 2026 Select Pick Up Support Card banners with 10 SSR candidates
+        // 3. Upsert all 10 official 2026 Select Pick Up Support Card banners with 10 SSR candidates
         $count = 0;
         foreach (self::getSelectPickupCandidates2026() as $sp) {
             GachaBanner::updateOrCreate(

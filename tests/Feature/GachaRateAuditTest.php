@@ -8,6 +8,7 @@ use App\Models\GachaBanner;
 use App\Models\GachaPull;
 use App\Services\BackupService;
 use App\Services\GameToraSyncService;
+use App\Support\UmaCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
 use Tests\TestCase;
@@ -538,5 +539,45 @@ class GachaRateAuditTest extends TestCase
             });
 
         $this->assertEquals('Select Pick Up (Sep 2026)', $legacyBanner->fresh()->name);
+    }
+
+    public function test_october_2026_select_pickup_candidates_match_official_cygames_announcement(): void
+    {
+        $allSelect = UmaCatalog::getSelectPickupCandidates2026();
+        $this->assertArrayHasKey('2026-10-13', $allSelect);
+
+        $octSelect = $allSelect['2026-10-13'];
+        $this->assertSame('Select Pick Up (Oct 2026)', $octSelect['name']);
+        $this->assertSame(30477, $octSelect['gametora_id']);
+        $this->assertSame('2026-10-13', $octSelect['start_date']);
+        $this->assertSame('2026-10-26', $octSelect['end_date']);
+        $this->assertCount(10, $octSelect['candidates']);
+
+        $expectedCandidates = [
+            'SSR [永久の誓い、永久の輝き] Satono Diamond (Speed)',
+            'SSR [刀光散らしてClash！] Tap Dance City (Speed)',
+            'SSR [心覚えし、京の華] Air Groove (Speed)',
+            'SSR [天才的ユートピア] Tokai Teio (Speed)',
+            'SSR [吉兆招福チョコ来たる] Matikanefukukitaru (Speed)',
+            'SSR [賑やかな未来を乗せて走れ！] Sakura Chiyono O (Stamina)',
+            'SSR [故郷に錦を飾るんでい！] Inari One (Stamina)',
+            'SSR [気まぐれ渡り星] Stay Gold (Guts)',
+            'SSR [Innovator] Forever Young (Intelligence)',
+            'SSR [一杯のノスタルジア] Tazuna Hayakawa (Friend)',
+        ];
+
+        $this->assertSame($expectedCandidates, $octSelect['candidates']);
+
+        // Test syncCanonical2026SelectPickupBanners populates banner properly
+        UmaCatalog::syncCanonical2026SelectPickupBanners();
+
+        $banner = GachaBanner::where('gametora_id', 30477)->first();
+        $this->assertNotNull($banner);
+        $this->assertSame('support_card', $banner->banner_type);
+        $this->assertSame('select_rate_up', $banner->category);
+        $this->assertSame('Select Pick Up (Oct 2026)', $banner->name);
+        $this->assertSame('2026-10-13', $banner->start_date->format('Y-m-d'));
+        $this->assertSame('2026-10-26', $banner->end_date->format('Y-m-d'));
+        $this->assertSame($expectedCandidates, $banner->featured_items);
     }
 }

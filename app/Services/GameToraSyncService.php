@@ -19,6 +19,12 @@ class GameToraSyncService
 
     public const DATA_BASE_URL = 'https://gametora.com/data/umamusume';
 
+    public function __construct(
+        protected ?CygamesNewsService $cygamesNewsService = null
+    ) {
+        $this->cygamesNewsService ??= app(CygamesNewsService::class);
+    }
+
     /**
      * Get the latest sync status.
      *
@@ -77,6 +83,15 @@ class GameToraSyncService
             $savedHash = (string) AppSetting::getValue('gametora_manifest_hash', '');
 
             if (! $force && $savedHash === $combinedHash && UmaCatalogItem::count() > 0 && GachaBanner::count() > 0) {
+                UmaCatalog::syncCanonical2026SelectPickupBanners();
+                try {
+                    $this->cygamesNewsService->syncSelectPickupBanners($force);
+                } catch (\Throwable $e) {
+                    Log::warning('Cygames news sync failed during cached GameTora sync', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
                 return [
                     'success' => true,
                     'is_up_to_date' => true,
@@ -270,7 +285,7 @@ class GameToraSyncService
             }
 
             // 5. Synchronize 2026 Gacha Banners
-            $newBannerCount = $this->sync2026Banners($manifest, $rawCharCards, $rawSupportCards);
+            $newBannerCount = $this->sync2026Banners($manifest, $rawCharCards, $rawSupportCards, $force);
 
             // 6. Synchronize Racetracks & Courses Catalog
             $this->syncRacetracks($manifest);
@@ -400,8 +415,10 @@ class GameToraSyncService
                 ];
             }
 
-            $outPath = resource_path('js/data/racetracksCatalog.json');
-            file_put_contents($outPath, json_encode($catalog, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            if (! empty($catalog)) {
+                $outPath = resource_path('js/data/racetracksCatalog.json');
+                file_put_contents($outPath, json_encode($catalog, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            }
         } catch (Exception $e) {
             Log::warning('Gagal menyinkronkan racetracks GameTora: '.$e->getMessage());
         }
@@ -414,7 +431,7 @@ class GameToraSyncService
      * @param  array<int, array<string, mixed>>  $rawCharCards
      * @param  array<int, array<string, mixed>>  $rawSupportCards
      */
-    protected function sync2026Banners(array $manifest, array $rawCharCards, array $rawSupportCards): int
+    protected function sync2026Banners(array $manifest, array $rawCharCards, array $rawSupportCards, bool $force = false): int
     {
         // Title translations mapping from English wiki / Umapyoi for known Japanese titles
         $titleTranslations = [
@@ -800,7 +817,7 @@ class GameToraSyncService
         // Delete stale duplicate Feb 2026 support banner (20031)
         GachaBanner::where('gametora_id', 20031)->delete();
 
-        // Ensure all 9 official 2026 Select Pick Up Support Card banners are seeded
+        // Ensure all 10 official 2026 Select Pick Up Support Card banners are seeded
         foreach (UmaCatalog::getSelectPickupCandidates2026() as $sp) {
             GachaBanner::updateOrCreate(
                 ['gametora_id' => $sp['gametora_id'], 'banner_type' => 'support_card'],
@@ -814,6 +831,15 @@ class GameToraSyncService
                     'is_active' => true,
                 ]
             );
+        }
+
+        // Dynamically enrich/override with official Cygames announcements if available
+        try {
+            $this->cygamesNewsService->syncSelectPickupBanners($force);
+        } catch (\Throwable $e) {
+            Log::warning('Cygames news sync failed during banner sync, retained canonical fallbacks', [
+                'error' => $e->getMessage(),
+            ]);
         }
 
         // Normalize any existing Select Pick Up banner titles in database to remove appended item lists

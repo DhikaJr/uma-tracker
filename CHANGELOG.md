@@ -2,6 +2,28 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.7.4] - 13 Oktober 2026
+
+### 📰 Integrasi Portal Resmi Cygames JP untuk Select Pickup & Provenance Dinamis
+- **Pipeline Sinkronisasi Dinamis Berita Resmi Cygames JP**:
+  - Mengimplementasikan [`CygamesNewsService.php`](file:///c:/Projects/uma-tracker/app/Services/CygamesNewsService.php) untuk memonitor dan menyinkronkan pengumuman resmi *Select Pickup Support Card Gacha* langsung dari portal resmi Cygames JP tanpa bergantung pada pembaruan manual bulanan atau sumber pihak ketiga tidak resmi.
+  - Mendeteksi dan memproses artikel berita baik bertipe pelaksanaan (`開催`) maupun pemberitahuan awal (`予告`) dengan pengurutan kronologis terbalik (pengumuman terbaru diprioritaskan).
+  - Melakukan ekstraksi terstruktur pada bagian `■ピックアップサポートカード候補` untuk memetakan tepat 10 kartu SSR ke dalam katalog lokal [`UmaCatalogItem`](file:///c:/Projects/uma-tracker/app/Models/UmaCatalogItem.php) dengan normalisasi tanda baca Jepang secara akurat.
+- **Validasi Integritas Data & Presedensi Berita Kanonikal**:
+  - Menegakkan *safety guard* ketat: apabila parsing tidak lengkap, terdapat kandidat tak dikenal, atau struktur halaman berubah, sistem menolak menimpa data banner yang sudah valid sebelumnya dan mempertahankan data kanonikal/fallback.
+  - Menerapkan aturan presedensi: pengumuman pelaksanaan (`開催`) dengan ID artikel lebih baru tidak akan pernah tertimpa oleh artikel preview (`予告`) yang lebih lama.
+  - Mencatat provenance kanonikal untuk setiap banner via `select_pickup_provenance_{gametora_id}` dan menyediakan helper `getProvenanceUrl()` pada [`GachaBanner.php`](file:///c:/Projects/uma-tracker/app/Models/GachaBanner.php).
+- **Deduplikasi Per-Artikel & Mekanisme Retry Aman**:
+  - Menerapkan mekanisme deduplikasi per-artikel (`isArticleProcessed`) dan per-banner (`select_pickup_provenance_id_{gametora_id}`), mengeliminasi ketergantungan pada filter skalar global.
+  - Menjamin artikel yang sempat gagal (akibat timeout atau HTTP error) akan otomatis dicoba kembali (*retry*) pada siklus sinkronisasi berikutnya, tanpa terlewat meskipun artikel lain dengan ID lebih tinggi pada banner berbeda telah berhasil diproses.
+- **Penyelarasan GameTora Sync & Pembaruan UI Dashboard**:
+  - Mengintegrasikan pengayaan berita Cygames ke dalam [`GameToraSyncService.php`](file:///c:/Projects/uma-tracker/app/Services/GameToraSyncService.php) sehingga banner Select Pickup selalu diperkaya otomatis saat GameTora disinkronkan, termasuk pada kondisi manifest cache GameTora tidak berubah.
+  - Memperbarui antarmuka pengguna pada [`DashboardView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/DashboardView.jsx) untuk menampilkan tautan langsung *Berita Cygames* menuju pengumuman kanonikal resmi serta menyesuaikan label header menjadi *Lineup Kandidat (Pilihan 2 dari 10 SSR)*.
+  - Memperbarui katalog bawaan pada [`UmaCatalog.php`](file:///c:/Projects/uma-tracker/app/Support/UmaCatalog.php) dengan menyertakan lineup 10 kartu SSR resmi untuk periode Oktober 2026 (Banner ID 30477).
+- **Pengujian Komprehensif & Verifikasi Basis Data**:
+  - Menambahkan pengujian otomatis komprehensif pada [`CygamesNewsSyncTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CygamesNewsSyncTest.php) dan [`GachaRateAuditTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/GachaRateAuditTest.php).
+  - Menjamin pengujian berjalan 100% pada SQLite in-memory (`:memory:`) tanpa mengubah berkas fisik `database/database.sqlite` (hash SHA-256 terbukti identik sebelum dan sesudah pengujian).
+
 ## [Versi 2.7.3] - 13 Oktober 2026
 
 ### 🔒 Penguatan Integritas Data, Migrasi `event_key`, Keamanan Backup & Hardening Lintasan Kompetisi

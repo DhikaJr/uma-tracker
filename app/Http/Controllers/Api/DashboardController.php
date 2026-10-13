@@ -305,6 +305,7 @@ class DashboardController extends Controller
                     'end_date' => $end ? $end->format('Y-m-d') : null,
                     'days_remaining' => $daysRemaining,
                     'featured_items' => $formattedItems,
+                    'provenance_url' => $b->getProvenanceUrl(),
                 ];
             });
 
