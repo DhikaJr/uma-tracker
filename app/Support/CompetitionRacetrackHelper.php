@@ -36,6 +36,31 @@ class CompetitionRacetrackHelper
     }
 
     /**
+     * Validate track dimensions (venue, surface, and positive integer distance).
+     * Rejects null, whitespace, invalid types, decimal distances, and non-positive numbers.
+     */
+    protected static function isValidTrackDimension(mixed $venue, mixed $surface, mixed $distance): bool
+    {
+        if (! is_string($venue) || trim($venue) === '') {
+            return false;
+        }
+
+        if (! is_string($surface) || trim($surface) === '') {
+            return false;
+        }
+
+        if (is_int($distance)) {
+            return $distance > 0;
+        }
+
+        if (is_string($distance)) {
+            return preg_match('/^[1-9][0-9]*$/', trim($distance)) === 1;
+        }
+
+        return false;
+    }
+
+    /**
      * Find matching racetrack course for a competition event.
      * Returns null if the event's location/distance/direction is not fully confirmed.
      *
@@ -50,14 +75,15 @@ class CompetitionRacetrackHelper
         $direction = is_array($event) ? ($event['direction'] ?? null) : $event->direction;
 
         // Zero speculative data: all required track dimensions must be officially announced
-        if (! $venue || ! $distance) {
+        if (! self::isValidTrackDimension($venue, $surface, $distance)) {
             return null;
         }
 
         $catalog = self::getCatalog();
-        $normVenue = strtolower(trim((string) $venue));
-        $normSurface = strtolower(trim((string) ($surface ?: 'turf')));
-        $normDirection = strtolower(trim((string) ($direction ?: '')));
+        $normVenue = strtolower(trim($venue));
+        $normSurface = strtolower(trim($surface));
+        $normDirection = is_string($direction) ? strtolower(trim($direction)) : '';
+        $targetDistance = (int) $distance;
 
         $track = null;
         foreach ($catalog as $t) {
@@ -81,7 +107,7 @@ class CompetitionRacetrackHelper
         // Filter courses matching length and surface
         $candidates = [];
         foreach ($track['courses'] as $c) {
-            if ((int) $c['length'] === (int) $distance && ($c['surface'] ?? '') === $normSurface) {
+            if ((int) $c['length'] === $targetDistance && ($c['surface'] ?? '') === $normSurface) {
                 $candidates[] = $c;
             }
         }
@@ -94,6 +120,12 @@ class CompetitionRacetrackHelper
         if (count($candidates) === 1) {
             $selectedCourse = $candidates[0];
         } else {
+            // When multiple candidates exist (e.g. inner/outer variants),
+            // direction must be provided and must uniquely disambiguate. Never guess.
+            if (! is_string($direction) || trim($direction) === '') {
+                return null;
+            }
+
             foreach ($candidates as $c) {
                 if ($wantsOuter && ((int) ($c['inout'] ?? 0) === 3 || ($c['inout_str'] ?? '') === 'outer')) {
                     $selectedCourse = $c;
@@ -104,8 +136,9 @@ class CompetitionRacetrackHelper
                     break;
                 }
             }
+
             if (! $selectedCourse) {
-                $selectedCourse = $candidates[0];
+                return null;
             }
         }
 
@@ -124,11 +157,16 @@ class CompetitionRacetrackHelper
      * Build GameTora URL format for a racetrack course.
      * Format: https://gametora.com/umamusume/racetracks/{region}#{jarak}-{turf atau dirt}-{inner atau outer}
      */
-    public static function buildGameToraUrl(string $venue, int $distance, string $surface, ?string $direction = null): string
+    public static function buildGameToraUrl(mixed $venue, mixed $distance, mixed $surface, mixed $direction = null): ?string
     {
+        if (! self::isValidTrackDimension($venue, $surface, $distance)) {
+            return null;
+        }
+
         $region = strtolower(trim($venue));
-        $normSurface = strtolower(trim($surface ?: 'turf'));
-        $normDirection = strtolower(trim((string) $direction));
+        $normSurface = strtolower(trim($surface));
+        $normDirection = is_string($direction) ? strtolower(trim($direction)) : '';
+        $numDistance = (int) $distance;
 
         $inout = '';
         if (str_contains($normDirection, 'outer')) {
@@ -137,6 +175,6 @@ class CompetitionRacetrackHelper
             $inout = '-inner';
         }
 
-        return "https://gametora.com/umamusume/racetracks/{$region}#{$distance}-{$normSurface}{$inout}";
+        return "https://gametora.com/umamusume/racetracks/{$region}#{$numDistance}-{$normSurface}{$inout}";
     }
 }

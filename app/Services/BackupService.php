@@ -122,6 +122,39 @@ class BackupService
     }
 
     /**
+     * Validate structured JSON columns across backup entities.
+     * Rejects raw PHP scalars and scalar JSON strings ('12345', 'true', 'false', 'null', '"teks"').
+     * Only accepts PHP arrays, or valid JSON strings that decode into an array/object.
+     * Accepts null ONLY if $nullable is true.
+     *
+     * @throws InvalidArgumentException
+     */
+    protected function validateStructuredJson(mixed $value, string $field, string $entity, int $index, bool $nullable = true): void
+    {
+        if ($value === null) {
+            if (! $nullable) {
+                throw new InvalidArgumentException("Kolom {$field} pada {$entity}[{$index}] wajib diisi dan tidak boleh null.");
+            }
+
+            return;
+        }
+
+        if (is_array($value)) {
+            return;
+        }
+
+        if (! is_string($value)) {
+            throw new InvalidArgumentException("Nilai {$field} pada {$entity}[{$index}] tidak valid (harus berupa array atau string JSON array/objek).");
+        }
+
+        $decoded = json_decode($value, true);
+        if (json_last_error() !== JSON_ERROR_NONE || ! is_array($decoded)) {
+            $jsonError = json_last_error() !== JSON_ERROR_NONE ? ': '.json_last_error_msg() : ' (harus berupa array atau objek terstruktur).';
+            throw new InvalidArgumentException("Format JSON tidak valid pada {$entity}[{$index}].{$field}{$jsonError}");
+        }
+    }
+
+    /**
      * Validate the entire backup data payload before attempting any database operations.
      * Enforces schema constraints, range limits, type safety, and internal duplicate detection.
      *
@@ -211,7 +244,7 @@ class BackupService
                 }
                 $this->validateDate($row['start_date'] ?? null, 'start_date', 'gacha_banners', $index);
                 $this->validateDate($row['end_date'] ?? null, 'end_date', 'gacha_banners', $index);
-                $this->validateJson($row['featured_items'] ?? null, 'featured_items', 'gacha_banners', $index);
+                $this->validateStructuredJson($row['featured_items'] ?? null, 'featured_items', 'gacha_banners', $index, true);
             }
         }
 
@@ -338,7 +371,11 @@ class BackupService
                         throw new InvalidArgumentException("Jumlah anggota circle '{$mCount}' pada circle_snapshots[{$index}] di luar batas valid (0 - 30).");
                     }
                 }
-                $this->validateJson($row['payload'] ?? null, 'payload', 'circle_snapshots', $index);
+                if (array_key_exists('payload', $row)) {
+                    $this->validateStructuredJson($row['payload'], 'payload', 'circle_snapshots', $index, false);
+                } elseif (isset($row['members_data'])) {
+                    $this->validateStructuredJson($row['members_data'], 'members_data', 'circle_snapshots', $index, true);
+                }
             }
         }
 
@@ -368,14 +405,11 @@ class BackupService
                 }
                 $seenCatalog[$catalogKey] = true;
 
-                $this->validateJson($row['raw_data'] ?? null, 'raw_data', 'uma_catalog_items', $index);
-                $this->validateJson($row['aptitudes'] ?? null, 'aptitudes', 'uma_catalog_items', $index);
-                $this->validateJson($row['skills'] ?? null, 'skills', 'uma_catalog_items', $index);
-                if (array_key_exists('objectives', $row) && $row['objectives'] !== null && ! is_array($row['objectives']) && ! is_string($row['objectives'])) {
-                    throw new InvalidArgumentException("Format objectives pada uma_catalog_items[{$index}] tidak valid (harus berupa array, string JSON, atau null).");
-                }
-                $this->validateJson($row['objectives'] ?? null, 'objectives', 'uma_catalog_items', $index);
-                $this->validateJson($row['details'] ?? null, 'details', 'uma_catalog_items', $index);
+                $this->validateStructuredJson($row['raw_data'] ?? null, 'raw_data', 'uma_catalog_items', $index, true);
+                $this->validateStructuredJson($row['aptitudes'] ?? null, 'aptitudes', 'uma_catalog_items', $index, true);
+                $this->validateStructuredJson($row['skills'] ?? null, 'skills', 'uma_catalog_items', $index, true);
+                $this->validateStructuredJson($row['objectives'] ?? null, 'objectives', 'uma_catalog_items', $index, true);
+                $this->validateStructuredJson($row['details'] ?? null, 'details', 'uma_catalog_items', $index, true);
             }
         }
 
@@ -1037,30 +1071,11 @@ class BackupService
                 $results['restored']['user_support_cards'] = $count;
             }
 
-            // 10. Competition Events (support restore/merge if explicitly provided in backup)
-            if (isset($data['competition_events']) && is_array($data['competition_events'])) {
-                $count = 0;
-                foreach ($data['competition_events'] as $row) {
-                    if (is_array($row) && ! empty($row['event_name'])) {
-                        CompetitionEvent::updateOrCreate(
-                            [
-                                'event_type' => $row['event_type'] ?? 'champions_meeting',
-                                'year' => (int) ($row['year'] ?? 2026),
-                                'month' => (int) ($row['month'] ?? 10),
-                            ],
-                            array_diff_key($row, ['id' => true, 'created_at' => true, 'updated_at' => true])
-                        );
-                        $count++;
-                    }
-                }
-                $results['restored']['competition_events'] = $count;
+            // Guarantee official Cygames competition schedule is never missing/empty within the same atomic transaction
+            if (CompetitionEvent::count() === 0) {
+                (new CompetitionEventSeeder)->run();
             }
         });
-
-        // Guarantee official Cygames competition schedule is never missing/empty
-        if (CompetitionEvent::count() === 0) {
-            (new CompetitionEventSeeder)->run();
-        }
 
         // Invalidate in-memory cached character rosters & star ratings
         UmaCatalog::clearCache();

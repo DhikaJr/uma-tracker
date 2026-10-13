@@ -2,6 +2,31 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.7.3] - 13 Oktober 2026
+
+### 🔒 Penguatan Integritas Data, Migrasi `event_key`, Keamanan Backup & Hardening Lintasan Kompetisi
+- **Migrasi Inkremental `event_key` & Seeder Idempotent**:
+  - Menambahkan kolom `event_key` dengan constraint `NOT NULL` dan indeks unik pada tabel `competition_events` melalui migrasi inkremental [`2026_10_13_000001_add_event_key_to_competition_events_table.php`](file:///c:/Projects/uma-tracker/database/migrations/2026_10_13_000001_add_event_key_to_competition_events_table.php).
+  - Melakukan backfill terverifikasi dengan format kanonikal `cm-YYYY-MM` (*Champions Meeting*) dan `loh-YYYY-MM` (*League of Heroes*) dengan penolakan ketat (`RuntimeException`) terhadap event tak dikenal atau duplikat.
+  - Memperbarui [`CompetitionEventSeeder.php`](file:///c:/Projects/uma-tracker/database/seeders/CompetitionEventSeeder.php) agar menggunakan `updateOrCreate(['event_key' => ...], ...)` sehingga pembaruan rincian turnamen resmi di masa mendatang berjalan secara *in-place* tanpa menduplikasi data.
+- **Proteksi Mutlak Data Turnamen Resmi & Atomisitas Pemulihan Backup**:
+  - Mengisolasi penuh tabel `competition_events` dari proses impor [`BackupService.php`](file:///c:/Projects/uma-tracker/app/Services/BackupService.php) sehingga data turnamen resmi Cygames kebal dari manipulasi atau penimpaan berkas backup pengguna (baik mode `overwrite` maupun `merge`).
+  - Memindahkan pengecekan tabel kosong dan auto-seeding turnamen resmi ke dalam batasan transaksi atomik `DB::transaction()`. Jika seeder gagal, seluruh proses restore pengguna dibatalkan (*rollback 100%*).
+  - Memperbarui dokumentasi spesifikasi teknis pada [`docs/backup_specification.md`](file:///c:/Projects/uma-tracker/docs/backup_specification.md) (Seksi 6 & 7).
+- **Validasi Terpadu Kolom JSON Terstruktur (`validateStructuredJson`)**:
+  - Menerapkan validator terpadu pada `BackupService` untuk seluruh 7 kolom JSON terstruktur: `aptitudes`, `skills`, `objectives`, `details`, `raw_data` (`uma_catalog_items`), `featured_items` (`gacha_banners`), dan `payload` (`circle_snapshots`).
+  - Menegakkan penolakan ketat terhadap tipe skalar PHP, skalar JSON (`'12345'`, `'true'`, `'false'`, `'null'`, `'"teks"'`), serta JSON malformed dengan melempar `InvalidArgumentException` yang menyebutkan kolom spesifik.
+  - Mempertahankan backward compatibility untuk snapshot circle warisan (format v0.9 dengan `members_data`).
+- **Hardening Menyeluruh `CompetitionRacetrackHelper`**:
+  - Menerapkan method validasi dimensi lintasan `isValidTrackDimension()` pada `findCourse()` dan `buildGameToraUrl()` di [`CompetitionRacetrackHelper.php`](file:///c:/Projects/uma-tracker/app/Support/CompetitionRacetrackHelper.php).
+  - Menolak nilai `null`, string kosong, whitespace (`"   "`, `" \t\n "`), dan tipe non-string (seperti `array`) pada parameter `venue` dan `surface` tanpa memicu warning/notice PHP.
+  - Memvalidasi parameter `distance` secara ketat sebagai bilangan bulat positif (> 0), menolak nilai desimal (`2200.9`), angka nol, angka negatif, string kosong/whitespace, dan nilai non-numerik.
+  - Mengeliminasi pemilihan lintasan spekulatif pada sirkuit multi-kandidat (misal Kyoto Turf 1600m / 1400m *inner* vs *outer*) sehingga selalu mengembalikan `null` apabila arah putaran ambigu atau tidak diumumkan resmi.
+- **Pengamanan Runtime Pengujian Database**:
+  - Menambahkan safety guard runtime pada [`tests/TestCase.php`](file:///c:/Projects/uma-tracker/tests/TestCase.php) yang menjamin seluruh suite pengujian otomatis berjalan di SQLite in-memory (`:memory:`) dan membatalkan eksekusi bila database produksi terdeteksi.
+  - Memverifikasi hash SHA-256 berkas fisik `database/database.sqlite` sebelum dan sesudah seluruh siklus pengujian tetap identik 100% (`69AAE37F8251524BEA7359D22A283DCC5962F33ABE59A486D8C90C6B16B166BE`).
+  - Menambahkan rangkaian unit/feature test pada [`tests/Feature/BackupVerificationTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/BackupVerificationTest.php) dan [`tests/Feature/CompetitionEventTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CompetitionEventTest.php) (total 216 tests, 2.996 assertions lulus 100%).
+
 ## [Versi 2.7.2] - 13 Oktober 2026
 
 ### 🛡️ Audit Komprehensif Backend, Keamanan Backup & Penyelarasan Aturan Domain

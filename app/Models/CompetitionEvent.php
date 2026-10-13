@@ -26,6 +26,7 @@ class CompetitionEvent extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'event_key',
         'event_type',
         'event_name',
         'year',

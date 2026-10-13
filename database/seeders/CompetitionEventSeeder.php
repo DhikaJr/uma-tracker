@@ -18,6 +18,7 @@ class CompetitionEventSeeder extends Seeder
     {
         $events = [
             [
+                'event_key' => 'cm-2026-10',
                 'event_type' => 'champions_meeting',
                 'event_name' => 'Champions Meeting CLASSIC',
                 'year' => 2026,
@@ -39,6 +40,7 @@ class CompetitionEventSeeder extends Seeder
                 'source_url' => 'https://umamusume.jp/news/detail?id=3483',
             ],
             [
+                'event_key' => 'loh-2026-11',
                 'event_type' => 'league_of_heroes',
                 'event_name' => 'League of Heroes',
                 'year' => 2026,
@@ -60,6 +62,7 @@ class CompetitionEventSeeder extends Seeder
                 'source_url' => 'https://umamusume.jp/news/detail?id=3483',
             ],
             [
+                'event_key' => 'cm-2026-12',
                 'event_type' => 'champions_meeting',
                 'event_name' => 'Champions Meeting LONG',
                 'year' => 2026,
@@ -81,6 +84,7 @@ class CompetitionEventSeeder extends Seeder
                 'source_url' => 'https://umamusume.jp/news/detail?id=3483',
             ],
             [
+                'event_key' => 'cm-2027-01',
                 'event_type' => 'champions_meeting',
                 'event_name' => 'Champions Meeting CLASSIC',
                 'year' => 2027,
@@ -102,6 +106,7 @@ class CompetitionEventSeeder extends Seeder
                 'source_url' => 'https://umamusume.jp/news/detail?id=3483',
             ],
             [
+                'event_key' => 'loh-2027-02',
                 'event_type' => 'league_of_heroes',
                 'event_name' => 'League of Heroes',
                 'year' => 2027,
@@ -123,6 +128,7 @@ class CompetitionEventSeeder extends Seeder
                 'source_url' => 'https://umamusume.jp/news/detail?id=3483',
             ],
             [
+                'event_key' => 'cm-2027-03',
                 'event_type' => 'champions_meeting',
                 'event_name' => 'Champions Meeting MILE',
                 'year' => 2027,
@@ -148,11 +154,7 @@ class CompetitionEventSeeder extends Seeder
         foreach ($events as $event) {
             CompetitionEvent::updateOrCreate(
                 [
-                    'year' => $event['year'],
-                    'month' => $event['month'],
-                    'period' => $event['period'],
-                    'event_type' => $event['event_type'],
-                    'event_name' => $event['event_name'],
+                    'event_key' => $event['event_key'],
                 ],
                 $event
             );

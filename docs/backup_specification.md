@@ -220,16 +220,17 @@ Metode `validate()` dieksekusi secara ketat sebelum `DB::transaction`:
 - Setiap tanggal diverifikasi parseability-nya via `Carbon::parse()` (mencegah string `'invalid-date'`).
 - Tipe enum diverifikasi (`rarity` in `['SSR', 'SR', 'R']`, `training_type` in `['manual', 'independent']`, dll.).
 - Nilai numerik diperiksa batasnya (`limit_break` 0–4, `base_stars` 1–5, `member_count` 0–30, rate 0.0–100.0).
-- Kolom JSON terstruktur (`aptitudes`, `skills`, `objectives`, `details`, `raw_data`, `payload`) wajib bernilai `array`, `string JSON` yang valid, atau `null`.
+- Kolom JSON terstruktur (`aptitudes`, `skills`, `objectives`, `details`, `raw_data`, `featured_items`, `payload`) divalidasi ketat via `validateStructuredJson`: hanya menerima PHP `array`, `string JSON` valid yang ter-decode menjadi array/objek, atau `null` (khusus field nullable; `payload` pada circle_snapshots wajib terisi). Nilai skalar mentah maupun string JSON skalar (`'12345'`, `'true'`, `'false'`, `'null'`, `'"teks"'`) ditolak secara eksplisit dengan `InvalidArgumentException`.
 - Seluruh perubahan database dijamin atomik melalui `DB::transaction` (rollback 100% jika terjadi kesalahan).
 
 ---
 
 ## 7. Perlindungan Data Jadwal Resmi (`competition_events`)
 
-Tabel `competition_events` (jadwal resmi Champions Meeting & League of Heroes dari pengumuman resmi Cygames JP) diperlakukan sebagai referensi sistem yang aman:
-- **Kebijakan Mode Overwrite**: Pemulihan backup dengan mode `overwrite` **TIDAK MENGHAPUS** tabel `competition_events`. Jadwal resmi yang sudah ada tetap utuh dan terlindungi dari penghapusan massal.
-- **Auto-Seeding Garansi**: Apabila tabel `competition_events` dalam keadaan kosong pada saat pemulihan (misal: di lingkungan baru setelah migrasi bersih), sistem secara otomatis menjalankan `CompetitionEventSeeder` pasca-import sehingga seluruh 6 event resmi Cygames 2026–2027 selalu tersedia.
-- **Dukungan Impor Opsional**: Jika payload backup menyertakan entri `competition_events`, data tersebut akan dipulihkan secara aman via `updateOrCreate` berbasis `[event_type, year, month]`.
+Tabel `competition_events` (jadwal resmi Champions Meeting & League of Heroes dari pengumuman resmi Cygames JP) diperlakukan sebagai data referensi sistem:
+- **Eksklusi dari Payload Impor**: Data jadwal CM/LoH adalah data referensi sistem resmi Cygames, bukan data personal pengguna. Segala array `competition_events` yang disertakan di dalam berkas backup diabaikan sepenuhnya oleh sistem restore untuk mencegah kontaminasi atau manipulasi data jadwal resmi.
+- **Kebijakan Mode Overwrite**: Pemulihan backup dengan mode `overwrite` **TIDAK MENGHAPUS** tabel `competition_events`. Jadwal resmi yang sudah ada tetap utuh dan terlindungi dari pembersihan data.
+- **Auto-Seeding Atomik**: Apabila tabel `competition_events` dalam keadaan kosong pada saat pemulihan (misal: di lingkungan baru setelah migrasi bersih), sistem secara otomatis mengeksekusi `CompetitionEventSeeder` di dalam closure `DB::transaction()` yang sama. Apabila proses seeding gagal, seluruh transaksi restore data personal ikut dibatalkan (rollback 100%) secara atomik.
+
 
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\CompetitionEvent;
+use App\Support\CompetitionRacetrackHelper;
 use Database\Seeders\CompetitionEventSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -528,5 +529,210 @@ class CompetitionEventTest extends TestCase
         $this->assertNull($events[3]['racetrack_course']);
         $this->assertNull($events[4]['racetrack_course']);
         $this->assertNull($events[5]['racetrack_course']);
+    }
+
+    public function test_event_key_lifecycle_and_in_place_update_without_duplication(): void
+    {
+        $this->seed(CompetitionEventSeeder::class);
+        $this->assertSame(6, CompetitionEvent::count());
+
+        $janEvent = CompetitionEvent::where('event_key', 'cm-2027-01')->first();
+        $this->assertNotNull($janEvent);
+        $this->assertSame('late', $janEvent->period);
+        $this->assertNull($janEvent->venue);
+        $this->assertNull($janEvent->start_date);
+
+        // Update when details become confirmed
+        CompetitionEvent::updateOrCreate(
+            ['event_key' => 'cm-2027-01'],
+            [
+                'period' => 'exact',
+                'start_date' => '2027-01-24',
+                'venue' => 'Tokyo',
+            ]
+        );
+
+        $this->assertSame(6, CompetitionEvent::count());
+
+        $updated = CompetitionEvent::where('event_key', 'cm-2027-01')->first();
+        $this->assertNotNull($updated);
+        $this->assertSame('exact', $updated->period);
+        $this->assertSame('2027-01-24', $updated->start_date?->format('Y-m-d'));
+        $this->assertSame('Tokyo', $updated->venue);
+    }
+
+    public function test_competition_racetrack_helper_surface_and_candidate_resolution(): void
+    {
+        // 1. When surface, venue, or distance is null, empty, or whitespace-only, both methods MUST return null
+        $this->assertNull(CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => 2200,
+            'surface' => null,
+            'direction' => 'right_outer',
+        ]));
+        $this->assertNull(CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => 2200,
+            'surface' => '',
+            'direction' => 'right_outer',
+        ]));
+        $this->assertNull(CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => 2200,
+            'surface' => "   \t\n  ",
+            'direction' => 'right_outer',
+        ]));
+        $this->assertNull(CompetitionRacetrackHelper::buildGameToraUrl('Kyoto', 2200, ''));
+        $this->assertNull(CompetitionRacetrackHelper::buildGameToraUrl('Kyoto', 2200, null));
+        $this->assertNull(CompetitionRacetrackHelper::buildGameToraUrl('Kyoto', 2200, "   \t "));
+
+        // Venue whitespace tests
+        $this->assertNull(CompetitionRacetrackHelper::findCourse([
+            'venue' => '   ',
+            'distance' => 2200,
+            'surface' => 'turf',
+            'direction' => 'right_outer',
+        ]));
+        $this->assertNull(CompetitionRacetrackHelper::findCourse([
+            'venue' => " \t\n ",
+            'distance' => 2200,
+            'surface' => 'turf',
+            'direction' => 'right_outer',
+        ]));
+        $this->assertNull(CompetitionRacetrackHelper::buildGameToraUrl('   ', 2200, 'turf'));
+        $this->assertNull(CompetitionRacetrackHelper::buildGameToraUrl(" \t\n ", 2200, 'turf'));
+
+        // Distance whitespace & non-positive numeric tests
+        $this->assertNull(CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => '   ',
+            'surface' => 'turf',
+            'direction' => 'right_outer',
+        ]));
+        $this->assertNull(CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => " \t\n ",
+            'surface' => 'turf',
+            'direction' => 'right_outer',
+        ]));
+        $this->assertNull(CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => 0,
+            'surface' => 'turf',
+            'direction' => 'right_outer',
+        ]));
+        $this->assertNull(CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => -2200,
+            'surface' => 'turf',
+            'direction' => 'right_outer',
+        ]));
+        // Distance decimal tests (2200.9)
+        $this->assertNull(CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => 2200.9,
+            'surface' => 'turf',
+            'direction' => 'right_outer',
+        ]));
+        $this->assertNull(CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => '2200.9',
+            'surface' => 'turf',
+            'direction' => 'right_outer',
+        ]));
+        $this->assertNull(CompetitionRacetrackHelper::buildGameToraUrl('Kyoto', 2200.9, 'turf'));
+        $this->assertNull(CompetitionRacetrackHelper::buildGameToraUrl('Kyoto', '2200.9', 'turf'));
+
+        // Venue & Surface array type tests
+        $this->assertNull(CompetitionRacetrackHelper::findCourse([
+            'venue' => ['Kyoto'],
+            'distance' => 2200,
+            'surface' => 'turf',
+            'direction' => 'right_outer',
+        ]));
+        $this->assertNull(CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => 2200,
+            'surface' => ['turf'],
+            'direction' => 'right_outer',
+        ]));
+        $this->assertNull(CompetitionRacetrackHelper::buildGameToraUrl(['Kyoto'], 2200, 'turf'));
+        $this->assertNull(CompetitionRacetrackHelper::buildGameToraUrl('Kyoto', 2200, ['turf']));
+
+        // 2. Single candidate track (Kyoto 2200m Turf) returns course even when direction is null
+        $singleCandidate = CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => 2200,
+            'surface' => 'turf',
+            'direction' => null,
+        ]);
+        $this->assertNotNull($singleCandidate);
+        $this->assertSame(10808, $singleCandidate['course']['id']);
+        $this->assertSame(2200, $singleCandidate['course']['length']);
+
+        // 3. Multi-candidate track (Kyoto 1600m Turf inner and outer)
+        // Without direction -> MUST return null (no speculative picking)
+        $noDirection = CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => 1600,
+            'surface' => 'turf',
+            'direction' => null,
+        ]);
+        $this->assertNull($noDirection);
+
+        $emptyDirection = CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => 1600,
+            'surface' => 'turf',
+            'direction' => '',
+        ]);
+        $this->assertNull($emptyDirection);
+
+        // With right_inner -> returns inner course (10805)
+        $innerCourse = CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => 1600,
+            'surface' => 'turf',
+            'direction' => 'right_inner',
+        ]);
+        $this->assertNotNull($innerCourse);
+        $this->assertSame('inner', $innerCourse['course']['inout_str']);
+
+        // With right_outer -> returns outer course (10806)
+        $outerCourse = CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => 1600,
+            'surface' => 'turf',
+            'direction' => 'right_outer',
+        ]);
+        $this->assertNotNull($outerCourse);
+        $this->assertSame('outer', $outerCourse['course']['inout_str']);
+
+        // Multi-candidate track (Kyoto 1400m Turf inner and outer)
+        $noDir1400 = CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => 1400,
+            'surface' => 'turf',
+            'direction' => null,
+        ]);
+        $this->assertNull($noDir1400);
+
+        $inner1400 = CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => 1400,
+            'surface' => 'turf',
+            'direction' => 'right_inner',
+        ]);
+        $this->assertNotNull($inner1400);
+        $this->assertSame('inner', $inner1400['course']['inout_str']);
+
+        $outer1400 = CompetitionRacetrackHelper::findCourse([
+            'venue' => 'Kyoto',
+            'distance' => 1400,
+            'surface' => 'turf',
+            'direction' => 'right_outer',
+        ]);
+        $this->assertNotNull($outer1400);
+        $this->assertSame('outer', $outer1400['course']['inout_str']);
     }
 }

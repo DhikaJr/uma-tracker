@@ -1066,52 +1066,219 @@ class BackupVerificationTest extends TestCase
         $this->assertSame($updatedObjectives, $merged->objectives);
     }
 
-    public function test_invalid_objectives_data_type_is_rejected(): void
+    public function test_json_validation_matrix_across_all_seven_fields(): void
     {
-        $payload = [
+        $fields = [
+            'aptitudes' => ['entity' => 'uma_catalog_items', 'nullable' => true],
+            'skills' => ['entity' => 'uma_catalog_items', 'nullable' => true],
+            'objectives' => ['entity' => 'uma_catalog_items', 'nullable' => true],
+            'details' => ['entity' => 'uma_catalog_items', 'nullable' => true],
+            'raw_data' => ['entity' => 'uma_catalog_items', 'nullable' => true],
+            'featured_items' => ['entity' => 'gacha_banners', 'nullable' => true],
+            'payload' => ['entity' => 'circle_snapshots', 'nullable' => false],
+        ];
+
+        $invalidValues = [
+            'scalar_json_int' => '12345',
+            'scalar_json_true' => 'true',
+            'scalar_json_null' => 'null',
+            'scalar_json_string' => '"teks"',
+            'raw_int' => 123,
+            'raw_float' => 12.34,
+            'raw_true' => true,
+            'raw_false' => false,
+        ];
+
+        foreach ($fields as $field => $config) {
+            $entity = $config['entity'];
+
+            // 1. Test rejection of all 8 invalid scalar formats
+            foreach ($invalidValues as $valType => $val) {
+                $payload = [
+                    'version' => '2.0',
+                    'data' => [
+                        $entity => [
+                            $this->getValidBaseEntityRow($entity, $field, $val),
+                        ],
+                    ],
+                ];
+
+                try {
+                    $this->backupService->validate($payload);
+                    $this->fail("Field '{$field}' should have rejected invalid value of type '{$valType}'.");
+                } catch (InvalidArgumentException $e) {
+                    $this->assertStringContainsString($field, $e->getMessage(), "Exception message for '{$field}' must mention the field name.");
+                }
+            }
+
+            // 2. Test acceptance of valid PHP array
+            $payloadWithArray = [
+                'version' => '2.0',
+                'data' => [
+                    $entity => [
+                        $this->getValidBaseEntityRow($entity, $field, ['sample_key' => 'sample_val']),
+                    ],
+                ],
+            ];
+            $this->backupService->validate($payloadWithArray);
+
+            // 3. Test acceptance of valid JSON array/object string
+            $payloadWithJsonString = [
+                'version' => '2.0',
+                'data' => [
+                    $entity => [
+                        $this->getValidBaseEntityRow($entity, $field, json_encode(['sample_key' => 'sample_val'])),
+                    ],
+                ],
+            ];
+            $this->backupService->validate($payloadWithJsonString);
+
+            // 4. Test null handling
+            $payloadWithNull = [
+                'version' => '2.0',
+                'data' => [
+                    $entity => [
+                        $this->getValidBaseEntityRow($entity, $field, null),
+                    ],
+                ],
+            ];
+
+            if ($config['nullable']) {
+                $this->backupService->validate($payloadWithNull);
+            } else {
+                try {
+                    $this->backupService->validate($payloadWithNull);
+                    $this->fail("Non-nullable field '{$field}' in '{$entity}' should have rejected null.");
+                } catch (InvalidArgumentException $e) {
+                    $this->assertStringContainsString($field, $e->getMessage());
+                }
+            }
+        }
+    }
+
+    protected function getValidBaseEntityRow(string $entity, string $field, mixed $value): array
+    {
+        return match ($entity) {
+            'uma_catalog_items' => array_merge([
+                'type' => 'character',
+                'name' => 'Valid Uma Character',
+            ], [$field => $value]),
+            'gacha_banners' => array_merge([
+                'name' => 'Valid Gacha Banner',
+                'base_rate' => 3.00,
+            ], [$field => $value]),
+            'circle_snapshots' => array_merge([
+                'circle_id' => '123456789',
+                'last_refreshed_at' => '2026-10-13 12:00:00',
+            ], [$field => $value]),
+            default => throw new InvalidArgumentException("Unknown entity: {$entity}"),
+        };
+    }
+
+    public function test_competition_events_protection_and_rollback_atomicity(): void
+    {
+        // 1. Seed official events and record snapshot
+        (new CompetitionEventSeeder)->run();
+        $this->assertSame(6, CompetitionEvent::count());
+
+        $officialSnapshot = CompetitionEvent::orderBy('id')->get()->map(fn ($e) => [
+            'event_key' => $e->event_key,
+            'event_name' => $e->event_name,
+            'venue' => $e->venue,
+            'distance' => $e->distance,
+        ])->toArray();
+
+        // 2. Prepare payload with fake/tampered competition_events
+        $maliciousPayload = [
             'version' => '2.0',
             'data' => [
-                'uma_catalog_items' => [
+                'app_settings' => [
+                    ['key' => 'user_theme', 'value' => 'dark'],
+                ],
+                'competition_events' => [
                     [
-                        'type' => 'character',
-                        'name' => 'Invalid Objectives Uma',
-                        'objectives' => 12345, // Not array, null, or string
+                        'event_key' => 'cm-2026-10',
+                        'event_type' => 'champions_meeting',
+                        'event_name' => 'HACKED CHAMPIONS MEETING',
+                        'year' => 2026,
+                        'month' => 10,
+                    ],
+                    [
+                        'event_key' => 'cm-2099-99',
+                        'event_type' => 'champions_meeting',
+                        'event_name' => 'FAKE EVENT IN YEAR 2099',
+                        'year' => 2099,
+                        'month' => 99,
                     ],
                 ],
             ],
         ];
 
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Format objectives pada uma_catalog_items[0] tidak valid');
-        $this->backupService->validate($payload);
-    }
+        // 3. Test overwrite mode: competition_events must be ignored completely
+        $this->backupService->import($maliciousPayload, 'overwrite');
+        $this->assertSame(6, CompetitionEvent::count());
+        $this->assertFalse(CompetitionEvent::where('event_key', 'cm-2099-99')->exists());
+        $this->assertSame('Champions Meeting CLASSIC', CompetitionEvent::where('event_key', 'cm-2026-10')->value('event_name'));
 
-    public function test_competition_events_retained_on_overwrite_and_seeded_if_empty(): void
-    {
-        // 1. Seed events
-        (new CompetitionEventSeeder)->run();
-        $initialCount = CompetitionEvent::count();
-        $this->assertGreaterThan(0, $initialCount);
+        $afterOverwriteSnapshot = CompetitionEvent::orderBy('id')->get()->map(fn ($e) => [
+            'event_key' => $e->event_key,
+            'event_name' => $e->event_name,
+            'venue' => $e->venue,
+            'distance' => $e->distance,
+        ])->toArray();
+        $this->assertSame($officialSnapshot, $afterOverwriteSnapshot);
 
-        // 2. Minimal valid export payload
-        $payload = [
+        // 4. Test merge mode: competition_events must also be ignored
+        $this->backupService->import($maliciousPayload, 'merge');
+        $this->assertSame(6, CompetitionEvent::count());
+        $this->assertFalse(CompetitionEvent::where('event_key', 'cm-2099-99')->exists());
+
+        // 5. Test auto-seeding when table is empty
+        CompetitionEvent::query()->delete();
+        $this->assertSame(0, CompetitionEvent::count());
+
+        $cleanPayload = [
             'version' => '2.0',
             'data' => [
                 'app_settings' => [
-                    ['key' => 'test_key', 'value' => 'test_val'],
+                    ['key' => 'user_theme', 'value' => 'light'],
+                ],
+            ],
+        ];
+        $this->backupService->import($cleanPayload, 'overwrite');
+        $this->assertSame(6, CompetitionEvent::count());
+
+        // 6. Test atomicity and full rollback if seeder fails during restore
+        CompetitionEvent::query()->delete();
+        $this->assertSame(0, CompetitionEvent::count());
+
+        $failPayload = [
+            'version' => '2.0',
+            'data' => [
+                'app_settings' => [
+                    ['key' => 'canary_rollback_setting', 'value' => 'must_be_rolled_back'],
                 ],
             ],
         ];
 
-        // 3. Overwrite restore must NOT delete competition_events
-        $this->backupService->import($payload, 'overwrite');
-        $this->assertEquals($initialCount, CompetitionEvent::count());
+        CompetitionEvent::saving(function () {
+            if (! empty($GLOBALS['simulate_seeder_failure'])) {
+                throw new \RuntimeException('CRITICAL SEEDER DISRUPTION');
+            }
+        });
 
-        // 4. If table is empty, restore must re-seed official events
-        CompetitionEvent::query()->delete();
-        $this->assertEquals(0, CompetitionEvent::count());
+        $GLOBALS['simulate_seeder_failure'] = true;
 
-        $this->backupService->import($payload, 'overwrite');
-        $this->assertEquals(6, CompetitionEvent::count());
+        try {
+            $this->backupService->import($failPayload, 'overwrite');
+            $this->fail('Restore should have aborted due to seeder failure.');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('CRITICAL SEEDER DISRUPTION', $e->getMessage());
+        } finally {
+            $GLOBALS['simulate_seeder_failure'] = false;
+        }
+
+        // Entire transaction must be rolled back: canary_rollback_setting must NOT exist
+        $this->assertDatabaseMissing('app_settings', ['key' => 'canary_rollback_setting']);
     }
 }
