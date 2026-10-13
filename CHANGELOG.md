@@ -2,6 +2,23 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.7.2] - 13 Oktober 2026
+
+### 🛡️ Audit Komprehensif Backend, Keamanan Backup & Penyelarasan Aturan Domain
+- **Penyelarasan Aturan Twinkle Collection pada Bulk Update**:
+  - Menyelaraskan endpoint `POST /api/gacha/pulls/bulk-update` pada [`GachaController.php`](file:///c:/Projects/uma-tracker/app/Http/Controllers/Api/GachaController.php) agar secara otomatis memaksa atribut `is_rate_up = false` ketika tarikan dialihkan ke banner kategori `twinkle` (*The Twinkle Collection Pretty Derby Gacha*).
+- **Penguatan Validasi & Integritas Kolom `objectives` pada Backup Service**:
+  - Memperketat metode `validate()` pada [`BackupService.php`](file:///c:/Projects/uma-tracker/app/Services/BackupService.php) untuk memverifikasi tipe data kolom JSON `objectives` pada entitas `uma_catalog_items` (wajib berupa `array`, `string JSON` yang valid, atau `null`).
+  - Menjamin pemulihan penuh tanpa distorsi (*lossless*) untuk seluruh sasaran objektif karier URA pada mode pemulihan `overwrite` maupun `merge`.
+- **Garansi Retensi & Auto-Seeding Jadwal Resmi (`competition_events`)**:
+  - Menjamin tabel jadwal resmi turnamen Cygames (`competition_events`) tidak dihapus saat pengguna melakukan restore mode `overwrite`.
+  - Mengintegrasikan mekanisme auto-seeding cerdas pasca-restore: apabila basis data dalam keadaan kosong (seperti pada setup instalasi baru), sistem secara otomatis menjalankan `CompetitionEventSeeder` sehingga 6 jadwal resmi Champions Meeting & League of Heroes periode 2026–2027 selalu tersedia.
+  - Mendukung pemulihan opsional jika entri `competition_events` disertakan dalam berkas cadangan JSON.
+- **Pembaruan Spesifikasi Backup & Pengujian Otomatis**:
+  - Memperbarui dokumentasi teknis pada [`docs/backup_specification.md`](file:///c:/Projects/uma-tracker/docs/backup_specification.md) terkait proteksi `competition_events` dan validasi tipe data kolom JSON terstruktur.
+  - Menambahkan pengujian otomatis komprehensif pada [`BackupVerificationTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/BackupVerificationTest.php) dan [`GachaBulkUpdateTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/GachaBulkUpdateTest.php).
+  - Menghasilkan berkas cadangan JSON termutakhir `uma-companion-backup-2026-10-13_011654.json` (58,77 MB) dengan 100% verifikasi integritas basis data.
+
 ## [Versi 2.7.1] - 11 Oktober 2026
 
 ### 💎 Penyempurnaan Jewel Planner & Auto-Fill Kalkulator Pengorbanan Jewel

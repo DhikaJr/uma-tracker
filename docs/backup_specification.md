@@ -220,5 +220,16 @@ Metode `validate()` dieksekusi secara ketat sebelum `DB::transaction`:
 - Setiap tanggal diverifikasi parseability-nya via `Carbon::parse()` (mencegah string `'invalid-date'`).
 - Tipe enum diverifikasi (`rarity` in `['SSR', 'SR', 'R']`, `training_type` in `['manual', 'independent']`, dll.).
 - Nilai numerik diperiksa batasnya (`limit_break` 0–4, `base_stars` 1–5, `member_count` 0–30, rate 0.0–100.0).
+- Kolom JSON terstruktur (`aptitudes`, `skills`, `objectives`, `details`, `raw_data`, `payload`) wajib bernilai `array`, `string JSON` yang valid, atau `null`.
 - Seluruh perubahan database dijamin atomik melalui `DB::transaction` (rollback 100% jika terjadi kesalahan).
+
+---
+
+## 7. Perlindungan Data Jadwal Resmi (`competition_events`)
+
+Tabel `competition_events` (jadwal resmi Champions Meeting & League of Heroes dari pengumuman resmi Cygames JP) diperlakukan sebagai referensi sistem yang aman:
+- **Kebijakan Mode Overwrite**: Pemulihan backup dengan mode `overwrite` **TIDAK MENGHAPUS** tabel `competition_events`. Jadwal resmi yang sudah ada tetap utuh dan terlindungi dari penghapusan massal.
+- **Auto-Seeding Garansi**: Apabila tabel `competition_events` dalam keadaan kosong pada saat pemulihan (misal: di lingkungan baru setelah migrasi bersih), sistem secara otomatis menjalankan `CompetitionEventSeeder` pasca-import sehingga seluruh 6 event resmi Cygames 2026–2027 selalu tersedia.
+- **Dukungan Impor Opsional**: Jika payload backup menyertakan entri `competition_events`, data tersebut akan dipulihkan secara aman via `updateOrCreate` berbasis `[event_type, year, month]`.
+
 

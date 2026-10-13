@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\AppSetting;
 use App\Models\CareerRun;
 use App\Models\CircleSnapshot;
+use App\Models\CompetitionEvent;
 use App\Models\GachaBanner;
 use App\Models\GachaPity;
 use App\Models\GachaPull;
@@ -14,6 +15,7 @@ use App\Models\UmaCatalogItem;
 use App\Models\UserCharacter;
 use App\Models\UserSupportCard;
 use App\Support\UmaCatalog;
+use Database\Seeders\CompetitionEventSeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -369,6 +371,9 @@ class BackupService
                 $this->validateJson($row['raw_data'] ?? null, 'raw_data', 'uma_catalog_items', $index);
                 $this->validateJson($row['aptitudes'] ?? null, 'aptitudes', 'uma_catalog_items', $index);
                 $this->validateJson($row['skills'] ?? null, 'skills', 'uma_catalog_items', $index);
+                if (array_key_exists('objectives', $row) && $row['objectives'] !== null && ! is_array($row['objectives']) && ! is_string($row['objectives'])) {
+                    throw new InvalidArgumentException("Format objectives pada uma_catalog_items[{$index}] tidak valid (harus berupa array, string JSON, atau null).");
+                }
                 $this->validateJson($row['objectives'] ?? null, 'objectives', 'uma_catalog_items', $index);
                 $this->validateJson($row['details'] ?? null, 'details', 'uma_catalog_items', $index);
             }
@@ -1031,7 +1036,31 @@ class BackupService
                 }
                 $results['restored']['user_support_cards'] = $count;
             }
+
+            // 10. Competition Events (support restore/merge if explicitly provided in backup)
+            if (isset($data['competition_events']) && is_array($data['competition_events'])) {
+                $count = 0;
+                foreach ($data['competition_events'] as $row) {
+                    if (is_array($row) && ! empty($row['event_name'])) {
+                        CompetitionEvent::updateOrCreate(
+                            [
+                                'event_type' => $row['event_type'] ?? 'champions_meeting',
+                                'year' => (int) ($row['year'] ?? 2026),
+                                'month' => (int) ($row['month'] ?? 10),
+                            ],
+                            array_diff_key($row, ['id' => true, 'created_at' => true, 'updated_at' => true])
+                        );
+                        $count++;
+                    }
+                }
+                $results['restored']['competition_events'] = $count;
+            }
         });
+
+        // Guarantee official Cygames competition schedule is never missing/empty
+        if (CompetitionEvent::count() === 0) {
+            (new CompetitionEventSeeder)->run();
+        }
 
         // Invalidate in-memory cached character rosters & star ratings
         UmaCatalog::clearCache();

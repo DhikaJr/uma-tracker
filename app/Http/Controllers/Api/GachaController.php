@@ -319,6 +319,9 @@ class GachaController extends Controller
             $banner = GachaBanner::find($validated['gacha_banner_id']);
             if ($banner) {
                 $updateData['banner_type'] = $banner->banner_type;
+                if ($banner->isTwinkle()) {
+                    $updateData['is_rate_up'] = false;
+                }
             }
         }
         if (! empty($validated['pulled_at'])) {

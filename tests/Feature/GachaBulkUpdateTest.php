@@ -121,4 +121,49 @@ class GachaBulkUpdateTest extends TestCase
             ->assertJsonPath('success', false)
             ->assertJsonPath('message', 'Tidak ada atribut perubahan yang dipilih.');
     }
+
+    public function test_bulk_update_to_twinkle_banner_forces_rate_up_to_false(): void
+    {
+        $standardBanner = GachaBanner::create([
+            'id' => 8802,
+            'name' => 'Standard Pretty Derby Gacha 2',
+            'banner_type' => 'character',
+            'category' => 'standard',
+            'base_rate' => 3.0,
+            'start_date' => '2026-01-01',
+        ]);
+
+        $twinkleBanner = GachaBanner::create([
+            'id' => 8803,
+            'name' => 'The Twinkle Collection Pretty Derby Gacha (2026)',
+            'banner_type' => 'character',
+            'category' => 'twinkle',
+            'base_rate' => 3.0,
+            'start_date' => '2026-01-05',
+        ]);
+
+        $pull = GachaPull::create([
+            'banner_type' => 'character',
+            'gacha_banner_id' => $standardBanner->id,
+            'pull_type' => 'single',
+            'item_name' => 'Symboli Rudolf',
+            'rarity' => 'SSR',
+            'is_rate_up' => true,
+            'pity_count_at_pull' => 1,
+            'pulled_at' => now(),
+        ]);
+
+        $this->assertTrue($pull->is_rate_up);
+
+        $response = $this->postJson('/api/gacha/pulls/bulk-update', [
+            'ids' => [$pull->id],
+            'gacha_banner_id' => $twinkleBanner->id,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $this->assertFalse($pull->fresh()->is_rate_up);
+        $this->assertEquals($twinkleBanner->id, $pull->fresh()->gacha_banner_id);
+    }
 }

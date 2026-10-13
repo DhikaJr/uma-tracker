@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\AppSetting;
 use App\Models\CareerRun;
 use App\Models\CircleSnapshot;
+use App\Models\CompetitionEvent;
 use App\Models\GachaBanner;
 use App\Models\GachaPity;
 use App\Models\GachaPull;
@@ -14,6 +15,7 @@ use App\Models\UmaCatalogItem;
 use App\Models\UserCharacter;
 use App\Models\UserSupportCard;
 use App\Services\BackupService;
+use Database\Seeders\CompetitionEventSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -1019,5 +1021,97 @@ class BackupVerificationTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonPath('success', false)
             ->assertJsonPath('message', fn ($msg) => str_contains((string) $msg, 'bukan file JSON yang valid'));
+    }
+
+    public function test_objectives_round_trip_lossless_in_overwrite_and_merge_modes(): void
+    {
+        $objectivesData = [
+            ['order' => 1, 'turn' => 11, 'title' => 'Junior Debut', 'target' => 'Race Completion'],
+            ['order' => 2, 'turn' => 31, 'title' => 'Satsuki Sho', 'target' => 'Top 5'],
+            ['order' => 3, 'turn' => 35, 'title' => 'Tokyo Yushun (Japan Derby)', 'target' => 'Top 5'],
+        ];
+
+        $char = UmaCatalogItem::create([
+            'type' => 'character',
+            'name' => 'Tokai Teio [Peak Joy]',
+            'rarity' => '3',
+            'gametora_id' => 100301,
+            'raw_data' => ['id' => 100301, 'name' => 'Tokai Teio'],
+            'aptitudes' => ['track' => ['turf' => 'A', 'dirt' => 'G']],
+            'skills' => ['innate' => [['name' => 'Ultimate Teio Step']]],
+            'objectives' => $objectivesData,
+            'details' => ['growth_rates' => ['speed' => 20, 'stamina' => 10]],
+        ]);
+
+        // 1. Export
+        $export = $this->backupService->export();
+        $this->assertNotEmpty($export['data']['uma_catalog_items']);
+
+        // 2. Overwrite import
+        $this->backupService->import($export, 'overwrite');
+        $restored = UmaCatalogItem::where('name', 'Tokai Teio [Peak Joy]')->first();
+        $this->assertNotNull($restored);
+        $this->assertSame($objectivesData, $restored->objectives);
+
+        // 3. Merge import with updated objectives
+        $updatedObjectives = array_merge($objectivesData, [
+            ['order' => 4, 'turn' => 43, 'title' => 'Tenno Sho (Autumn)', 'target' => '1st Place'],
+        ]);
+        $export['data']['uma_catalog_items'][0]['objectives'] = $updatedObjectives;
+
+        $this->backupService->import($export, 'merge');
+        $merged = UmaCatalogItem::where('name', 'Tokai Teio [Peak Joy]')->first();
+        $this->assertNotNull($merged);
+        $this->assertCount(4, $merged->objectives);
+        $this->assertSame($updatedObjectives, $merged->objectives);
+    }
+
+    public function test_invalid_objectives_data_type_is_rejected(): void
+    {
+        $payload = [
+            'version' => '2.0',
+            'data' => [
+                'uma_catalog_items' => [
+                    [
+                        'type' => 'character',
+                        'name' => 'Invalid Objectives Uma',
+                        'objectives' => 12345, // Not array, null, or string
+                    ],
+                ],
+            ],
+        ];
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Format objectives pada uma_catalog_items[0] tidak valid');
+        $this->backupService->validate($payload);
+    }
+
+    public function test_competition_events_retained_on_overwrite_and_seeded_if_empty(): void
+    {
+        // 1. Seed events
+        (new CompetitionEventSeeder)->run();
+        $initialCount = CompetitionEvent::count();
+        $this->assertGreaterThan(0, $initialCount);
+
+        // 2. Minimal valid export payload
+        $payload = [
+            'version' => '2.0',
+            'data' => [
+                'app_settings' => [
+                    ['key' => 'test_key', 'value' => 'test_val'],
+                ],
+            ],
+        ];
+
+        // 3. Overwrite restore must NOT delete competition_events
+        $this->backupService->import($payload, 'overwrite');
+        $this->assertEquals($initialCount, CompetitionEvent::count());
+
+        // 4. If table is empty, restore must re-seed official events
+        CompetitionEvent::query()->delete();
+        $this->assertEquals(0, CompetitionEvent::count());
+
+        $this->backupService->import($payload, 'overwrite');
+        $this->assertEquals(6, CompetitionEvent::count());
     }
 }
