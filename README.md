@@ -198,14 +198,14 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 
 | Grup Modul / Prefix | Endpoint Utama | Ringkasan Fungsi & Kapabilitas |
 |---|---|---|
-| **Gacha Tracker** (`/api/gacha/*`) | `banners`, `pulls`, `stats`, `luck-percentile`, `sync-catalog` | Manajemen riwayat tarikan (single, 10-pull, batch), rekalkulasi pity counter otomatis (target 200), audit rate banner standar/boosted, evaluasi keberuntungan binomial kumulatif, serta sinkronisasi katalog banner JP 2026+. |
+| **Gacha Tracker** (`/api/gacha/*`) | `banners`, `pulls`, `stats`, `luck-percentile`, `sync-catalog` | Manajemen riwayat tarikan (single, 10-pull, batch), rekalkulasi pity counter otomatis (target 200), audit rate banner standar/boosted, evaluasi keberuntungan binomial kumulatif, sinkronisasi katalog banner JP 2026+, serta sinkronisasi otomatis berita pengumuman resmi Cygames JP (`CygamesNewsService`) untuk lineup 10 kartu *Select Pickup*. |
 | **Career & Fans** (`/api/career/*`) | `runs`, `stats`, `metadata`, `bulk-delete` | Pencatatan sesi latihan karir, pemetaan autorank resmi (Bronze E hingga LF24), pelacakan kuota fans circle, analisis agregat performa skenario, dan metadata OCR. |
 | **Affinity Calculator** (`/api/affinity/*`) | `calculate`, `recommendations/{targetId}`, `races`, `career-runs` | Perhitungan kompatibilitas silsilah 7-slot (Base Affinity + G1 Shared Victory + Triple Affinity), penegakan aturan anti-duplikasi, serta rekomendasi pasangan parent terbaik dari koleksi lokal. |
 | **Koleksi** (`/api/collection/*`) | `characters`, `support-cards`, `skill-detail` | Pelacakan kepemilikan karakter (1★–5★, skill tree) dan support card (0LB–MLB, hint/event effect), serta perincian formula & efek skill GameTora. |
-| **Competition Events** (`/api/competition-events/*`) | `competition-events`, `{id}` | Linimasa kronologis resmi CM & LoH (Zero Speculative Data), aturan khusus (misal No Debuff), rekomendasi green skills resmi, serta objek diagram layout sirkuit & fase balapan GameTora. |
-| **Backup & Restore** (`/api/backup/*`) | `stats`, `export`, `import` | Ekspor dan impor data 9 entitas basis data terstruktur (Schema v2.0) dengan validasi whitelist versi, mode `merge` / `overwrite`, dan atomic rollback transaksional. |
+| **Competition Events** (`/api/competition-events/*`) | `competition-events`, `{id}` | Linimasa kronologis resmi CM & LoH (Zero Speculative Data), aturan khusus (misal No Debuff), rekomendasi green skills resmi, objek diagram layout sirkuit & fase balapan GameTora, serta penyajian `recommended_build_guide` (referensi rekomendasi benchmark target stats GameWith dan katalog skill recovery terklasifikasi sesuai jarak balapan). |
+| **Backup & Restore** (`/api/backup/*`) | `stats`, `export`, `import` | Ekspor dan impor data 9 entitas basis data terstruktur (Schema v2.0) dengan validasi whitelist versi, mode `merge` / `overwrite`, isolasi proteksi event resmi, dan atomic rollback transaksional. |
 | **Circle Tracker** (`/api/circle-tracker/*`) | `status`, `refresh`, `track-player` | Pemantauan ritme kuota bulanan circle, indikator status pacing harian riil, arsip data historis bulanan, dan deteksi otomatis anggota yang telah keluar (*ex-member*). |
-| **Planner & Settings** (`/api/planner/*`, `/api/settings`, `/api/dashboard/summary`) | `config`, `settings`, `summary` | Konfigurasi target tabungan Jewel/Carat, simulasi pengorbanan Jewel (farming vs gacha), pengaturan kuota circle, dan ringkasan metrik dashboard utama. |
+| **Planner & Settings** (`/api/planner/*`, `/api/settings`, `/api/changelog`, `/api/dashboard/summary`) | `config`, `settings`, `changelog`, `summary` | Konfigurasi target tabungan Jewel/Carat, simulasi pengorbanan Jewel (farming vs gacha), pengaturan kuota circle, parsing berkas riwayat pembaruan Markdown ke JSON/HTML terstruktur (`/api/changelog`), dan ringkasan metrik dashboard utama. |
 
 ---
 
@@ -214,11 +214,13 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 Aplikasi dilengkapi rangkaian pengujian otomatis berbasis **PHPUnit** pada database memori terisolasi (`:memory:`):
 
 ```bash
-# Menjalankan seluruh pengujian (210 tests, 2.846 assertions)
+# Menjalankan seluruh pengujian (238 tests, 8.779 assertions)
 php artisan test --compact
 
 # Menjalankan pengujian spesifik
 php artisan test --filter=CompetitionEventTest
+php artisan test --filter=SkillConditionTranslatorTest
+php artisan test --filter=CygamesNewsSyncTest
 php artisan test --filter=AffinityCalculatorTest
 php artisan test --filter=BackupRoundTripTest
 php artisan test --filter=BackupIntegrityTest
@@ -230,10 +232,10 @@ vendor/bin/pint
 ```
 
 ### Cakupan Pengujian:
-- **Upcoming Competition Planner**: Integritas seeder tepat 6 event resmi Cygames 2026–2027, idempotensi seeder tanpa duplikasi, pengurutan kronologis presisi multi-prioritas (`year`, `month`, `period`, `start_date`), preservasi nilai `NULL` dan eksplisit `"random"`, isolasi aturan khusus `no_debuff` pada CM MILE Maret 2027, integritas dataset 17 sirkuit pada `racetracksCatalog.json`, lampiran objek layout sirkuit resmi `racetrack_course` untuk event terkonfirmasi, isolasi nilai `NULL` untuk event yang belum diumumkan (Zero Speculative Data), serta pengujian serialisasi API.
+- **Upcoming Competition Planner**: Integritas seeder tepat 6 event resmi Cygames 2026–2027, idempotensi seeder tanpa duplikasi, pengurutan kronologis presisi multi-prioritas (`year`, `month`, `period`, `start_date`), preservasi nilai `NULL` dan eksplisit `"random"` pada LoH, isolasi aturan khusus `no_debuff` pada CM MILE Maret 2027, integritas dataset 17 sirkuit pada `racetracksCatalog.json`, lampiran objek layout sirkuit resmi `racetrack_course` untuk event terkonfirmasi, isolasi nilai `NULL` untuk event yang belum diumumkan (Zero Speculative Data), referensi target stats & panduan recovery komunitas GameWith, pemisahan klasifikasi recovery stamina murni (`recovery_only`) vs skill multi-efek (`mixed_effect_recovery`), penyaringan dinamis rentang jarak yang kompatibel (`middle`/`medium`, `long`, multi-distance), serta pengujian serialisasi API.
 - **Inheritance Affinity & Compatibility**: Pengujian kalkulasi kompatibilitas silsilah 7 slot lengkap, penambahan bonus kemenangan G1 bersama (+3 poin/balapan), ambang batas klasifikasi badge (△, ○, ◎), validasi ketat anti-duplikasi karakter silsilah lintas kostum, dan algoritma rekomendasi indukan terbaik dari koleksi user.
-- **Backup & Restore Integrity**: Pengujian pemulihan round-trip, kepatuhan skema v2.0, proteksi atomik rollback, penolakan versi tidak dikenal, integritas foreign key SQLite, dan pemulihan field JSON katalog.
-- **Gacha Logic, Twinkle Collection & Rate Audit**: Verifikasi persistensi atribut `base_rate` (3,00% vs 4,50%), kalkulasi dinamis featured rate-up 0,75%, aturan khusus banner Twinkle Collection (pembagian rate 3% terbagi rata tanpa rate-up, isolasi pool B3 8 karakter, dan dukungan pool B1/B2), eksklusivitas karakter bervarian kostum resmi `[...]` pada katalog metadata gacha, eksklusi banner berbayar (`scam_gacha = true` / `restriction = premium`), dan siklus hidup pity counter.
+- **Backup & Restore Integrity**: Pengujian pemulihan round-trip, kepatuhan skema v2.0, proteksi atomik rollback, penolakan versi tidak dikenal, integritas foreign key SQLite, isolasi dan proteksi mutlak tabel `competition_events` dari manipulasi payload impor backup, validasi `validateStructuredJson` pada 7 kolom JSON katalog, dan pemulihan field JSON katalog.
+- **Gacha Logic, Twinkle Collection & Rate Audit**: Verifikasi persistensi atribut `base_rate` (3,00% vs 4,50%), kalkulasi dinamis featured rate-up 0,75%, aturan khusus banner Twinkle Collection (pembagian rate 3% terbagi rata tanpa rate-up, isolasi pool B3 8 karakter, dan dukungan pool B1/B2), eksklusivitas karakter bervarian kostum resmi `[...]` pada katalog metadata gacha, ekstraksi otomatis dan provenance berita pengumuman resmi Cygames JP untuk *Select Pickup* (`CygamesNewsSyncTest`), eksklusi banner berbayar (`scam_gacha = true` / `restriction = premium`), dan siklus hidup pity counter.
 - **Koleksi & GameTora Sync**: Proteksi batas minimum bintang karakter bawaan, matriks efek status kartu bantuan 0LB–MLB, integritas hash pembaruan katalog, serta sinkronisasi dataset sirkuit balap.
 - **PWA & UI Routing**: Verifikasi manifest PWA, routing service worker, dan pengalihan build fallback.
 
@@ -243,5 +245,5 @@ vendor/bin/pint
 
 - **Disclaimer Aplikasi**: Aplikasi ini merupakan proyek *fan-made* non-komersial yang dikembangkan untuk membantu para trainer dalam mencatat riwayat gacha dan ritme grinding fans kuota Circle Club.
 - **Hak Cipta Karakter & Aset Game**: [*Uma Musume: Pretty Derby (ウマ娘 プリティーダービー)*](https://umamusume.jp/) beserta seluruh materi dan aset terkait merupakan hak cipta eksklusif milik © [**Cygames, Inc.**](https://www.cygames.co.jp/)
-- **Sumber Data Katalog Komunitas**: Seluruh data nama karakter, varian kostum, kartu bantuan, dan jadwal banner JP disinkronkan dari platform komunitas [GameTora](https://gametora.com/umamusume).
+- **Sumber Data Katalog Komunitas**: Seluruh data nama karakter, varian kostum, kartu bantuan, dan jadwal banner JP disinkronkan dari platform komunitas [GameTora](https://gametora.com/umamusume). Rujukan benchmark target stats kompetisi mengacu pada panduan komunitas terverifikasi [GameWith JP](https://gamewith.jp/uma-musume/), serta rujukan jadwal pengumuman dan lineup resmi bersumber langsung dari portal berita resmi [Cygames JP](https://umamusume.jp/news/).
 - **Pengembangan dengan Bantuan AI**: Program dan repositori ini dibuat seutuhnya (*100% full AI-generated*) dengan bantuan kecerdasan buatan (AI) yang dipandu dan diaudit melalui pengujian otomatis untuk memastikan stabilitas serta kesesuaian logika aplikasi.
