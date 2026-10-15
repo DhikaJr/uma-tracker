@@ -180,6 +180,41 @@ export function translateClause(clause) {
             return makeResult(trimmed, field, op, val, `Sisa jarak finish ${op} ${val}m`, 'progress', 'milestone');
         }
 
+        case 'remain_distance_viewer_id': {
+            let text = `Sisa jarak karakter non-NPC/pemain ${op} ${val} meter`;
+            if (op === '<=' || op === '<') {
+                text = `Ada karakter non-NPC/pemain yang telah mencapai sisa jarak <= ${val} meter menuju garis finish`;
+            } else if (op === '>=' || op === '>') {
+                text = `Sisa jarak karakter non-NPC/pemain menuju garis finish masih >= ${val} meter`;
+            }
+            const note = 'Catatan: Memeriksa sisa jarak balapan dari perspektif karakter non-NPC/pemain.';
+            return makeResult(trimmed, field, op, val, text, 'progress', 'milestone', note);
+        }
+
+        case 'lane_type': {
+            let text = `Sedang berlari di lajur lintasan ${op} ${val}`;
+            if (op === '==' && intVal === 0) {
+                text = 'Sedang berlari di jalur sisi dalam (menempel pagar dalam / inner rail)';
+            } else if (op === '<=' && Number(val) <= 0.2) {
+                text = 'Sedang berlari di lajur sisi dalam (inner lane)';
+            }
+            const note = 'Catatan: Mengindikasikan posisi lajur lintasan terhadap pagar pembatas dalam (0 = menempel tepat di pagar dalam).';
+            return makeResult(trimmed, field, op, val, text, 'track', 'compass', note);
+        }
+
+        case 'post_number': {
+            let text = `Nomor blok gerbang start (post number) ${op} ${val}`;
+            if (op === '<=' || op === '<') {
+                text = `Memulai balapan dari nomor blok gerbang start (post number) 1 s.d. ${val}`;
+            } else if (op === '>=' || op === '>') {
+                text = `Memulai balapan dari nomor blok gerbang start (post number) ${val} ke atas`;
+            } else if (op === '==') {
+                text = `Memulai balapan dari blok gerbang start (post number) ke-${val}`;
+            }
+            const note = 'Catatan: Post number (waku-ban / 枠番) adalah nomor braket/blok start tempat Uma Musume berangkat, bukan nomor pintu gerbang persis.';
+            return makeResult(trimmed, field, op, val, text, 'track', 'flag', note);
+        }
+
         case 'course_distance':
             return makeResult(trimmed, field, op, val, `Panjang lintasan balap ${op} ${val} meter`, 'track', 'map-pin');
 
@@ -291,6 +326,27 @@ export function translateClause(clause) {
         case 'distance_diff_top_float':
             return makeResult(trimmed, field, op, val, `Jarak selisih dengan pelari peringkat pertama ${op} ${Number(val) / 10} meter`, 'position', 'ruler');
 
+        case 'distance_diff_rate': {
+            let text = `Rentang selisih jarak rombongan ${op} ${val}%`;
+            if (op === '<=' || op === '<') {
+                text = `Posisi berada dalam rentang ${val}% terdepan dari total jarak antara pelari pertama hingga terakhir`;
+            } else if (op === '>=' || op === '>') {
+                text = intVal >= 75
+                    ? `Posisi berada di rombongan belakang (rentang jarak >= ${val}% dari pelari terdepan hingga terakhir)`
+                    : `Posisi berada pada rentang jarak >= ${val}% ke belakang dari pelari terdepan`;
+            }
+            const note = 'Catatan: distance_diff_rate mengukur posisi relatif karakter sebagai persentase dari total panjang rombongan balapan (0% = pelari paling depan, 100% = pelari paling belakang).';
+            return makeResult(trimmed, field, op, val, text, 'position', 'percent', note);
+        }
+
+        case 'is_behind_in': {
+            const text = intVal === 1
+                ? 'Pelari di belakang berada lebih dekat ke sisi pagar dalam (inner rail) dibanding Anda'
+                : 'Pelari di belakang tidak berada lebih dekat ke sisi pagar dalam dibanding Anda';
+            const note = 'Catatan: Memeriksa apakah pelari yang membuntuti di belakang berada di posisi lebih dekat ke pagar bagian dalam lintasan.';
+            return makeResult(trimmed, field, op, val, text, 'position', 'compass', note);
+        }
+
         case 'blocked_front':
             return makeResult(trimmed, field, op, val, 'Jalur lari di depan sedang terhalang oleh pelari lain', 'status', 'shield-alert');
 
@@ -398,6 +454,14 @@ export function translateClause(clause) {
             return makeResult(trimmed, field, op, val, `Menggunakan strategi ${styles[intVal] || `Strategi ${val}`}`, 'strategy', 'user-check');
         }
 
+        case 'running_style_equal_popularity_one': {
+            const text = intVal === 1
+                ? 'Menggunakan strategi gaya lari yang sama dengan pelari terfavorit ke-1 (Most Popular) di balapan'
+                : 'Menggunakan strategi gaya lari yang berbeda dengan pelari terfavorit ke-1 di balapan';
+            const note = 'Catatan: Memeriksa apakah strategi lari karakter cocok dengan strategi pelari nomor 1 paling difavoritkan publik (Ninki 1).';
+            return makeResult(trimmed, field, op, val, text, 'strategy', 'user-check', note);
+        }
+
         case 'distance_type': {
             const dists = {
                 1: 'Jarak Pendek (Sprint / 短距離)',
@@ -484,6 +548,21 @@ export function translateClause(clause) {
                 'alert-circle'
             );
 
+        case 'running_style_temptation_count_nige':
+        case 'running_style_temptation_count_senko':
+        case 'running_style_temptation_count_sashi':
+        case 'running_style_temptation_count_oikomi': {
+            const styleMap = {
+                running_style_temptation_count_nige: 'Runner (Pelari Depan / 逃げ)',
+                running_style_temptation_count_senko: 'Leader (Pengejar Terdepan / 先行)',
+                running_style_temptation_count_sashi: 'Betweener (Pelari Tengah / 差し)',
+                running_style_temptation_count_oikomi: 'Chaser (Pelari Belakang / 追込)',
+            };
+            const sName = styleMap[field] || 'Strategi';
+            const note = 'Catatan: Termasuk karakter Anda sendiri jika memenuhi kondisi strategi tersebut.';
+            return makeResult(trimmed, field, op, val, `Terdapat minimal ${val} pelari strategi ${sName} yang sedang mengalami rush / panik lari (kakari / 掛かり)`, 'status', 'shield-alert', note);
+        }
+
         case 'motivation': {
             const moods = {
                 1: 'Sangat Buruk (Terrible / 絶不調)',
@@ -512,6 +591,18 @@ export function translateClause(clause) {
         // ================= SKILLS ACTIVATION COUNTERS =================
         case 'activate_count_middle':
             return makeResult(trimmed, field, op, val, `Telah mengaktifkan minimal ${val} skill selama Fase Pertengahan (Mid-Race)`, 'skill', 'sparkles');
+
+        case 'activate_count_param_skill':
+            return makeResult(
+                trimmed,
+                field,
+                op,
+                val,
+                `Telah mengaktifkan minimal ${val} skill pasif/status hijau (Green Skills) di balapan ini`,
+                'skill',
+                'sparkles',
+                'Catatan: Mengacu pada jumlah skill pasif (berwarna hijau) yang berhasil diaktifkan selama balapan.'
+            );
 
         case 'activate_count_start':
             return makeResult(trimmed, field, op, val, `Telah mengaktifkan minimal ${val} skill selama Fase Awal (Early-Race)`, 'skill', 'sparkles');

@@ -286,7 +286,36 @@ class SkillConditionTranslator
                 return self::makeClauseResult($raw, $field, $op, $val, "Sisa jarak finish {$op} {$val}m", 'progress', 'milestone');
 
             case 'remain_distance_viewer_id':
-                return self::makeClauseResult($raw, $field, $op, $val, "Sisa jarak finish karakter {$op} {$val}m", 'progress', 'milestone');
+                $text = match (true) {
+                    $op === '<=' || $op === '<' => "Ada karakter non-NPC/pemain yang telah mencapai sisa jarak <= {$val} meter menuju garis finish",
+                    $op === '>=' || $op === '>' => "Sisa jarak karakter non-NPC/pemain menuju garis finish masih >= {$val} meter",
+                    default => "Sisa jarak karakter non-NPC/pemain {$op} {$val} meter",
+                };
+                $note = 'Catatan: Memeriksa sisa jarak balapan dari perspektif karakter non-NPC/pemain.';
+
+                return self::makeClauseResult($raw, $field, $op, $val, $text, 'progress', 'milestone', $note);
+
+            case 'lane_type':
+                $text = "Sedang berlari di lajur lintasan {$op} {$val}";
+                if ($op === '==' && $intVal === 0) {
+                    $text = 'Sedang berlari di jalur sisi dalam (menempel pagar dalam / inner rail)';
+                } elseif ($op === '<=' && (float) $val <= 0.2) {
+                    $text = 'Sedang berlari di lajur sisi dalam (inner lane)';
+                }
+                $note = 'Catatan: Mengindikasikan posisi lajur lintasan terhadap pagar pembatas dalam (0 = menempel tepat di pagar dalam).';
+
+                return self::makeClauseResult($raw, $field, $op, $val, $text, 'track', 'compass', $note);
+
+            case 'post_number':
+                $text = match (true) {
+                    $op === '<=' || $op === '<' => "Memulai balapan dari nomor blok gerbang start (post number) 1 s.d. {$val}",
+                    $op === '>=' || $op === '>' => "Memulai balapan dari nomor blok gerbang start (post number) {$val} ke atas",
+                    $op === '==' => "Memulai balapan dari blok gerbang start (post number) ke-{$val}",
+                    default => "Nomor blok gerbang start (post number) {$op} {$val}",
+                };
+                $note = 'Catatan: Post number (waku-ban / 枠番) adalah nomor braket/blok start tempat Uma Musume berangkat, bukan nomor pintu gerbang persis.';
+
+                return self::makeClauseResult($raw, $field, $op, $val, $text, 'track', 'flag', $note);
 
             case 'course_distance':
                 return self::makeClauseResult($raw, $field, $op, $val, "Panjang lintasan balap {$op} {$val}m", 'track', 'map-pin');
@@ -396,7 +425,24 @@ class SkillConditionTranslator
                 return self::makeClauseResult($raw, $field, $op, $val, "Jarak selisih dengan pelari peringkat pertama {$op} {$meters} meter", 'position', 'ruler');
 
             case 'distance_diff_rate':
-                return self::makeClauseResult($raw, $field, $op, $val, "Selisih jarak persentase dengan posisi pertama {$op} {$val}%", 'position', 'ruler');
+                $text = match (true) {
+                    $op === '<=' || $op === '<' => "Posisi berada dalam rentang {$val}% terdepan dari total jarak antara pelari pertama hingga terakhir",
+                    $op === '>=' || $op === '>' => $intVal >= 75
+                        ? "Posisi berada di rombongan belakang (rentang jarak >= {$val}% dari pelari terdepan hingga terakhir)"
+                        : "Posisi berada pada rentang jarak >= {$val}% ke belakang dari pelari terdepan",
+                    default => "Rentang selisih jarak rombongan {$op} {$val}%",
+                };
+                $note = 'Catatan: distance_diff_rate mengukur posisi relatif karakter sebagai persentase dari total panjang rombongan balapan (0% = pelari paling depan, 100% = pelari paling belakang).';
+
+                return self::makeClauseResult($raw, $field, $op, $val, $text, 'position', 'percent', $note);
+
+            case 'is_behind_in':
+                $text = $intVal === 1
+                    ? 'Pelari di belakang berada lebih dekat ke sisi pagar dalam (inner rail) dibanding Anda'
+                    : 'Pelari di belakang tidak berada lebih dekat ke sisi pagar dalam dibanding Anda';
+                $note = 'Catatan: Memeriksa apakah pelari yang membuntuti di belakang berada di posisi lebih dekat ke pagar bagian dalam lintasan.';
+
+                return self::makeClauseResult($raw, $field, $op, $val, $text, 'position', 'compass', $note);
 
             case 'blocked_front':
                 return self::makeClauseResult($raw, $field, $op, $val, 'Jalur lari di depan sedang terhalang oleh pelari lain', 'status', 'shield-alert');
@@ -479,6 +525,14 @@ class SkillConditionTranslator
                 $name = $styleNames[$intVal] ?? "Strategi {$val}";
 
                 return self::makeClauseResult($raw, $field, $op, $val, "Menggunakan strategi {$name}", 'strategy', 'user-check');
+
+            case 'running_style_equal_popularity_one':
+                $text = $intVal === 1
+                    ? 'Menggunakan strategi gaya lari yang sama dengan pelari terfavorit ke-1 (Most Popular) di balapan'
+                    : 'Menggunakan strategi gaya lari yang berbeda dengan pelari terfavorit ke-1 di balapan';
+                $note = 'Catatan: Memeriksa apakah strategi lari karakter cocok dengan strategi pelari nomor 1 paling difavoritkan publik (Ninki 1).';
+
+                return self::makeClauseResult($raw, $field, $op, $val, $text, 'strategy', 'user-check', $note);
 
             case 'distance_type':
                 $distNames = [
@@ -620,6 +674,21 @@ class SkillConditionTranslator
 
                 return self::makeClauseResult($raw, $field, $op, $val, $text, 'strategy', 'alert-circle', 'Jumlah pelari End Closer (追込) lawan yang saat ini sedang mengalami status panik (kakari) di dalam balapan.');
 
+            case 'running_style_temptation_count_nige':
+            case 'running_style_temptation_count_senko':
+            case 'running_style_temptation_count_sashi':
+            case 'running_style_temptation_count_oikomi':
+                $styleMap = [
+                    'running_style_temptation_count_nige' => 'Runner (Pelari Depan / 逃げ)',
+                    'running_style_temptation_count_senko' => 'Leader (Pengejar Terdepan / 先行)',
+                    'running_style_temptation_count_sashi' => 'Betweener (Pelari Tengah / 差し)',
+                    'running_style_temptation_count_oikomi' => 'Chaser (Pelari Belakang / 追込)',
+                ];
+                $sName = $styleMap[$field] ?? 'Strategi';
+                $note = 'Catatan: Termasuk karakter Anda sendiri jika memenuhi kondisi strategi tersebut.';
+
+                return self::makeClauseResult($raw, $field, $op, $val, "Terdapat minimal {$val} pelari strategi {$sName} yang sedang mengalami rush / panik lari (kakari / 掛かり)", 'status', 'shield-alert', $note);
+
             case 'motivation':
                 $moodNames = [
                     1 => 'Sangat Buruk (Terrible / 絶不調)',
@@ -660,6 +729,18 @@ class SkillConditionTranslator
 
             case 'activate_count_heal':
                 return self::makeClauseResult($raw, $field, $op, $val, "Telah mengaktifkan minimal {$val} skill pemulihan stamina (heal)", 'skill', 'sparkles');
+
+            case 'activate_count_param_skill':
+                return self::makeClauseResult(
+                    $raw,
+                    $field,
+                    $op,
+                    $val,
+                    "Telah mengaktifkan minimal {$val} skill pasif/status hijau (Green Skills) di balapan ini",
+                    'skill',
+                    'sparkles',
+                    'Catatan: Mengacu pada jumlah skill pasif (berwarna hijau) yang berhasil diaktifkan selama balapan.'
+                );
 
             case 'activate_count_all_team':
                 return self::makeClauseResult($raw, $field, $op, $val, "Tim telah mengaktifkan total minimal {$val} skill secara kumulatif", 'skill', 'sparkles');

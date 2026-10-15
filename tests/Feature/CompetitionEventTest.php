@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\CompetitionEvent;
+use App\Support\CompetitionGreenSkillRecommender;
 use App\Support\CompetitionRacetrackHelper;
+use App\Support\CompetitionStatRecoveryRecommender;
 use Database\Seeders\CompetitionEventSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -734,5 +736,447 @@ class CompetitionEventTest extends TestCase
         ]);
         $this->assertNotNull($outer1400);
         $this->assertSame('outer', $outer1400['course']['inout_str']);
+    }
+
+    public function test_loh_november_2026_with_random_conditions_is_treated_as_fully_confirmed(): void
+    {
+        $this->seed(CompetitionEventSeeder::class);
+
+        $loh = CompetitionEvent::where('event_key', 'loh-2026-11')->firstOrFail();
+
+        $this->assertSame('random', $loh->weather);
+        $this->assertSame('random', $loh->track_condition);
+
+        // Assert isFullyConfirmed on both recommenders
+        $this->assertTrue(CompetitionGreenSkillRecommender::isFullyConfirmed($loh));
+        $this->assertTrue(CompetitionStatRecoveryRecommender::isFullyConfirmed($loh));
+        $this->assertTrue($loh->is_fully_confirmed);
+
+        $guide = CompetitionStatRecoveryRecommender::getRecommendations($loh);
+        $this->assertTrue($guide['is_fully_confirmed']);
+        $this->assertTrue($guide['has_guide_reference']);
+        $this->assertSame('https://gamewith.jp/uma-musume/article/show/574934', $guide['source_url']);
+        $this->assertNotEmpty($guide['stat_tiers']);
+        $this->assertNotEmpty($guide['reference_recovery_catalog']);
+    }
+
+    public function test_recovery_skills_catalog_integrity_and_excludes_non_recovery_skills(): void
+    {
+        $path = resource_path('js/data/recoverySkillsCatalog.json');
+        $this->assertFileExists($path);
+
+        $catalog = json_decode((string) file_get_contents($path), true);
+        $this->assertIsArray($catalog);
+        $this->assertNotEmpty($catalog);
+
+        $namesJp = array_column($catalog, 'name_jp');
+
+        // Curvature must be EXCLUDED
+        $this->assertNotContains('弧線のプロフェッサー', $namesJp);
+
+        // Maestro must be INCLUDED
+        $this->assertContains('円弧のマエストロ', $namesJp);
+
+        // Breath of Fresh Air and Cooldown must be two distinct entries
+        $this->assertContains('好転一息', $namesJp);
+        $this->assertContains('クールダウン', $namesJp);
+
+        $bofa = null;
+        $cooldown = null;
+        foreach ($catalog as $skill) {
+            // Verify effect_type is always stamina_recovery
+            $this->assertSame('stamina_recovery', $skill['effect_type']);
+
+            // Verify heal_value is consistent with raw_effect_value
+            $expectedHeal = '+'.number_format($skill['raw_effect_value'] / 100, 1).'%';
+            $this->assertSame($expectedHeal, $skill['heal_value']);
+
+            if ($skill['name_jp'] === '好転一息') {
+                $bofa = $skill;
+            }
+            if ($skill['name_jp'] === 'クールダウン') {
+                $cooldown = $skill;
+            }
+        }
+
+        $this->assertNotNull($bofa);
+        $this->assertNotNull($cooldown);
+        $this->assertNotEquals($bofa['id'], $cooldown['id']);
+        $this->assertNotEquals($bofa['distance_category'], $cooldown['distance_category']);
+
+        // Verify condition_groups exists on every entry for full modal detail
+        foreach ($catalog as $skill) {
+            $this->assertArrayHasKey('condition_groups', $skill);
+            $this->assertNotEmpty($skill['condition_groups']);
+            $this->assertArrayHasKey('effects', $skill['condition_groups'][0]);
+            $this->assertNotEmpty($skill['condition_groups'][0]['effects']);
+            $this->assertArrayHasKey('is_inherited', $skill);
+        }
+
+        // Verify distinct Original Unique vs Inherited Unique entries
+        $catalogById = array_column($catalog, null, 'id');
+
+        // Illuminate You (Original Costume Unique)
+        $this->assertArrayHasKey(110741, $catalogById);
+        $illuminateOrig = $catalogById[110741];
+        $this->assertFalse($illuminateOrig['is_inherited']);
+        $this->assertSame('Unique (Costume Original)', $illuminateOrig['rarity_label']);
+        $this->assertSame('Original', $illuminateOrig['version_label']);
+        $this->assertSame('+7.5%', $illuminateOrig['heal_value']);
+        $this->assertCount(2, $illuminateOrig['condition_groups']);
+
+        // Illuminate You (Inherited Costume Unique)
+        $this->assertArrayHasKey(910741, $catalogById);
+        $illuminateInh = $catalogById[910741];
+        $this->assertTrue($illuminateInh['is_inherited']);
+        $this->assertSame('Unique (Costume Inherited)', $illuminateInh['rarity_label']);
+        $this->assertSame('Inherited (Warisan)', $illuminateInh['version_label']);
+        $this->assertSame('+3.5%', $illuminateInh['heal_value']);
+        $this->assertSame(110741, $illuminateInh['parent_id']);
+        $this->assertCount(2, $illuminateInh['condition_groups']);
+
+        // Arrow of Gold, Break up the Dark Clouds (Original Costume Unique)
+        $this->assertArrayHasKey(110671, $catalogById);
+        $arrowOrig = $catalogById[110671];
+        $this->assertFalse($arrowOrig['is_inherited']);
+        $this->assertSame('Unique (Costume Original)', $arrowOrig['rarity_label']);
+        $this->assertSame('Original', $arrowOrig['version_label']);
+        $this->assertSame('+3.5%', $arrowOrig['heal_value']);
+
+        // Arrow of Gold, Break up the Dark Clouds (Inherited Costume Unique)
+        $this->assertArrayHasKey(910671, $catalogById);
+        $arrowInh = $catalogById[910671];
+        $this->assertTrue($arrowInh['is_inherited']);
+        $this->assertSame('Unique (Costume Inherited)', $arrowInh['rarity_label']);
+        $this->assertSame('Inherited (Warisan)', $arrowInh['version_label']);
+        $this->assertSame('+0.5%', $arrowInh['heal_value']);
+        $this->assertSame(110671, $arrowInh['parent_id']);
+
+        // Purity of Heart (3★ Original) vs Pure Heart (Inherited)
+        $this->assertArrayHasKey(100451, $catalogById);
+        $purityOrig = $catalogById[100451];
+        $this->assertFalse($purityOrig['is_inherited']);
+        $this->assertSame('Unique (Original)', $purityOrig['rarity_label']);
+        $this->assertSame('+7.5%', $purityOrig['heal_value']);
+
+        $this->assertArrayHasKey(900451, $catalogById);
+        $pureHeartInh = $catalogById[900451];
+        $this->assertTrue($pureHeartInh['is_inherited']);
+        $this->assertSame('Unique (Inherited)', $pureHeartInh['rarity_label']);
+        $this->assertSame('+3.5%', $pureHeartInh['heal_value']);
+
+        // Verify character attribution labels on Unique Original and Unique Warisan (Inherited)
+        $this->assertSame("Mejiro Bright (Costume)'s unique", $illuminateOrig['character_label']);
+        $this->assertSame('Mejiro Bright', $illuminateOrig['character_name']);
+        $this->assertSame(107402, $illuminateOrig['character_id']);
+
+        $this->assertSame("Mejiro Bright (Costume Warisan)'s unique", $illuminateInh['character_label']);
+        $this->assertSame('Mejiro Bright', $illuminateInh['character_name']);
+        $this->assertSame(107402, $illuminateInh['character_id']);
+
+        $this->assertSame("Satono Diamond (Costume)'s unique", $arrowOrig['character_label']);
+        $this->assertSame("Satono Diamond (Costume Warisan)'s unique", $arrowInh['character_label']);
+
+        $this->assertSame("Super Creek (Original)'s unique", $purityOrig['character_label']);
+        $this->assertSame("Super Creek (Warisan)'s unique", $pureHeartInh['character_label']);
+
+        // introduction: My body (ID 10321) & U=ma2 Inherited (ID 900321)
+        $this->assertArrayHasKey(10321, $catalogById);
+        $tachyonOrig = $catalogById[10321];
+        $this->assertSame("Agnes Tachyon (Original)'s unique", $tachyonOrig['character_label']);
+        $this->assertSame('Agnes Tachyon', $tachyonOrig['character_name']);
+        $this->assertSame(103201, $tachyonOrig['character_id']);
+
+        $this->assertArrayHasKey(900321, $catalogById);
+        $tachyonInh = $catalogById[900321];
+        $this->assertSame("Agnes Tachyon (Warisan)'s unique", $tachyonInh['character_label']);
+
+        // Clear Heart (ID 10451)
+        $this->assertArrayHasKey(10451, $catalogById);
+        $clearHeart = $catalogById[10451];
+        $this->assertSame("Super Creek (Original)'s unique", $clearHeart['character_label']);
+
+        // Ready, Steady, Go! (ID 10521) & Super-Duper Climax Inherited (ID 900521)
+        $this->assertArrayHasKey(10521, $catalogById);
+        $uraraOrig = $catalogById[10521];
+        $this->assertSame("Haru Urara (Original)'s unique", $uraraOrig['character_label']);
+
+        $this->assertArrayHasKey(900521, $catalogById);
+        $uraraInh = $catalogById[900521];
+        $this->assertSame("Haru Urara (Warisan)'s unique", $uraraInh['character_label']);
+
+        // Verify distance_diff_rate translation in catalog (Sleeping Lion ID 200621)
+        $this->assertArrayHasKey(200621, $catalogById);
+        $sleepingLion = $catalogById[200621];
+        $this->assertStringNotContainsString('distance_diff_rate', $sleepingLion['activation_condition_id']);
+        $this->assertStringContainsString('rombongan belakang', $sleepingLion['activation_condition_id']);
+        $this->assertStringContainsString('rentang jarak >= 75%', $sleepingLion['activation_condition_id']);
+
+        // Verify all 50 unique skills have non-empty character_label
+        $uniqueCount = 0;
+        foreach ($catalog as $s) {
+            if ($s['is_inherited'] || in_array($s['rarity'], [3, 4, 5], true)) {
+                $uniqueCount++;
+                $this->assertNotNull($s['character_label'], "Skill {$s['id']} ({$s['name_en']}) missing character_label");
+                $this->assertNotEmpty($s['character_name'], "Skill {$s['id']} ({$s['name_en']}) missing character_name");
+            }
+        }
+        $this->assertSame(50, $uniqueCount);
+    }
+
+    public function test_verified_gamewith_guides_urls_and_stat_tiers(): void
+    {
+        $this->seed(CompetitionEventSeeder::class);
+
+        // CM Oct 2026 (Kyoto 2200m)
+        $cmOct = CompetitionEvent::where('event_key', 'cm-2026-10')->firstOrFail();
+        $recOct = $cmOct->recommended_build_guide;
+        $this->assertTrue($recOct['has_guide_reference']);
+        $this->assertSame('https://gamewith.jp/uma-musume/article/show/572401', $recOct['source_url']);
+        $this->assertSame('GameWith', $recOct['source_name']);
+        $this->assertCount(2, $recOct['stat_tiers']);
+        $this->assertSame('2000', $recOct['stat_tiers'][0]['speed']);
+        $this->assertSame('1400', $recOct['stat_tiers'][0]['stamina']);
+
+        // LoH Nov 2026 (Kyoto 3000m)
+        $lohNov = CompetitionEvent::where('event_key', 'loh-2026-11')->firstOrFail();
+        $recNov = $lohNov->recommended_build_guide;
+        $this->assertTrue($recNov['has_guide_reference']);
+        $this->assertSame('https://gamewith.jp/uma-musume/article/show/574934', $recNov['source_url']);
+        $this->assertTrue($recNov['stat_tiers'][1]['is_provisional']);
+
+        // CM Dec 2026 (Nakayama 2500m)
+        $cmDec = CompetitionEvent::where('event_key', 'cm-2026-12')->firstOrFail();
+        $recDec = $cmDec->recommended_build_guide;
+        $this->assertTrue($recDec['has_guide_reference']);
+        $this->assertSame('https://gamewith.jp/uma-musume/article/show/578925', $recDec['source_url']);
+        $this->assertStringContainsString('Gold Recovery 1', $recDec['stat_tiers'][0]['stamina']);
+        $this->assertStringContainsString('Gold Recovery 1', $recDec['stat_tiers'][1]['stamina']);
+        $this->assertNotNull($recDec['recovery_guide']);
+        $this->assertStringContainsString('Gold Recovery', implode(' ', $recDec['recovery_guide']['recommendations']));
+    }
+
+    public function test_unannounced_events_and_events_without_community_guide_do_not_speculate(): void
+    {
+        $this->seed(CompetitionEventSeeder::class);
+
+        // 1. Unannounced event (Jan 2027)
+        $cmJan = CompetitionEvent::where('event_key', 'cm-2027-01')->firstOrFail();
+        $this->assertFalse($cmJan->is_fully_confirmed);
+
+        $recJan = $cmJan->recommended_build_guide;
+        $this->assertFalse($recJan['is_fully_confirmed']);
+        $this->assertFalse($recJan['has_guide_reference']);
+        $this->assertEmpty($recJan['stat_tiers']);
+        $this->assertNull($recJan['recovery_guide']);
+        $this->assertEmpty($recJan['reference_recovery_catalog']);
+        $this->assertSame('Rekomendasi target stats dan kebutuhan recovery belum ditampilkan karena detail lintasan dan jarak resmi belum diumumkan secara lengkap oleh Cygames.', $recJan['disclaimer']);
+
+        // 2. Event with confirmed track but NO community guide entry
+        $eventNoGuide = CompetitionEvent::create([
+            'event_key' => 'cm-2099-99',
+            'event_type' => 'champions_meeting',
+            'event_name' => 'Custom Future Event',
+            'year' => 2099,
+            'month' => 9,
+            'period' => 'late',
+            'date_label' => 'Akhir September 2099',
+            'venue' => 'Tokyo',
+            'surface' => 'turf',
+            'distance' => 2400,
+            'distance_category' => 'medium',
+            'direction' => 'left',
+            'season' => 'autumn',
+        ]);
+
+        $this->assertTrue($eventNoGuide->is_fully_confirmed);
+
+        $recNoGuide = $eventNoGuide->recommended_build_guide;
+        $this->assertTrue($recNoGuide['is_fully_confirmed']);
+        $this->assertFalse($recNoGuide['has_guide_reference']);
+        $this->assertEmpty($recNoGuide['stat_tiers']);
+        $this->assertNull($recNoGuide['recovery_guide']);
+        $this->assertEmpty($recNoGuide['reference_recovery_catalog']);
+        $this->assertSame('Referensi rekomendasi belum tersedia', $recNoGuide['disclaimer']);
+    }
+
+    /**
+     * Test classification separating primary recovery skills from mixed-effect recovery skills.
+     */
+    public function test_recovery_catalog_classification_separates_primary_recovery_from_mixed_effects(): void
+    {
+        $catalog = CompetitionStatRecoveryRecommender::getRecoveryCatalog();
+        $this->assertNotEmpty($catalog, 'Recovery skills catalog must not be empty');
+
+        $catalogById = array_column($catalog, null, 'id');
+
+        // Reference Skill 1: Arc Maestro (円弧のマエストロ / ID 200351) MUST be in recovery_only
+        $this->assertArrayHasKey(200351, $catalogById, 'Arc Maestro (200351) must exist in catalog');
+        $arcMaestro = $catalogById[200351];
+        $this->assertSame('recovery_only', $arcMaestro['recovery_category']);
+        $this->assertSame('Recovery Utama', $arcMaestro['recovery_category_label']);
+        $this->assertFalse($arcMaestro['is_mixed_effect']);
+        $this->assertEmpty($arcMaestro['non_recovery_effects']);
+
+        // Reference Skill 2: introduction: My body (ID 10321) MUST be in mixed_effect_recovery, NOT recovery_only
+        $this->assertArrayHasKey(10321, $catalogById, 'introduction: My body (10321) must exist in catalog');
+        $tachyonSkill = $catalogById[10321];
+        $this->assertSame('mixed_effect_recovery', $tachyonSkill['recovery_category']);
+        $this->assertSame('Skill Multi-Efek dengan Recovery', $tachyonSkill['recovery_category_label']);
+        $this->assertTrue($tachyonSkill['is_mixed_effect']);
+        $this->assertNotEmpty($tachyonSkill['non_recovery_effects']);
+
+        // Dynamic validation: Split catalog dynamically without hardcoding static totals
+        $recoveryOnlySkills = array_filter($catalog, fn (array $s): bool => ($s['recovery_category'] ?? null) === 'recovery_only');
+        $mixedEffectSkills = array_filter($catalog, fn (array $s): bool => ($s['recovery_category'] ?? null) === 'mixed_effect_recovery');
+
+        $this->assertNotEmpty($recoveryOnlySkills, 'Must have skills in recovery_only category');
+        $this->assertNotEmpty($mixedEffectSkills, 'Must have skills in mixed_effect_recovery category');
+        $this->assertSame(
+            count($catalog),
+            count($recoveryOnlySkills) + count($mixedEffectSkills),
+            'Every skill in the catalog must belong to either recovery_only or mixed_effect_recovery'
+        );
+
+        // Verify that Arc Maestro is strictly in recoveryOnlySkills and NOT in mixedEffectSkills
+        $recoveryOnlyIds = array_column($recoveryOnlySkills, 'id');
+        $mixedEffectIds = array_column($mixedEffectSkills, 'id');
+
+        $this->assertContains(200351, $recoveryOnlyIds);
+        $this->assertNotContains(200351, $mixedEffectIds);
+
+        // Verify that introduction: My body is strictly in mixedEffectSkills and NOT in recoveryOnlySkills
+        $this->assertContains(10321, $mixedEffectIds);
+        $this->assertNotContains(10321, $recoveryOnlyIds);
+
+        // Verify that EVERY skill in recovery_only only has valid recovery effects (type 9)
+        foreach ($recoveryOnlySkills as $skill) {
+            $this->assertFalse($skill['is_mixed_effect'], "Skill {$skill['id']} in recovery_only must have is_mixed_effect=false");
+            $this->assertEmpty($skill['non_recovery_effects'], "Skill {$skill['id']} in recovery_only must have empty non_recovery_effects");
+
+            $allEffects = [];
+            foreach ($skill['condition_groups'] as $group) {
+                foreach ($group['effects'] as $effect) {
+                    $allEffects[] = $effect;
+                }
+            }
+
+            $this->assertNotEmpty($allEffects, "Skill {$skill['id']} must have at least one effect");
+            foreach ($allEffects as $effect) {
+                $this->assertSame(9, (int) $effect['type'], "Skill {$skill['id']} ({$skill['name_en']}) in recovery_only has non-recovery effect type {$effect['type']}");
+            }
+        }
+
+        // Verify that EVERY skill in mixed_effect_recovery has at least one recovery effect (type 9) AND at least one non-recovery effect
+        foreach ($mixedEffectSkills as $skill) {
+            $this->assertTrue($skill['is_mixed_effect'], "Skill {$skill['id']} in mixed_effect_recovery must have is_mixed_effect=true");
+            $this->assertNotEmpty($skill['non_recovery_effects'], "Skill {$skill['id']} in mixed_effect_recovery must have non-empty non_recovery_effects");
+
+            $hasRecovery = false;
+            $hasNonRecovery = false;
+
+            foreach ($skill['condition_groups'] as $group) {
+                foreach ($group['effects'] as $effect) {
+                    if ((int) $effect['type'] === 9) {
+                        $hasRecovery = true;
+                    } else {
+                        $hasNonRecovery = true;
+                    }
+                }
+            }
+
+            $this->assertTrue($hasRecovery, "Skill {$skill['id']} ({$skill['name_en']}) in mixed_effect_recovery must have at least one recovery effect (type 9)");
+            $this->assertTrue($hasNonRecovery, "Skill {$skill['id']} ({$skill['name_en']}) in mixed_effect_recovery must have at least one non-recovery effect");
+        }
+
+        // Verify that all skills in both categories retain essential metadata
+        foreach ($catalog as $skill) {
+            $this->assertArrayHasKey('id', $skill);
+            $this->assertArrayHasKey('name_en', $skill);
+            $this->assertArrayHasKey('name_jp', $skill);
+            $this->assertArrayHasKey('rarity', $skill);
+            $this->assertArrayHasKey('raw_effect_value', $skill);
+            $this->assertArrayHasKey('heal_value', $skill);
+            $this->assertArrayHasKey('icon_url', $skill);
+            $this->assertArrayHasKey('running_style', $skill);
+            $this->assertArrayHasKey('distance_category', $skill);
+            $this->assertArrayHasKey('activation_condition_id', $skill);
+        }
+    }
+
+    /**
+     * Test that competition event recommended build guide includes recovery skills
+     * matching the event's distance range (e.g. Medium or Long), in addition to all-distance skills,
+     * and strictly excludes skills restricted to other distances.
+     */
+    public function test_event_recovery_catalog_includes_skills_matching_event_distance_range_and_excludes_incompatible(): void
+    {
+        $this->seed(CompetitionEventSeeder::class);
+
+        $fullCatalog = CompetitionStatRecoveryRecommender::getRecoveryCatalog();
+        $allDistanceSkillsCount = count(array_filter($fullCatalog, fn (array $s): bool => ($s['distance_category'] ?? '') === 'all'));
+
+        // 1. CM October 2026: Kyoto 2200m (Middle / Medium distance)
+        $cmOct = CompetitionEvent::where('event_key', 'cm-2026-10')->firstOrFail();
+        $recOct = CompetitionStatRecoveryRecommender::getRecommendations($cmOct);
+        $catalogOct = $recOct['reference_recovery_catalog'];
+        $octIds = array_column($catalogOct, 'id');
+
+        $this->assertNotEmpty($catalogOct);
+        $this->assertGreaterThan(
+            $allDistanceSkillsCount,
+            count($catalogOct),
+            'CM October 2026 (Medium) must include medium-specific skills in addition to all-distance skills'
+        );
+
+        // All-distance skill Arc Maestro (200351) MUST be included
+        $this->assertContains(200351, $octIds, 'Arc Maestro (all-distance) must be included');
+
+        // Medium-specific skills MUST be included
+        $this->assertContains(200711, $octIds, 'Trailblazer (Medium) must be included in Medium event');
+        $this->assertContains(201141, $octIds, 'Miracle Step (Medium) must be included in Medium event');
+        $this->assertContains(202091, $octIds, 'Burning Spirit (Medium) must be included in Medium event');
+
+        // Multi-distance skill covering Medium & Long MUST be included
+        $this->assertContains(203511, $octIds, 'Domineering Glare (Medium & Long) must be included in Medium event');
+
+        // Long-only skills MUST NOT be included in Medium event
+        $this->assertNotContains(200741, $octIds, 'Cooldown (Long-only) must not be included in Medium event');
+        $this->assertNotContains(201201, $octIds, 'VIP Pass (Long-only) must not be included in Medium event');
+        $this->assertNotContains(204292, $octIds, 'Ultra-Long Recovery (Long-only) must not be included in Medium event');
+
+        // Sprint-only skill MUST NOT be included in Medium event
+        $this->assertNotContains(200662, $octIds, 'Wait and See (Sprint-only) must not be included in Medium event');
+
+        // 2. LoH November 2026: Kyoto 3000m (Long distance)
+        $lohNov = CompetitionEvent::where('event_key', 'loh-2026-11')->firstOrFail();
+        $recNov = CompetitionStatRecoveryRecommender::getRecommendations($lohNov);
+        $catalogNov = $recNov['reference_recovery_catalog'];
+        $novIds = array_column($catalogNov, 'id');
+
+        $this->assertNotEmpty($catalogNov);
+        $this->assertGreaterThan(
+            $allDistanceSkillsCount,
+            count($catalogNov),
+            'LoH November 2026 (Long) must include long-specific skills in addition to all-distance skills'
+        );
+
+        // All-distance skill Arc Maestro (200351) MUST be included
+        $this->assertContains(200351, $novIds, 'Arc Maestro (all-distance) must be included in Long event');
+
+        // Long-specific skills MUST be included
+        $this->assertContains(200741, $novIds, 'Cooldown (Long) must be included in Long event');
+        $this->assertContains(201201, $novIds, 'VIP Pass (Long) must be included in Long event');
+        $this->assertContains(204292, $novIds, 'Ultra-Long Recovery (Long) must be included in Long event');
+
+        // Multi-distance skill covering Medium & Long MUST be included
+        $this->assertContains(203511, $novIds, 'Domineering Glare (Medium & Long) must be included in Long event');
+
+        // Medium-only skills MUST NOT be included in Long event
+        $this->assertNotContains(200711, $novIds, 'Trailblazer (Medium-only) must not be included in Long event');
+        $this->assertNotContains(201141, $novIds, 'Miracle Step (Medium-only) must not be included in Long event');
+
+        // Sprint-only skill MUST NOT be included in Long event
+        $this->assertNotContains(200662, $novIds, 'Wait and See (Sprint-only) must not be included in Long event');
     }
 }

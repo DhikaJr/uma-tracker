@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Support\CompetitionGreenSkillRecommender;
+use App\Support\CompetitionStatRecoveryRecommender;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -68,6 +69,7 @@ class CompetitionEvent extends Model
     protected $appends = [
         'is_fully_confirmed',
         'recommended_green_skills',
+        'recommended_build_guide',
     ];
 
     /**
@@ -86,6 +88,16 @@ class CompetitionEvent extends Model
     public function getRecommendedGreenSkillsAttribute(): array
     {
         return CompetitionGreenSkillRecommender::getRecommendations($this);
+    }
+
+    /**
+     * Get recommended build guide (stats and recovery) for competition event.
+     *
+     * @return array<string, mixed>
+     */
+    public function getRecommendedBuildGuideAttribute(): array
+    {
+        return CompetitionStatRecoveryRecommender::getRecommendations($this);
     }
 
     /**

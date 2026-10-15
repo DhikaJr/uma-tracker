@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
     ArrowLeft, 
     Trophy, 
@@ -20,7 +20,9 @@ import {
     TrendingUp,
     Heart,
     Flame,
-    Gauge
+    Gauge,
+    Target,
+    Award
 } from 'lucide-react';
 import { 
     SURFACE_MAP, 
@@ -37,6 +39,8 @@ import { findRacetrackCourse } from '../utils/racetrackHelper';
 import RacetrackCourseDetail from './RacetrackCourseDetail';
 import SkillDetailModal from './SkillDetailModal';
 import NoDebuffSkillsModal from './NoDebuffSkillsModal';
+import competitionEventGuides from '../data/competitionEventGuides.json';
+import recoverySkillsCatalog from '../data/recoverySkillsCatalog.json';
 
 /**
  * Subcomponent: Stat boost pill for green skills
@@ -108,6 +112,9 @@ function RandomBadge() {
 export default function CompetitionEventDetailView({ event, onBack, activeDate }) {
     const [selectedSkillModal, setSelectedSkillModal] = useState(null);
     const [showNoDebuffModal, setShowNoDebuffModal] = useState(false);
+    const [recoveryCategoryTab, setRecoveryCategoryTab] = useState('recovery_only');
+    const [recoveryStyleTab, setRecoveryStyleTab] = useState('all');
+    const [recoveryRarityTab, setRecoveryRarityTab] = useState('all');
 
     if (!event) return null;
 
@@ -168,6 +175,125 @@ export default function CompetitionEventDetailView({ event, onBack, activeDate }
 
     // Official Racetrack Course Layout result (null if unconfirmed or unknown)
     const racetrackData = findRacetrackCourse(event);
+
+    // Community Target Stats & Recovery Guide
+    const buildGuideResult = useMemo(() => {
+        if (event.recommended_build_guide && event.recommended_build_guide.is_fully_confirmed !== undefined) {
+            return event.recommended_build_guide;
+        }
+
+        const isFullyConfirmed = Boolean(event.venue && event.distance && event.direction && event.season);
+        if (!isFullyConfirmed) {
+            return {
+                is_fully_confirmed: false,
+                has_guide_reference: false,
+                stat_tiers: [],
+                recovery_guide: null,
+                reference_recovery_catalog: [],
+                disclaimer: 'Rekomendasi target stats dan kebutuhan recovery belum ditampilkan karena detail lintasan dan jarak resmi belum diumumkan secara lengkap oleh Cygames.'
+            };
+        }
+
+        const guide = event.event_key ? competitionEventGuides[event.event_key] : null;
+        if (!guide || !guide.stat_tiers || guide.stat_tiers.length === 0) {
+            return {
+                is_fully_confirmed: true,
+                has_guide_reference: false,
+                stat_tiers: [],
+                recovery_guide: null,
+                reference_recovery_catalog: [],
+                disclaimer: 'Referensi rekomendasi belum tersedia'
+            };
+        }
+
+        let distCat = event.distance_category;
+        if (!distCat && event.distance) {
+            const d = Number(event.distance);
+            distCat = d <= 1400 ? 'sprint' : d <= 1800 ? 'mile' : d <= 2400 ? 'middle' : 'long';
+        }
+
+        const normEventCat = (distCat === 'middle' || distCat === 'medium') ? 'medium' : (distCat ? distCat.toLowerCase() : '');
+
+        const filteredCatalog = recoverySkillsCatalog.filter((s) => {
+            if (!normEventCat) return true;
+
+            if (s.distance_categories && Array.isArray(s.distance_categories)) {
+                if (s.distance_categories.includes('all')) return true;
+                return s.distance_categories.some(cat => {
+                    const normCat = (cat === 'middle' || cat === 'medium') ? 'medium' : (cat ? cat.toLowerCase() : '');
+                    return normCat === normEventCat;
+                });
+            }
+
+            const skillDist = (s.distance_category || 'all').toLowerCase();
+            if (skillDist === 'all') return true;
+
+            const normSkillDist = (skillDist === 'middle' || skillDist === 'medium') ? 'medium' : skillDist;
+            return normSkillDist === normEventCat;
+        });
+
+        return {
+            is_fully_confirmed: true,
+            has_guide_reference: true,
+            source_name: guide.source_name || 'GameWith',
+            source_url: guide.source_url || '',
+            verified_at: guide.verified_at || '',
+            is_community_recommendation: Boolean(guide.is_community_recommendation ?? true),
+            benchmark_disclaimer: guide.benchmark_disclaimer || '',
+            scenario_note: guide.scenario_note || '',
+            stat_tiers: guide.stat_tiers || [],
+            recovery_guide: guide.recovery_guide || null,
+            reference_recovery_catalog: filteredCatalog,
+            disclaimer: null
+        };
+    }, [event]);
+
+    const displayedRecoverySkills = useMemo(() => {
+        const skills = buildGuideResult.reference_recovery_catalog || [];
+        return skills.filter((s) => {
+            if (recoveryCategoryTab !== 'all') {
+                if (s.recovery_category !== recoveryCategoryTab) {
+                    return false;
+                }
+            }
+            if (recoveryStyleTab !== 'all') {
+                if (s.running_style !== 'all' && s.running_style !== recoveryStyleTab) {
+                    return false;
+                }
+            }
+            if (recoveryRarityTab === 'gold') {
+                if (s.rarity !== 2) return false;
+            } else if (recoveryRarityTab === 'unique_original') {
+                if (s.is_inherited || (s.rarity !== 3 && s.rarity !== 4 && s.rarity !== 5)) return false;
+            } else if (recoveryRarityTab === 'unique_inherited') {
+                if (!s.is_inherited) return false;
+            } else if (recoveryRarityTab === 'evolved') {
+                if (s.rarity !== 6) return false;
+            } else if (recoveryRarityTab === 'white') {
+                if (s.is_inherited || s.rarity !== 1) return false;
+            }
+            return true;
+        });
+    }, [buildGuideResult, recoveryCategoryTab, recoveryStyleTab, recoveryRarityTab]);
+
+    const recoveryCounts = useMemo(() => {
+        const allSkills = buildGuideResult.reference_recovery_catalog || [];
+        const skills = recoveryCategoryTab === 'all'
+            ? allSkills
+            : allSkills.filter(s => s.recovery_category === recoveryCategoryTab);
+
+        return {
+            total: skills.length,
+            gold: skills.filter(s => s.rarity === 2).length,
+            uniqueOriginal: skills.filter(s => !s.is_inherited && (s.rarity === 3 || s.rarity === 4 || s.rarity === 5)).length,
+            uniqueInherited: skills.filter(s => s.is_inherited).length,
+            evolved: skills.filter(s => s.rarity === 6).length,
+            white: skills.filter(s => !s.is_inherited && s.rarity === 1).length,
+            allTotal: allSkills.length,
+            recoveryOnlyTotal: allSkills.filter(s => s.recovery_category === 'recovery_only').length,
+            mixedEffectTotal: allSkills.filter(s => s.recovery_category === 'mixed_effect_recovery').length,
+        };
+    }, [buildGuideResult, recoveryCategoryTab]);
 
     return (
         <div className="space-y-6 pb-12 animate-fadeIn">
@@ -489,6 +615,433 @@ export default function CompetitionEventDetailView({ event, onBack, activeDate }
                                     </div>
                                 );
                             })}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Target Stats & Recovery Guide Section (Komunitas JP) */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-5">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                                <Target className="w-5 h-5" />
+                            </span>
+                            <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                                Referensi Rekomendasi Target Stats & Skill Recovery
+                            </h3>
+                        </div>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                            Contoh patokan acuan build karakter dari komunitas kompetitif Jepang untuk persiapan turnamen.
+                        </p>
+                    </div>
+
+                    {buildGuideResult.has_guide_reference && (
+                        <div className="shrink-0 flex items-center gap-1.5 text-xs font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/50 px-3 py-1.5 rounded-xl border border-purple-500/20 w-fit">
+                            <Sparkles className="w-4 h-4 text-purple-500" />
+                            <span>Referensi Komunitas GameWith</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Case 1: Unconfirmed or No Guide Reference */}
+                {(!buildGuideResult.is_fully_confirmed || !buildGuideResult.has_guide_reference) && (
+                    <div className="p-5 sm:p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 flex items-start gap-3.5">
+                        <Info className="w-5 h-5 text-slate-400 mt-0.5 shrink-0" />
+                        <div className="space-y-1.5">
+                            <h4 className="text-sm font-black text-slate-700 dark:text-slate-200">
+                                Referensi Target Stats & Recovery Belum Tersedia
+                            </h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                {buildGuideResult.disclaimer}
+                            </p>
+                            <p className="text-[11px] text-slate-400 italic">
+                                Sesuai prinsip integritas data (Zero Speculative Data), sistem tidak membuat angka target stats atau rekomendasi recovery spekulatif sebelum parameter resmi dan panduan komunitas terverifikasi tersedia.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Case 2: Confirmed & Has Community Guide */}
+                {buildGuideResult.is_fully_confirmed && buildGuideResult.has_guide_reference && (
+                    <div className="space-y-6">
+                        {/* Attribution & Benchmark Disclaimer Box */}
+                        <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 dark:bg-amber-950/20 space-y-2.5">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                                <div className="flex items-center gap-2 font-bold text-amber-900 dark:text-amber-200">
+                                    <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                                    <span>Contoh Rekomendasi Komunitas (Bukan Persyaratan Resmi Cygames)</span>
+                                </div>
+                                {buildGuideResult.source_url && (
+                                    <a
+                                        href={buildGuideResult.source_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-400 hover:underline shrink-0 text-xs"
+                                    >
+                                        <span>Sumber: {buildGuideResult.source_name}</span>
+                                        {buildGuideResult.verified_at && (
+                                            <span className="opacity-75">({buildGuideResult.verified_at})</span>
+                                        )}
+                                        <ExternalLink className="w-3.5 h-3.5" />
+                                    </a>
+                                )}
+                            </div>
+                            <p className="text-xs text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+                                {buildGuideResult.benchmark_disclaimer}
+                            </p>
+                            {buildGuideResult.scenario_note && (
+                                <div className="p-2.5 rounded-xl bg-amber-500/15 text-[11px] font-semibold text-amber-900 dark:text-amber-200">
+                                    {buildGuideResult.scenario_note}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Target Stats Tiers Comparison Cards */}
+                        <div>
+                            <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider mb-3 flex items-center gap-2">
+                                <Gauge className="w-4 h-4 text-purple-500" />
+                                <span>Contoh Patokan Target Stats Akhir (GameWith)</span>
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {buildGuideResult.stat_tiers.map((tier) => (
+                                    <div
+                                        key={tier.tier_key}
+                                        className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                                            tier.is_provisional
+                                                ? 'bg-purple-50/40 dark:bg-purple-950/15 border-purple-300 dark:border-purple-800/50'
+                                                : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/80'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between gap-2 mb-3.5">
+                                            <span className="font-black text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                                                <Award className={`w-4 h-4 ${tier.tier_key === 'advanced' ? 'text-amber-500' : 'text-blue-500'}`} />
+                                                <span>{tier.tier_label}</span>
+                                            </span>
+                                            {tier.is_provisional && (
+                                                <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                                                    Sementara (Provisional)
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+                                            {/* Speed */}
+                                            <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                                                <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400">SPEED</div>
+                                                <div className="text-sm font-black text-blue-900 dark:text-blue-200 mt-0.5">
+                                                    {tier.speed || tier.stats?.speed}
+                                                </div>
+                                            </div>
+                                            {/* Stamina */}
+                                            <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 col-span-2 sm:col-span-1">
+                                                <div className="text-[10px] font-bold text-rose-600 dark:text-rose-400">STAMINA</div>
+                                                <div className="text-xs sm:text-sm font-black text-rose-900 dark:text-rose-200 mt-0.5 break-words">
+                                                    {tier.stamina || tier.stats?.stamina}
+                                                </div>
+                                            </div>
+                                            {/* Power */}
+                                            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                                                <div className="text-[10px] font-bold text-amber-600 dark:text-amber-400">POWER</div>
+                                                <div className="text-sm font-black text-amber-900 dark:text-amber-200 mt-0.5">
+                                                    {tier.power || tier.stats?.power}
+                                                </div>
+                                            </div>
+                                            {/* Guts */}
+                                            <div className="p-2.5 rounded-xl bg-orange-500/10 border border-orange-500/20">
+                                                <div className="text-[10px] font-bold text-orange-600 dark:text-orange-400">GUTS</div>
+                                                <div className="text-sm font-black text-orange-900 dark:text-orange-200 mt-0.5">
+                                                    {tier.guts || tier.stats?.guts}
+                                                </div>
+                                            </div>
+                                            {/* Wisdom */}
+                                            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 col-span-2 sm:col-span-1">
+                                                <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">WISDOM</div>
+                                                <div className="text-sm font-black text-emerald-900 dark:text-emerald-200 mt-0.5">
+                                                    {tier.wisdom || tier.stats?.wisdom}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Panduan Recovery Event (Seksi Terpisah 1) */}
+                        {buildGuideResult.recovery_guide && (
+                            <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-rose-500/5 via-pink-500/5 to-purple-500/5 border border-rose-200/80 dark:border-rose-900/40 space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <Heart className="w-4 h-4 text-rose-500" />
+                                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                                        Panduan Recovery Event: {buildGuideResult.recovery_guide.summary_label}
+                                    </h4>
+                                </div>
+                                <ul className="space-y-2 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                                    {buildGuideResult.recovery_guide.recommendations.map((rec, idx) => (
+                                        <li key={idx} className="flex items-start gap-2 leading-relaxed">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-2 shrink-0" />
+                                            <span>{rec}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        {/* Katalog Referensi Skill Recovery (GameTora) (Seksi Terpisah 2) */}
+                        <div className="space-y-4 pt-2">
+                            <div className="space-y-3">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div>
+                                        <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                                            <Sparkles className="w-4 h-4 text-purple-500" />
+                                            <span>Katalog Referensi Skill Recovery (GameTora)</span>
+                                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                                                {displayedRecoverySkills.length} Skill
+                                            </span>
+                                        </h4>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                            {recoveryCategoryTab === 'recovery_only'
+                                                ? 'Daftar skill dengan efek pemulihan stamina murni (Type 9) yang berlaku untuk kategori jarak event ini.'
+                                                : recoveryCategoryTab === 'mixed_effect_recovery'
+                                                ? 'Daftar skill yang memiliki efek recovery stamina sekaligus efek pendamping (speed/acceleration/dll).'
+                                                : 'Daftar seluruh skill pemulihan stamina resmi yang berlaku untuk kategori jarak event ini.'}
+                                        </p>
+                                    </div>
+
+                                    {/* Running Style Filter Tabs */}
+                                    <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                                        {[
+                                            { key: 'all', label: 'Semua Gaya Lari' },
+                                            { key: 'nige', label: 'Front / Nige' },
+                                            { key: 'senkou', label: 'Pace / Senkou' },
+                                            { key: 'sashi', label: 'Late / Sashi' },
+                                            { key: 'oikomi', label: 'End / Oikomi' }
+                                        ].map((tab) => (
+                                            <button
+                                                key={tab.key}
+                                                type="button"
+                                                onClick={() => setRecoveryStyleTab(tab.key)}
+                                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                                    recoveryStyleTab === tab.key
+                                                        ? 'bg-purple-600 text-white shadow-2xs'
+                                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                }`}
+                                            >
+                                                {tab.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Category Toggle: Recovery Utama (Default) vs Multi-Efek dengan Recovery */}
+                                <div className="flex flex-wrap items-center gap-2 pt-1">
+                                    <div className="inline-flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs">
+                                        <button
+                                            type="button"
+                                            onClick={() => setRecoveryCategoryTab('recovery_only')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                                                recoveryCategoryTab === 'recovery_only'
+                                                    ? 'bg-white dark:bg-slate-900 text-purple-700 dark:text-purple-300 shadow-xs font-black'
+                                                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                                            }`}
+                                        >
+                                            <span className="w-2 h-2 rounded-full bg-rose-500" />
+                                            <span>Recovery Utama</span>
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-black ${
+                                                recoveryCategoryTab === 'recovery_only'
+                                                    ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300'
+                                                    : 'bg-slate-200/80 dark:bg-slate-700/80 text-slate-600 dark:text-slate-400'
+                                            }`}>
+                                                {recoveryCounts.recoveryOnlyTotal}
+                                            </span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setRecoveryCategoryTab('mixed_effect_recovery')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                                                recoveryCategoryTab === 'mixed_effect_recovery'
+                                                    ? 'bg-white dark:bg-slate-900 text-cyan-700 dark:text-cyan-300 shadow-xs font-black'
+                                                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                                            }`}
+                                        >
+                                            <span className="w-2 h-2 rounded-full bg-cyan-500" />
+                                            <span>Skill Multi-Efek dengan Recovery</span>
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-black ${
+                                                recoveryCategoryTab === 'mixed_effect_recovery'
+                                                    ? 'bg-cyan-100 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300'
+                                                    : 'bg-slate-200/80 dark:bg-slate-700/80 text-slate-600 dark:text-slate-400'
+                                            }`}>
+                                                {recoveryCounts.mixedEffectTotal}
+                                            </span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setRecoveryCategoryTab('all')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                                                recoveryCategoryTab === 'all'
+                                                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-black'
+                                                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                                            }`}
+                                        >
+                                            <span>Semua</span>
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-black ${
+                                                recoveryCategoryTab === 'all'
+                                                    ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300'
+                                                    : 'bg-slate-200/80 dark:bg-slate-700/80 text-slate-600 dark:text-slate-400'
+                                            }`}>
+                                                {recoveryCounts.allTotal}
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Rarity / Category Filter Pills */}
+                                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
+                                    {[
+                                        { key: 'all', label: `Semua Jenis (${recoveryCounts.total})` },
+                                        { key: 'gold', label: `Gold / Rare (${recoveryCounts.gold})` },
+                                        { key: 'unique_original', label: `Unique Original (${recoveryCounts.uniqueOriginal})` },
+                                        { key: 'unique_inherited', label: `Unique Warisan (${recoveryCounts.uniqueInherited})` },
+                                        { key: 'evolved', label: `Evolusi (${recoveryCounts.evolved})` },
+                                        { key: 'white', label: `Normal (${recoveryCounts.white})` }
+                                    ].map((tab) => (
+                                        <button
+                                            key={tab.key}
+                                            type="button"
+                                            onClick={() => setRecoveryRarityTab(tab.key)}
+                                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                                recoveryRarityTab === tab.key
+                                                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-2xs font-black'
+                                                    : 'bg-white dark:bg-slate-850 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                            }`}
+                                        >
+                                            {tab.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Filtered recovery skills list */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1">
+                                {displayedRecoverySkills.map((skill) => (
+                                    <div
+                                        key={skill.id}
+                                        className={`p-3.5 rounded-2xl border flex items-start justify-between gap-3 transition-all ${
+                                            skill.is_inherited
+                                                ? 'bg-indigo-50/40 dark:bg-slate-800/80 border-indigo-200/80 dark:border-indigo-900/50 hover:border-indigo-500/60'
+                                                : skill.rarity === 5 || skill.rarity === 4 || skill.rarity === 3
+                                                    ? 'bg-amber-50/30 dark:bg-slate-800/80 border-amber-200/80 dark:border-amber-900/50 hover:border-amber-500/60'
+                                                    : skill.rarity === 2
+                                                        ? 'bg-amber-50/20 dark:bg-slate-800/60 border-amber-200/60 dark:border-amber-900/40 hover:border-amber-400'
+                                                        : skill.rarity === 6
+                                                            ? 'bg-pink-50/20 dark:bg-slate-800/60 border-pink-200/60 dark:border-pink-900/40 hover:border-pink-400'
+                                                            : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700/70 hover:border-purple-500/40'
+                                        }`}
+                                    >
+                                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden p-1 shrink-0 mt-0.5 border ${
+                                                skill.is_inherited
+                                                    ? 'bg-indigo-950/20 dark:bg-indigo-900/30 border-indigo-500/40'
+                                                    : skill.rarity === 5 || skill.rarity === 4 || skill.rarity === 3
+                                                        ? 'bg-amber-950/20 dark:bg-amber-900/30 border-amber-500/40'
+                                                        : skill.rarity === 2
+                                                            ? 'bg-amber-950/20 dark:bg-amber-900/30 border-amber-500/30'
+                                                            : skill.rarity === 6
+                                                                ? 'bg-pink-950/20 dark:bg-pink-900/30 border-pink-500/30'
+                                                                : 'bg-purple-950/20 dark:bg-purple-900/30 border-purple-500/30'
+                                            }`}>
+                                                <img
+                                                    src={skill.icon_url}
+                                                    alt={skill.name_en}
+                                                    className="w-full h-full object-contain"
+                                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                />
+                                            </div>
+                                            <div className="space-y-1 min-w-0 flex-1">
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <span className="font-black text-sm text-slate-900 dark:text-white">
+                                                        {skill.name_en}
+                                                    </span>
+                                                    {skill.name_jp && (
+                                                        <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                                                            ({skill.name_jp})
+                                                        </span>
+                                                    )}
+                                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-black ${
+                                                        skill.is_inherited
+                                                            ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/40'
+                                                            : skill.rarity === 5 || skill.rarity === 4 || skill.rarity === 3
+                                                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40'
+                                                                : skill.rarity === 2
+                                                                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                                                                    : skill.rarity === 6
+                                                                        ? 'bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/30'
+                                                                        : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                                                    }`}>
+                                                        {skill.rarity_label}
+                                                    </span>
+                                                    {skill.is_inherited && (
+                                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-300/60 dark:border-indigo-800/60">
+                                                            Warisan (継承)
+                                                        </span>
+                                                    )}
+                                                    {!skill.is_inherited && (skill.rarity === 5 || skill.rarity === 4 || skill.rarity === 3) && (
+                                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-300/60 dark:border-amber-800/60">
+                                                            Original (Bawaan)
+                                                        </span>
+                                                    )}
+                                                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                                                        <Heart className="w-2.5 h-2.5" />
+                                                        <span>{skill.heal_value}</span>
+                                                    </span>
+                                                    {skill.is_mixed_effect && (
+                                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/40" title="Memiliki efek stamina recovery serta efek non-recovery tambahan (kecepatan/akselerasi/dll)">
+                                                            <Sparkles className="w-2.5 h-2.5" />
+                                                            <span>Multi-Efek</span>
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 flex-wrap">
+                                                    <span>{skill.distance_category_label}</span>
+                                                    <span>•</span>
+                                                    <span>{skill.running_style_label}</span>
+                                                    {skill.base_duration && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span className="font-semibold text-slate-600 dark:text-slate-300">Durasi: {skill.base_duration}</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                                                    {skill.activation_condition_id}
+                                                </p>
+                                                {skill.character_label && (
+                                                    <p className={`text-[11px] italic font-medium pt-0.5 ${
+                                                        skill.is_inherited
+                                                            ? 'text-indigo-600 dark:text-indigo-400'
+                                                            : 'text-amber-700 dark:text-amber-400'
+                                                    }`}>
+                                                        {skill.character_label}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedSkillModal(skill)}
+                                            className="px-2.5 py-1 rounded-lg text-xs font-black text-purple-600 dark:text-purple-400 hover:text-white hover:bg-purple-600 transition-colors border border-purple-500/30 shrink-0 cursor-pointer flex items-center gap-0.5 mt-1"
+                                            title="Lihat detail skill"
+                                        >
+                                            <span>More</span>
+                                            <ChevronRight className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 )}

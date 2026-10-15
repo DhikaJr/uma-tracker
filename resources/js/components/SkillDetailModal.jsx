@@ -170,8 +170,18 @@ export default function SkillDetailModal({ skill, onClose }) {
                                     </span>
                                 )}
                                 {skill.version_label && (
-                                    <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-xs font-black shrink-0">
+                                    <span className={`px-2 py-0.5 rounded-md text-xs font-black shrink-0 ${
+                                        skill.is_inherited
+                                            ? 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800'
+                                            : 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300/60 dark:border-amber-700/60'
+                                    }`}>
                                         {skill.version_label}
+                                    </span>
+                                )}
+                                {skill.is_mixed_effect && (
+                                    <span className="px-2 py-0.5 rounded-md text-xs font-black shrink-0 bg-cyan-100 dark:bg-cyan-950/80 text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-700 flex items-center gap-1">
+                                        <Sparkles className="w-3 h-3" />
+                                        <span>Multi-Efek</span>
                                     </span>
                                 )}
                             </div>
@@ -208,17 +218,23 @@ export default function SkillDetailModal({ skill, onClose }) {
                                 <span className="text-slate-800 dark:text-slate-200 font-medium">{descEn}</span>
                             </div>
                         )}
+                        {skill.character_label && (
+                            <div className="pt-1 text-[11px] text-purple-700 dark:text-purple-300 italic font-medium">
+                                {skill.character_label}
+                            </div>
+                        )}
                     </div>
 
-                    {/* Metadata Grid (Rarity, Activation, Base Cost) */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {/* Metadata Grid (Rarity, Activation, Base Cost, Recovery Category) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
                         <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-700/50">
                             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rarity</div>
                             <div className="font-bold text-slate-900 dark:text-white mt-0.5 flex items-center gap-1.5">
                                 <span className={`inline-block w-2 h-2 rounded-full ${
-                                    rarityLabel === 'Evolved' ? 'bg-pink-500' :
-                                    rarityLabel === 'Unique' || rarityLabel === 'Upgraded unique' ? 'bg-amber-500' :
-                                    rarityLabel === 'Rare' ? 'bg-purple-500' : 'bg-slate-400'
+                                    skill.is_inherited ? 'bg-indigo-500' :
+                                    rarityLabel === 'Evolved' || rarityLabel?.includes('Evolusi') ? 'bg-pink-500' :
+                                    rarityLabel === 'Unique' || rarityLabel === 'Upgraded unique' || rarityLabel?.includes('Unique') ? 'bg-amber-500' :
+                                    rarityLabel === 'Rare' || rarityLabel?.includes('Gold') ? 'bg-amber-500' : 'bg-slate-400'
                                 }`} />
                                 <span>{rarityLabel}</span>
                             </div>
@@ -236,6 +252,16 @@ export default function SkillDetailModal({ skill, onClose }) {
                                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Biaya Skill (Base)</div>
                                 <div className="font-bold text-slate-900 dark:text-white mt-0.5">
                                     {baseCost} pt
+                                </div>
+                            </div>
+                        )}
+
+                        {skill.recovery_category && (
+                            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-700/50">
+                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kategori Recovery</div>
+                                <div className="font-bold text-slate-900 dark:text-white mt-0.5 flex items-center gap-1.5">
+                                    <span className={`inline-block w-2 h-2 rounded-full ${skill.is_mixed_effect ? 'bg-cyan-500' : 'bg-rose-500'}`} />
+                                    <span>{skill.is_mixed_effect ? 'Multi-Efek' : 'Recovery Utama'}</span>
                                 </div>
                             </div>
                         )}

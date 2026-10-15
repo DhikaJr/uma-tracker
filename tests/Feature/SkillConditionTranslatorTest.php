@@ -362,4 +362,58 @@ class SkillConditionTranslatorTest extends TestCase
         $this->assertStringContainsString('End Closer', $oikomiRes['summary']);
         $this->assertSame('Terdapat minimal 1 pelari End Closer (pelari penutup / 追込) lawan yang sedang panik / tergesa-gesa (kakari)', $oikomiRes['branches'][0]['conditions'][0]['text']);
     }
+
+    /**
+     * Test translation of newly added GameTora Skill Condition Viewer conditions:
+     * distance_diff_rate, is_behind_in, lane_type, post_number, running_style_equal_popularity_one,
+     * remain_distance_viewer_id, activate_count_param_skill, and running_style_temptation_count_*.
+     */
+    public function test_translate_gametora_viewer_conditions(): void
+    {
+        // 1. distance_diff_rate>=75 (Sleeping Lion condition in Gambar 1)
+        $diff75 = SkillConditionTranslator::translateClause('distance_diff_rate>=75');
+        $this->assertSame('distance_diff_rate', $diff75['field']);
+        $this->assertSame('Posisi berada di rombongan belakang (rentang jarak >= 75% dari pelari terdepan hingga terakhir)', $diff75['text']);
+        $this->assertArrayHasKey('note', $diff75);
+
+        // 2. distance_diff_rate<=30 (GameTora example)
+        $diff30 = SkillConditionTranslator::translateClause('distance_diff_rate<=30');
+        $this->assertSame('Posisi berada dalam rentang 30% terdepan dari total jarak antara pelari pertama hingga terakhir', $diff30['text']);
+
+        // 3. is_behind_in==1
+        $behindIn = SkillConditionTranslator::translateClause('is_behind_in==1');
+        $this->assertSame('is_behind_in', $behindIn['field']);
+        $this->assertSame('Pelari di belakang berada lebih dekat ke sisi pagar dalam (inner rail) dibanding Anda', $behindIn['text']);
+
+        // 4. lane_type==0
+        $lane = SkillConditionTranslator::translateClause('lane_type==0');
+        $this->assertSame('lane_type', $lane['field']);
+        $this->assertSame('Sedang berlari di jalur sisi dalam (menempel pagar dalam / inner rail)', $lane['text']);
+
+        // 5. post_number<=3
+        $post = SkillConditionTranslator::translateClause('post_number<=3');
+        $this->assertSame('post_number', $post['field']);
+        $this->assertSame('Memulai balapan dari nomor blok gerbang start (post number) 1 s.d. 3', $post['text']);
+
+        // 6. running_style_equal_popularity_one==1
+        $pop = SkillConditionTranslator::translateClause('running_style_equal_popularity_one==1');
+        $this->assertSame('running_style_equal_popularity_one', $pop['field']);
+        $this->assertSame('Menggunakan strategi gaya lari yang sama dengan pelari terfavorit ke-1 (Most Popular) di balapan', $pop['text']);
+
+        // 7. remain_distance_viewer_id<=850
+        $remainViewer = SkillConditionTranslator::translateClause('remain_distance_viewer_id<=850');
+        $this->assertSame('remain_distance_viewer_id', $remainViewer['field']);
+        $this->assertSame('Ada karakter non-NPC/pemain yang telah mencapai sisa jarak <= 850 meter menuju garis finish', $remainViewer['text']);
+
+        // 8. activate_count_param_skill>=7
+        $paramSkill = SkillConditionTranslator::translateClause('activate_count_param_skill>=7');
+        $this->assertSame('activate_count_param_skill', $paramSkill['field']);
+        $this->assertSame('Telah mengaktifkan minimal 7 skill pasif/status hijau (Green Skills) di balapan ini', $paramSkill['text']);
+
+        // 9. Compound formula matching Sleeping Lion: running_style==4&phase_random==1&distance_diff_rate>=75
+        $sleepingLion = SkillConditionTranslator::translate('running_style==4&phase_random==1&distance_diff_rate>=75');
+        $this->assertStringContainsString('Chaser (Pelari Belakang / 追込)', $sleepingLion['summary']);
+        $this->assertStringContainsString('Fase Pertengahan (Mid-Race)', $sleepingLion['summary']);
+        $this->assertStringContainsString('rombongan belakang', $sleepingLion['summary']);
+    }
 }

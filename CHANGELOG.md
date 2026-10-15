@@ -2,6 +2,33 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.8.0] - 15 Oktober 2026
+
+### 🏆 Modul Perencana Turnamen (CM / LoH): Referensi Target Stats, Panduan Recovery & Katalog Komprehensif
+- **Referensi Rekomendasi Target Stats & Panduan Recovery Komunitas JP (GameWith)**:
+  - Mengintegrasikan referensi benchmark target stats (Speed, Stamina, Power, Guts, Wisdom) dan kebutuhan recovery dari komunitas terverifikasi (GameWith) ke dalam [`competitionEventGuides.json`](file:///c:/Projects/uma-tracker/resources/js/data/competitionEventGuides.json) untuk turnamen resmi Cygames 2026–2027 (CM Okt 2026, LoH Nov 2026, CM Des 2026).
+  - Mengimplementasikan [`CompetitionStatRecoveryRecommender.php`](file:///c:/Projects/uma-tracker/app/Support/CompetitionStatRecoveryRecommender.php) dengan proteksi anti-spekulasi: turnamen dengan detail lintasan/jarak yang belum diumumkan resmi oleh Cygames (seperti CM Jan 2027) atau turnamen tanpa panduan komunitas secara ketat menampilkan disclaimer transparan dan tidak mengarang data.
+- **Katalog Referensi Skill Recovery Lengkap dari Data GameTora Lokal**:
+  - Membangun [`recoverySkillsCatalog.json`](file:///c:/Projects/uma-tracker/resources/js/data/recoverySkillsCatalog.json) (257 skill) murni dari data GameTora lokal terverifikasi, mengeksklusikan skill non-recovery (seperti skill kecepatan tikungan *Arc Professor* / `弧線のプロフェッサー`) serta memisahkan *Breath of Fresh Air* (`好転一息`) dan *Cooldown* (`クールダウン`).
+  - Menghubungkan 50 skill unik bawaan dan warisan ke karakter asalnya dengan label atribusi (misal `Super Creek (Original)'s unique`, `Mejiro Bright (Costume Warisan)'s unique`).
+- **Pemisahan Klasifikasi Recovery Utama vs Skill Multi-Efek dengan Recovery**:
+  - Mengklasifikasikan skill secara presisi berdasarkan seluruh efek aktif di semua kelompok kondisi:
+    - `recovery_only` (Recovery Utama): skill dengan efek stamina recovery murni (Type 9).
+    - `mixed_effect_recovery` (Skill Multi-Efek dengan Recovery): skill yang memiliki stamina recovery (Type 9) sekaligus efek non-recovery pendamping (kecepatan, akselerasi, dll., misal `introduction：My body` Agnes Tachyon).
+  - Tampilan UI default pada [`CompetitionEventDetailView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CompetitionEventDetailView.jsx) memprioritaskan `Recovery Utama`, dilengkapi filter pemilih tab kategori dan badge visual `Multi-Efek` berwarna cyan pada kartu skill serta [`SkillDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/SkillDetailModal.jsx).
+- **Penyelarasan Rentang Jarak Sesuai Turnamen yang Dipilih (CM / LoH)**:
+  - Menyelesaikan kendala ekuivalensi nomenklatur kategori jarak (`middle` di database dan seeder vs `medium` di katalog) pada backend dan frontend.
+  - Memetakan kondisi jarak (`distance_type==1..4`, multi-jarak seperti `distance_type==3@distance_type==4`, serta pembatasan `course_distance>=3000`, `2200m`, dll.) di seluruh condition groups & preconditions.
+  - Turnamen yang dipilih kini secara dinamis menampilkan skill recovery yang aktif pada rentang jaraknya (Medium, Long, Mile, Sprint) bersama skill untuk semua jarak, dan mengeksklusikan skill jarak lain yang tidak kompatibel.
+- **Penyempurnaan Penerjemah Syarat Kondisi Skill (Bahasa Indonesia)**:
+  - Menambahkan dukungan penerjemahan lengkap untuk klausul GameTora pada [`SkillConditionTranslator.php`](file:///c:/Projects/uma-tracker/app/Support/SkillConditionTranslator.php) dan [`skillConditionTranslator.js`](file:///c:/Projects/uma-tracker/resources/js/utils/skillConditionTranslator.js), termasuk `distance_diff_rate` (jarak relatif pelari dari rombongan belakang), `accumulatetime`, `remain_distance`, dan operator perbandingan.
+- **Hardening Konfigurasi Sesi & Cache Lokal (Pencegahan Mutasi SQLite)**:
+  - Mengubah driver default sesi dan cache lokal pada `.env`, `.env.example`, [`config/session.php`](file:///c:/Projects/uma-tracker/config/session.php), dan [`config/cache.php`](file:///c:/Projects/uma-tracker/config/cache.php) dari `database` menjadi `file`.
+  - Mengeliminasi potensi mutasi otomatis pada berkas `database/database.sqlite` akibat penulisan request normal Laravel.
+- **Verifikasi Integritas & Pengujian Otomatis Komprehensif**:
+  - Menambahkan pengujian pada [`CompetitionEventTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CompetitionEventTest.php) dan [`SkillConditionTranslatorTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/SkillConditionTranslatorTest.php) (238 tests, 8.779 assertions lulus 100% pada SQLite `:memory:`).
+  - Memverifikasi hash SHA-256 berkas fisik `database/database.sqlite` tetap identik 100% sebelum dan sesudah pekerjaan (`989D0E39E62D6CE0239DDE356EC86576C49A0CFD8F15B603F0FD94E9E7F1D246`).
+
 ## [Versi 2.7.4] - 13 Oktober 2026
 
 ### 📰 Integrasi Portal Resmi Cygames JP untuk Select Pickup & Provenance Dinamis
