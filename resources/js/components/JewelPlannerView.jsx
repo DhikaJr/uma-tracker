@@ -61,18 +61,47 @@ const CM_OPTIONS = {
 
     // League of Heroes (Cumulative Tiers)
     'loh_platinum_4': { label: 'LoH - Platinum 4 (3.290 Carat + 4 Tiket)', carats: 3290, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Cumulative Tier)' },
+    'loh_plat_4': { label: 'LoH - Platinum 4 (3.290 Carat + 4 Tiket)', carats: 3290, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Cumulative Tier)' },
     'loh_platinum_3': { label: 'LoH - Platinum 3 (2.790 Carat + 4 Tiket)', carats: 2790, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Cumulative Tier)' },
     'loh_platinum_2': { label: 'LoH - Platinum 2 (2.290 Carat + 4 Tiket)', carats: 2290, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Cumulative Tier)' },
     'loh_platinum_1': { label: 'LoH - Platinum 1 (1.790 Carat + 4 Tiket)', carats: 1790, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Cumulative Tier)' },
     'loh_platinum': { label: 'LoH - Platinum 1 (1.790 Carat + 4 Tiket)', carats: 1790, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Cumulative Tier)' },
     'loh_gold_4': { label: 'LoH - Gold 4 (1.290 Carat + 4 Tiket)', carats: 1290, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Cumulative Tier)' },
-    'loh_gold_3': { label: 'LoH - Gold 3 (990 Carat + 3 Tiket)', carats: 990, tickets: 3, charTickets: 2, suppTickets: 1, group: 'League of Heroes (Cumulative Tier)' },
+    'loh_gold_3': { label: 'LoH - Gold 3 (990 Carat + 3 Tiket)', carats: 990, tickets: 3, charTickets: 1, suppTickets: 2, group: 'League of Heroes (Cumulative Tier)' },
     'loh_gold_2': { label: 'LoH - Gold 2 (690 Carat + 2 Tiket)', carats: 690, tickets: 2, charTickets: 1, suppTickets: 1, group: 'League of Heroes (Cumulative Tier)' },
-    'loh_gold_1': { label: 'LoH - Gold 1 (540 Carat + 1 Tiket)', carats: 540, tickets: 1, charTickets: 1, suppTickets: 0, group: 'League of Heroes (Cumulative Tier)' },
+    'loh_gold_1': { label: 'LoH - Gold 1 (540 Carat + 1 Tiket)', carats: 540, tickets: 1, charTickets: 0, suppTickets: 1, group: 'League of Heroes (Cumulative Tier)' },
     'loh_silver_4': { label: 'LoH - Silver 4 (390 Carat)', carats: 390, tickets: 0, charTickets: 0, suppTickets: 0, group: 'League of Heroes (Cumulative Tier)' },
     'loh_silver_3': { label: 'LoH - Silver 3 (290 Carat)', carats: 290, tickets: 0, charTickets: 0, suppTickets: 0, group: 'League of Heroes (Cumulative Tier)' },
     'loh_silver_2': { label: 'LoH - Silver 2 (190 Carat)', carats: 190, tickets: 0, charTickets: 0, suppTickets: 0, group: 'League of Heroes (Cumulative Tier)' },
     'loh_silver_1': { label: 'LoH - Silver 1 (140 Carat)', carats: 140, tickets: 0, charTickets: 0, suppTickets: 0, group: 'League of Heroes (Cumulative Tier)' },
+    'loh_bronze_4': { label: 'LoH - Bronze 4 (90 Carat)', carats: 90, tickets: 0, charTickets: 0, suppTickets: 0, group: 'League of Heroes (Cumulative Tier)' },
+    'loh_bronze_3': { label: 'LoH - Bronze 3 (60 Carat)', carats: 60, tickets: 0, charTickets: 0, suppTickets: 0, group: 'League of Heroes (Cumulative Tier)' },
+    'loh_bronze_2': { label: 'LoH - Bronze 2 (30 Carat)', carats: 30, tickets: 0, charTickets: 0, suppTickets: 0, group: 'League of Heroes (Cumulative Tier)' },
+    'loh_bronze_1': { label: 'LoH - Bronze 1 (0 Carat)', carats: 0, tickets: 0, charTickets: 0, suppTickets: 0, group: 'League of Heroes (Cumulative Tier)' },
+
+    // League of Heroes (Platinum 4 Score Rewards: +100 Carat / 2.000pt setelah Platinum 4)
+    'loh_plat_4_plus_2000': { label: 'LoH - Plat 4 +2.000pt (3.390 Carat + 4 Tiket)', carats: 3390, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_4000': { label: 'LoH - Plat 4 +4.000pt (3.490 Carat + 4 Tiket)', carats: 3490, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_6000': { label: 'LoH - Plat 4 +6.000pt (3.590 Carat + 4 Tiket)', carats: 3590, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_8000': { label: 'LoH - Plat 4 +8.000pt (3.690 Carat + 4 Tiket)', carats: 3690, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_10000': { label: 'LoH - Plat 4 +10.000pt (3.790 Carat + 4 Tiket)', carats: 3790, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_12000': { label: 'LoH - Plat 4 +12.000pt (3.890 Carat + 4 Tiket)', carats: 3890, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_14000': { label: 'LoH - Plat 4 +14.000pt (3.990 Carat + 4 Tiket)', carats: 3990, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_16000': { label: 'LoH - Plat 4 +16.000pt (4.090 Carat + 4 Tiket)', carats: 4090, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_18000': { label: 'LoH - Plat 4 +18.000pt (4.190 Carat + 4 Tiket)', carats: 4190, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_20000': { label: 'LoH - Plat 4 +20.000pt (4.290 Carat + 4 Tiket)', carats: 4290, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+
+    // Aliases
+    'loh_plat_4_plus_1': { label: 'LoH - Plat 4 +2.000pt (3.390 Carat + 4 Tiket)', carats: 3390, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_2': { label: 'LoH - Plat 4 +4.000pt (3.490 Carat + 4 Tiket)', carats: 3490, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_3': { label: 'LoH - Plat 4 +6.000pt (3.590 Carat + 4 Tiket)', carats: 3590, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_4': { label: 'LoH - Plat 4 +8.000pt (3.690 Carat + 4 Tiket)', carats: 3690, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_5': { label: 'LoH - Plat 4 +10.000pt (3.790 Carat + 4 Tiket)', carats: 3790, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_6': { label: 'LoH - Plat 4 +12.000pt (3.890 Carat + 4 Tiket)', carats: 3890, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_7': { label: 'LoH - Plat 4 +14.000pt (3.990 Carat + 4 Tiket)', carats: 3990, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_8': { label: 'LoH - Plat 4 +16.000pt (4.090 Carat + 4 Tiket)', carats: 4090, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_9': { label: 'LoH - Plat 4 +18.000pt (4.190 Carat + 4 Tiket)', carats: 4190, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
+    'loh_plat_4_plus_10': { label: 'LoH - Plat 4 +20.000pt (4.290 Carat + 4 Tiket)', carats: 4290, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
 
     // None
     'none': { label: 'Tidak Mengikuti / Skip Hadiah (0 Carat)', carats: 0, tickets: 0, charTickets: 0, suppTickets: 0, group: 'Lainnya' },
@@ -1326,7 +1355,7 @@ export default function JewelPlannerView({ onNotify }) {
                                         <select
                                             value={config.champions_meeting_target}
                                             onChange={(e) => setConfig({ ...config, champions_meeting_target: e.target.value })}
-                                            className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-white max-w-[280px]"
+                                            className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-white max-w-[280px] sm:max-w-[350px]"
                                         >
                                             <optgroup label="Champions Meeting (Grade League)">
                                                 {Object.entries(CM_OPTIONS).filter(([_, item]) => item.group === 'Champions Meeting (Grade League)').map(([key, item]) => (
@@ -1334,7 +1363,12 @@ export default function JewelPlannerView({ onNotify }) {
                                                 ))}
                                             </optgroup>
                                             <optgroup label="League of Heroes (Cumulative Tiers)">
-                                                {Object.entries(CM_OPTIONS).filter(([k, item]) => item.group === 'League of Heroes (Cumulative Tier)' && k !== 'loh_platinum').map(([key, item]) => (
+                                                {Object.entries(CM_OPTIONS).filter(([k, item]) => item.group === 'League of Heroes (Cumulative Tier)' && k !== 'loh_platinum' && k !== 'loh_plat_4').map(([key, item]) => (
+                                                    <option key={key} value={key}>{item.label}</option>
+                                                ))}
+                                            </optgroup>
+                                            <optgroup label="League of Heroes (Platinum 4 Score Rewards: +100 Carat / 2.000pt)">
+                                                {Object.entries(CM_OPTIONS).filter(([k, item]) => item.group === 'League of Heroes (Platinum 4 Score Rewards)' && !k.match(/^loh_plat_4_plus_\d+$/)).map(([key, item]) => (
                                                     <option key={key} value={key}>{item.label}</option>
                                                 ))}
                                             </optgroup>
@@ -1347,6 +1381,18 @@ export default function JewelPlannerView({ onNotify }) {
                                         </span>
                                     </div>
                                 </div>
+
+                                {config.champions_meeting_target?.startsWith('loh_') && (
+                                    <div className="mt-2 text-[11px] leading-relaxed text-emerald-800 dark:text-emerald-300 bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl p-2.5">
+                                        <div className="font-bold flex items-center gap-1.5 text-emerald-900 dark:text-emerald-200 mb-0.5">
+                                            <span>🏆 Rincian Hadiah League of Heroes (LoH JP):</span>
+                                        </div>
+                                        <ul className="list-disc list-inside space-y-0.5 text-slate-600 dark:text-slate-400">
+                                            <li><strong>Tier Kumulatif:</strong> Menghasilkan Jewel kumulatif (hingga 3.290 Carat di Plat 4) serta 4 Tiket Gacha (Gold 1: 1 Support, Gold 2: 1 Uma, Gold 3: 1 Support, Gold 4: 1 Uma).</li>
+                                            <li><strong>PLATINUM Skor Rewards:</strong> Setelah mencapai Platinum 4 (30.000pt), setiap kelipatan 2.000pt skor liga memberikan tambahan <strong>+100 Jewel (Carat)</strong>.</li>
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

@@ -27,11 +27,17 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
   - Menstandarkan 9 label navigasi ringkas (*Dasbor, Analitik, Gacha, Karier, Afinitas, Koleksi, Circle, Perencana, Event*) di seluruh breakpoint desktop lengkap dengan tooltip (`title`) nama modul penuh dan `whitespace-nowrap shrink-0`.
   - Menyembunyikan subjudul panjang di bawah brand `UMA COMPANION`, menjaga format ringkas pill kuota Circle (`36.1M / 20M` dengan detail angka penuh pada tooltip), serta mempertahankan tombol utilitas kanan (*Changelog, Backup & Restore, Mode Terang/Gelap*) sebagai tombol *icon-only* yang proporsional.
   - Mengkalibrasi padding dan gap tombol navigasi pada breakpoint `xl:` agar seluruh 9 menu tampil utuh tanpa pemotongan teks pada resolusi laptop standar 1366x768.
+- **Kalibrasi Lengkap Tabel Hadiah Kumulatif League of Heroes & Bonus Skor Platinum 4 (`JewelPlannerView.jsx`)**:
+  - Melengkapi pilihan tier kumulatif League of Heroes mulai dari **Bronze 2 (1.000pt / 30 Carat)**, **Bronze 3 (60 Carat)**, **Bronze 4 (90 Carat)**, **Silver 1–4 (140 s.d. 390 Carat)**, **Gold 1–4 (540 s.d. 1.290 Carat + 4 Tiket)**, hingga **Platinum 1–4 (1.790 s.d. 3.290 Carat + 4 Tiket)**.
+  - Mengoreksi alokasi jenis tiket pada tier Gold sesuai tabel hadiah in-game JP: Gold 1 (+1 Tiket Support), Gold 2 (+1 Tiket Karakter), Gold 3 (+1 Tiket Support), dan Gold 4 (+1 Tiket Karakter).
+  - Menambahkan grup opsi **`Platinum 4 Score Rewards (+100 Carat / 2.000pt)`** pasca mencapai Platinum 4 (mulai dari `+2.000pt` / 3.390 Carat hingga `+20.000pt` / 4.290 Carat) beserta kotak info kontekstual rincian hadiah LoH.
+- **Optimasi Code-Splitting & Lazy Loading Bundel Frontend (`AppMain.jsx`)**:
+  - Menerapkan `React.lazy()` dan `<Suspense>` pada seluruh komponen tampilan modul dan modal utilitas untuk memecah bundel monolitik utama menjadi chunk modular per halaman (*on-demand loading*) sehingga mempercepat pemuatan awal aplikasi.
 - **Hardening Konfigurasi Sesi & Cache Lokal (Pencegahan Mutasi SQLite)**:
   - Mengubah driver default sesi dan cache lokal pada `.env`, `.env.example`, [`config/session.php`](file:///c:/Projects/uma-tracker/config/session.php), dan [`config/cache.php`](file:///c:/Projects/uma-tracker/config/cache.php) dari `database` menjadi `file`.
   - Mengeliminasi potensi mutasi otomatis pada berkas `database/database.sqlite` akibat penulisan request normal Laravel.
 - **Verifikasi Integritas & Pengujian Otomatis Komprehensif**:
-  - Menambahkan pengujian pada [`CompetitionEventTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CompetitionEventTest.php) dan [`SkillConditionTranslatorTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/SkillConditionTranslatorTest.php) (238 tests, 8.779 assertions lulus 100% pada SQLite `:memory:`).
+  - Menambahkan pengujian pada [`CompetitionEventTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CompetitionEventTest.php), [`SkillConditionTranslatorTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/SkillConditionTranslatorTest.php), dan [`PlannerApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/PlannerApiTest.php) (239 tests, 8.815 assertions lulus 100% pada SQLite `:memory:`).
   - Memverifikasi hash SHA-256 berkas fisik `database/database.sqlite` tetap identik 100% sebelum dan sesudah pekerjaan (`989D0E39E62D6CE0239DDE356EC86576C49A0CFD8F15B603F0FD94E9E7F1D246`).
 
 ## [Versi 2.7.4] - 13 Oktober 2026

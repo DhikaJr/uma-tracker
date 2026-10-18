@@ -55,6 +55,7 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
 - **Auto-Fill Saldo Modal Awal**: Nilai Jewel yang tersedia terisi 100% otomatis dari total saldo aset saat ini (`Free Carats + Paid Carats`) tanpa perlu input manual, disertai konversi ekuivalensi tarikan gacha yang terkorbankan (150 Jewel/pull).
 - **Kalibrasi Resmi Cygames (Durasi 12 Menit & Biaya Pt Turun 80%)**: Menyerap pembaruan resmi Cygames (News #3497 per 14 Oktober 2026) mengenai penyesuaian durasi Trainer Ability menjadi 12 menit dan pemotongan biaya Ability Pt hingga 80% untuk 8 jenis buff latihan.
 - **Penanganan Cerdas Tanggal Target & Daily Jewel Pack**: Penyesuaian reward Daily Missions ke 50 Carats/hari, formula Daily Jewel Pack yang menghitung penuh 50 Free Carats harian (total 2.000 Carat / 30 hari pack), tombol cepat rentang waktu (+30, +60, +90 Hari), dan proteksi auto-advance jika tanggal target telah lampau.
+- **Dukungan Penuh Hadiah Turnamen League of Heroes & Bonus Platinum 4**: Tabel hadiah kumulatif lengkap League of Heroes mulai dari Bronze 2 hingga Platinum 4 (30 s.d. 3.290 Carat + 4 Tiket dengan pemetaan presisi Tiket Karakter/Support pada tier Gold 1–4) serta milestone **Platinum 4 Score Rewards (+100 Carat per 2.000pt)** hingga skor liga +20.000pt (total 4.290 Carat) untuk proyeksi tabungan kompetitif yang akurat.
 
 ### 6. Koleksi Karakter & Support Card (Server JP)
 - **Katalog Koleksi Karakter**: Pelacakan status kepemilikan karakter dan varian kostum resmi yang disinkronkan dari GameTora JP, lengkap dengan modal tampilan ilustrasi berdiri (*Stand Zoom*).
@@ -214,7 +215,7 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 Aplikasi dilengkapi rangkaian pengujian otomatis berbasis **PHPUnit** pada database memori terisolasi (`:memory:`):
 
 ```bash
-# Menjalankan seluruh pengujian (238 tests, 8.779 assertions)
+# Menjalankan seluruh pengujian (239 tests, 8.815 assertions)
 php artisan test --compact
 
 # Menjalankan pengujian spesifik

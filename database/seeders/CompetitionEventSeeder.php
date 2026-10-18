@@ -11,7 +11,7 @@ class CompetitionEventSeeder extends Seeder
 {
     /**
      * Run the database seeds.
-     * Inserts the 6 officially announced Cygames 2026–2027 competition events.
+     * Inserts the 6 officially announced Cygames 2026-2027 competition events.
      * Guaranteed to be idempotent: running multiple times never duplicates rows.
      */
     public function run(): void

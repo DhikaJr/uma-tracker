@@ -85,4 +85,34 @@ class PlannerApiTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['free_carats', 'target_banner_type', 'target_date', 'spark_goal_multiplier']);
     }
+
+    public function test_can_save_and_retrieve_league_of_heroes_target_tiers_and_platinum_score_rewards(): void
+    {
+        $lohTargets = [
+            'loh_gold_1',
+            'loh_plat_4',
+            'loh_platinum_4',
+            'loh_plat_4_plus_2000',
+            'loh_plat_4_plus_20000',
+        ];
+
+        foreach ($lohTargets as $target) {
+            $payload = [
+                'free_carats' => 20000,
+                'target_date' => '2026-11-30',
+                'spark_goal_multiplier' => 1.0,
+                'champions_meeting_target' => $target,
+            ];
+
+            $saveResponse = $this->postJson('/api/planner/config', $payload);
+            $saveResponse->assertStatus(200)
+                ->assertJsonPath('success', true)
+                ->assertJsonPath('config.champions_meeting_target', $target);
+
+            $getResponse = $this->getJson('/api/planner/config');
+            $getResponse->assertStatus(200)
+                ->assertJsonPath('success', true)
+                ->assertJsonPath('config.champions_meeting_target', $target);
+        }
+    }
 }

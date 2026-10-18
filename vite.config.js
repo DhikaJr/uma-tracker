@@ -83,6 +83,28 @@ export default defineConfig({
             },
         },
     ],
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    const normalizedId = id.replace(/\\/g, '/');
+                    if (normalizedId.includes('resources/js/data/recoverySkillsCatalog.json')) {
+                        return 'data-recovery-skills';
+                    }
+                    if (normalizedId.includes('resources/js/data/racetracksCatalog.json')) {
+                        return 'data-racetracks';
+                    }
+                    if (
+                        normalizedId.includes('resources/js/data/greenSkillsCatalog.json') ||
+                        normalizedId.includes('resources/js/data/noDebuffSkills.json') ||
+                        normalizedId.includes('resources/js/data/competitionEventGuides.json')
+                    ) {
+                        return 'data-competition-catalogs';
+                    }
+                },
+            },
+        },
+    },
     server: {
         watch: {
             ignored: ['**/storage/framework/views/**'],

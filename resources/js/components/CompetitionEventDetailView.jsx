@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { 
     ArrowLeft, 
     Trophy, 
@@ -37,8 +37,8 @@ import {
 import { getRecommendedGreenSkills } from '../utils/greenSkillHelper';
 import { findRacetrackCourse } from '../utils/racetrackHelper';
 import RacetrackCourseDetail from './RacetrackCourseDetail';
-import SkillDetailModal from './SkillDetailModal';
-import NoDebuffSkillsModal from './NoDebuffSkillsModal';
+const SkillDetailModal = lazy(() => import('./SkillDetailModal'));
+const NoDebuffSkillsModal = lazy(() => import('./NoDebuffSkillsModal'));
 import competitionEventGuides from '../data/competitionEventGuides.json';
 import recoverySkillsCatalog from '../data/recoverySkillsCatalog.json';
 
@@ -1058,19 +1058,23 @@ export default function CompetitionEventDetailView({ event, onBack, activeDate }
             </div>
 
             {/* Skill Detail Modal (Opened via "More" button) */}
-            {selectedSkillModal && (
-                <SkillDetailModal
-                    skill={selectedSkillModal}
-                    onClose={() => setSelectedSkillModal(null)}
-                />
-            )}
+            <Suspense fallback={null}>
+                {selectedSkillModal && (
+                    <SkillDetailModal
+                        skill={selectedSkillModal}
+                        onClose={() => setSelectedSkillModal(null)}
+                    />
+                )}
+            </Suspense>
 
             {/* No Debuff Skills Modal */}
-            {showNoDebuffModal && (
-                <NoDebuffSkillsModal
-                    onClose={() => setShowNoDebuffModal(false)}
-                />
-            )}
+            <Suspense fallback={null}>
+                {showNoDebuffModal && (
+                    <NoDebuffSkillsModal
+                        onClose={() => setShowNoDebuffModal(false)}
+                    />
+                )}
+            </Suspense>
         </div>
     );
 }

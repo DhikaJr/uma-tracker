@@ -1,18 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import Navbar from './components/Navbar';
-import DashboardView from './components/DashboardView';
-import AnalyticsView from './components/AnalyticsView';
-import GachaView from './components/GachaView';
-import FansView from './components/FansView';
-import CircleClubView from './components/CircleClubView';
-import JewelPlannerView from './components/JewelPlannerView';
-import CollectionView from './components/CollectionView';
-import AffinityView from './components/AffinityView';
-import CompetitionEventsView from './components/CompetitionEventsView';
 import MobileBottomNav from './components/MobileBottomNav';
 import Toast from './components/Toast';
-import BackupRestoreModal from './components/BackupRestoreModal';
-import ChangelogModal from './components/ChangelogModal';
+
+// Lazy-loaded Views and Modals for Code-Splitting
+const DashboardView = lazy(() => import('./components/DashboardView'));
+const AnalyticsView = lazy(() => import('./components/AnalyticsView'));
+const GachaView = lazy(() => import('./components/GachaView'));
+const FansView = lazy(() => import('./components/FansView'));
+const AffinityView = lazy(() => import('./components/AffinityView'));
+const CollectionView = lazy(() => import('./components/CollectionView'));
+const CircleClubView = lazy(() => import('./components/CircleClubView'));
+const JewelPlannerView = lazy(() => import('./components/JewelPlannerView'));
+const CompetitionEventsView = lazy(() => import('./components/CompetitionEventsView'));
+const CompetitionEventDetailView = lazy(() => import('./components/CompetitionEventDetailView'));
+const BackupRestoreModal = lazy(() => import('./components/BackupRestoreModal'));
+const ChangelogModal = lazy(() => import('./components/ChangelogModal'));
+
+/**
+ * Lightweight fallback spinner during dynamic chunk lazy-loading.
+ * Fully styled for both light and dark modes.
+ */
+function ViewLoadingFallback() {
+    return (
+        <div className="flex flex-col items-center justify-center min-h-[420px] p-8 text-center rounded-2xl bg-white/60 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800/80 shadow-xs animate-fadeIn">
+            <div className="relative flex items-center justify-center mb-4">
+                <div className="w-10 h-10 border-3 border-emerald-200 dark:border-emerald-900 border-t-emerald-500 rounded-full animate-spin" />
+            </div>
+            <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 animate-pulse">
+                Memuat modul...
+            </p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-medium">
+                Menyiapkan tampilan & data aplikasi
+            </p>
+        </div>
+    );
+}
 
 export default function AppMain() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -159,97 +182,107 @@ export default function AppMain() {
 
             {/* Main Content Area */}
             <main className="flex-1 w-full max-w-[1366px] 2xl:max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-5 xl:px-6 py-6 sm:py-8 pb-24 sm:pb-8 overflow-x-hidden">
-                {activeTab === 'dashboard' && (
-                    <DashboardView
-                        summaryData={summaryData}
-                        loading={loadingSummary}
-                        setActiveTab={setActiveTab}
-                        circleGoal={circleGoal}
-                        baseRate={baseRate}
-                        setBaseRate={updateBaseRate}
-                        onNotify={notify}
-                        onReload={loadSummary}
-                    />
-                )}
+                <Suspense fallback={<ViewLoadingFallback />}>
+                    {activeTab === 'dashboard' && (
+                        <DashboardView
+                            summaryData={summaryData}
+                            loading={loadingSummary}
+                            setActiveTab={setActiveTab}
+                            circleGoal={circleGoal}
+                            baseRate={baseRate}
+                            setBaseRate={updateBaseRate}
+                            onNotify={notify}
+                            onReload={loadSummary}
+                        />
+                    )}
 
-                {activeTab === 'analytics' && (
-                    <AnalyticsView 
-                        circleGoal={circleGoal}
-                        baseRate={baseRate}
-                        onNotify={notify}
-                    />
-                )}
+                    {activeTab === 'analytics' && (
+                        <AnalyticsView 
+                            circleGoal={circleGoal}
+                            baseRate={baseRate}
+                            onNotify={notify}
+                        />
+                    )}
 
-                {activeTab === 'gacha' && (
-                    <GachaView 
-                        onNotify={notify} 
-                        baseRate={baseRate}
-                        setBaseRate={updateBaseRate}
-                    />
-                )}
+                    {activeTab === 'gacha' && (
+                        <GachaView 
+                            onNotify={notify} 
+                            baseRate={baseRate}
+                            setBaseRate={updateBaseRate}
+                        />
+                    )}
 
-                {activeTab === 'career' && (
-                    <FansView 
-                        onNotify={notify} 
-                        circleGoal={circleGoal}
-                        setCircleGoal={updateCircleGoal}
-                        onCareerStatsUpdate={handleCareerStatsUpdate}
-                    />
-                )}
+                    {activeTab === 'career' && (
+                        <FansView 
+                            onNotify={notify} 
+                            circleGoal={circleGoal}
+                            setCircleGoal={updateCircleGoal}
+                            onCareerStatsUpdate={handleCareerStatsUpdate}
+                        />
+                    )}
 
-                {activeTab === 'affinity' && (
-                    <AffinityView 
-                        onNotify={notify}
-                        darkMode={darkMode}
-                    />
-                )}
+                    {activeTab === 'affinity' && (
+                        <AffinityView 
+                            onNotify={notify}
+                            darkMode={darkMode}
+                        />
+                    )}
 
-                {activeTab === 'collection' && (
-                    <CollectionView 
-                        onNotify={notify}
-                    />
-                )}
+                    {activeTab === 'collection' && (
+                        <CollectionView 
+                            onNotify={notify}
+                        />
+                    )}
 
-                {activeTab === 'club' && (
-                    <CircleClubView 
-                        onNotify={notify} 
-                        circleGoal={circleGoal}
-                    />
-                )}
+                    {activeTab === 'club' && (
+                        <CircleClubView 
+                            onNotify={notify} 
+                            circleGoal={circleGoal}
+                        />
+                    )}
 
-                {activeTab === 'planner' && (
-                    <JewelPlannerView 
-                        onNotify={notify}
-                    />
-                )}
+                    {activeTab === 'planner' && (
+                        <JewelPlannerView 
+                            onNotify={notify}
+                        />
+                    )}
 
-                {activeTab === 'events' && (
-                    <CompetitionEventsView 
-                        onNotify={notify}
-                    />
-                )}
+                    {activeTab === 'events' && (
+                        <CompetitionEventsView 
+                            onNotify={notify}
+                        />
+                    )}
+                </Suspense>
             </main>
 
             {/* Toast Notifications */}
             <Toast toast={toast} onClose={() => setToast(null)} />
 
             {/* Backup & Restore Modal */}
-            <BackupRestoreModal 
-                isOpen={showBackupModal} 
-                onClose={() => setShowBackupModal(false)} 
-                onRestoreSuccess={() => {
-                    loadSummary();
-                    // trigger tab reload if needed
-                    setActiveTab((curr) => curr);
-                }}
-                notify={notify}
-            />
+            <Suspense fallback={null}>
+                {showBackupModal && (
+                    <BackupRestoreModal 
+                        isOpen={showBackupModal} 
+                        onClose={() => setShowBackupModal(false)} 
+                        onRestoreSuccess={() => {
+                            loadSummary();
+                            // trigger tab reload if needed
+                            setActiveTab((curr) => curr);
+                        }}
+                        notify={notify}
+                    />
+                )}
+            </Suspense>
 
             {/* Changelog Modal */}
-            <ChangelogModal 
-                isOpen={showChangelogModal} 
-                onClose={() => setShowChangelogModal(false)} 
-            />
+            <Suspense fallback={null}>
+                {showChangelogModal && (
+                    <ChangelogModal 
+                        isOpen={showChangelogModal} 
+                        onClose={() => setShowChangelogModal(false)} 
+                    />
+                )}
+            </Suspense>
 
             {/* Footer with Attribution & Database Sourcing Disclaimer */}
             <footer className="bg-slate-900 border-t border-slate-800 text-slate-400 py-8 text-xs">
