@@ -18,7 +18,8 @@ class BackupUmaDataCommand extends Command
     protected $signature = 'uma:backup 
                             {--output= : Path file tujuan penyimpanan backup JSON}
                             {--path= : Alias untuk path file tujuan penyimpanan backup JSON}
-                            {--pretty : Format JSON dengan indentasi rapi}';
+                            {--pretty : Format JSON dengan indentasi rapi}
+                            {--keep=0 : Jumlah maksimal file backup terbaru di storage/app/backups yang dipertahankan (0 = simpan semua)}';
 
     /**
      * The console command description.
@@ -69,6 +70,14 @@ class BackupUmaDataCommand extends Command
         }
 
         $this->table(['Entitas Data', 'Jumlah Record'], $rows);
+
+        $keep = (int) $this->option('keep');
+        if ($keep > 0) {
+            $pruneResult = $service->pruneOldBackups($keep);
+            if ($pruneResult['deleted_count'] > 0) {
+                $this->info("Membersihkan {$pruneResult['deleted_count']} file backup lama ({$pruneResult['freed_mb']} MB dibebaskan, {$pruneResult['remaining_count']} file tersisa).");
+            }
+        }
 
         return Command::SUCCESS;
     }

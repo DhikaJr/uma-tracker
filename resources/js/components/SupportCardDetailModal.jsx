@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SkillDetailModal from './SkillDetailModal';
+import { formatSupportUniqueEffect } from '../utils/supportUniqueEffectFormatter';
 import {
     X,
     Sparkles,
@@ -285,7 +286,8 @@ export default function SupportCardDetailModal({ card, isOpen, onClose }) {
 
     const levelHeaders = cardDetails?.level_headers || (rarity === 'SSR' ? [30, 35, 40, 45, 50] : (rarity === 'SR' ? [25, 30, 35, 40, 45] : [20, 25, 30, 35, 40]));
     const effectsTable = cardDetails?.effects_table || [];
-    const uniqueEffect = cardDetails?.unique_effect || null;
+    const rawUnique = card.raw_unique || cardDetails?.raw_unique || null;
+    const uniqueEffect = formatSupportUniqueEffect(cardDetails?.unique_effect, rawUnique, card.card_type);
     const hintSkills = cardDetails?.hints?.skills || [];
     const hintOthers = cardDetails?.hints?.others || [];
     const eventSkills = cardDetails?.event_skills || [];
@@ -525,26 +527,63 @@ export default function SupportCardDetailModal({ card, isOpen, onClose }) {
                         <div className="space-y-6">
                             {/* Unique Effect Banner */}
                             {uniqueEffect && (
-                                <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300 dark:border-amber-800/80 shadow-xs space-y-2">
-                                    <div className="flex items-center justify-between">
+                                <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300 dark:border-amber-800/80 shadow-xs space-y-2.5">
+                                    <div className="flex items-center justify-between flex-wrap gap-2">
                                         <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-bold text-xs">
                                             <Sparkles className="w-4 h-4 text-amber-500" />
                                             <span>Efek Unik (Unique Effect)</span>
                                         </div>
-                                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-amber-500 text-white shadow-xs">
-                                            Aktif di Lv. {uniqueEffect.level || 30}
-                                        </span>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                                        {uniqueEffect.effects?.map((ue, idx) => (
-                                            <span 
-                                                key={idx}
-                                                className="px-2.5 py-1 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-amber-200 dark:border-amber-900/60 shadow-2xs"
-                                            >
-                                                {ue.name_en || ue.name_ja}: <strong>+{ue.value || 0}%</strong>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            {(uniqueEffect.condition_id || uniqueEffect.condition) && (
+                                                <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                                                    {uniqueEffect.condition_id || uniqueEffect.condition}
+                                                </span>
+                                            )}
+                                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-amber-500 text-white shadow-xs">
+                                                Aktif di Lv. {uniqueEffect.level || 30}
                                             </span>
-                                        ))}
+                                        </div>
                                     </div>
+
+                                    {/* Detailed Description */}
+                                    <div className="space-y-1">
+                                        {uniqueEffect.description_id && (
+                                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-relaxed">
+                                                {uniqueEffect.description_id}
+                                            </p>
+                                        )}
+                                        {uniqueEffect.description_en && uniqueEffect.description_en !== uniqueEffect.description_id && (
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+                                                {uniqueEffect.description_en}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Bonus Badges / Stats Breakdown */}
+                                    {uniqueEffect.bonuses && uniqueEffect.bonuses.length > 0 ? (
+                                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                                            {uniqueEffect.bonuses.map((b, idx) => (
+                                                <span 
+                                                    key={idx}
+                                                    className="px-2.5 py-1 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-amber-200 dark:border-amber-900/60 shadow-2xs flex items-center gap-1.5"
+                                                >
+                                                    <span>{b.name_id || b.name_en}</span>
+                                                    <strong className="text-emerald-600 dark:text-emerald-400">{b.formatted}</strong>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                                            {uniqueEffect.effects?.map((ue, idx) => (
+                                                <span 
+                                                    key={idx}
+                                                    className="px-2.5 py-1 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-amber-200 dark:border-amber-900/60 shadow-2xs"
+                                                >
+                                                    {ue.name_id || ue.name_en || ue.name_ja}: <strong className="text-emerald-600 dark:text-emerald-400">+{ue.value || 0}%</strong>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 

@@ -18,6 +18,7 @@ use App\Support\UmaCatalog;
 use Database\Seeders\CompetitionEventSeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use InvalidArgumentException;
 
 class BackupService
@@ -27,9 +28,9 @@ class BackupService
     public const SUPPORTED_SCHEMA_VERSIONS = ['0.9', '1.0', '2.0'];
 
     /**
-     * Get live count statistics of all backup-able tables.
+     * Get live count statistics of all backup-able tables and local backup archives.
      *
-     * @return array<string, int>
+     * @return array<string, mixed>
      */
     public function stats(): array
     {
@@ -43,6 +44,105 @@ class BackupService
             'gacha_banners' => GachaBanner::count(),
             'user_characters' => UserCharacter::count(),
             'user_support_cards' => UserSupportCard::count(),
+            'local_backups' => $this->getLocalBackupFilesSummary(),
+        ];
+    }
+
+    /**
+     * Get summary of local backup files in storage/app/backups.
+     *
+     * @return array{count: int, total_size_bytes: int, total_size_mb: float, files: list<array<string, mixed>>}
+     */
+    public function getLocalBackupFilesSummary(?string $backupDir = null): array
+    {
+        $backupDir = $backupDir ?: storage_path('app/backups');
+        if (! File::isDirectory($backupDir)) {
+            return [
+                'count' => 0,
+                'total_size_bytes' => 0,
+                'total_size_mb' => 0.0,
+                'files' => [],
+            ];
+        }
+
+        $pattern = $backupDir.DIRECTORY_SEPARATOR.'uma-companion-backup-*.json';
+        $found = glob($pattern) ?: [];
+
+        $files = [];
+        $totalBytes = 0;
+
+        foreach ($found as $filepath) {
+            $bytes = (int) @filesize($filepath);
+            $totalBytes += $bytes;
+            $mtime = (int) @filemtime($filepath);
+
+            $files[] = [
+                'filename' => basename($filepath),
+                'size_bytes' => $bytes,
+                'size_mb' => round($bytes / 1048576, 2),
+                'modified_at' => $mtime ? date('Y-m-d H:i:s', $mtime) : null,
+                'timestamp' => $mtime,
+            ];
+        }
+
+        usort($files, fn ($a, $b) => $b['timestamp'] <=> $a['timestamp']);
+
+        $cleanFiles = array_map(function ($f) {
+            unset($f['timestamp']);
+
+            return $f;
+        }, $files);
+
+        return [
+            'count' => count($cleanFiles),
+            'total_size_bytes' => $totalBytes,
+            'total_size_mb' => round($totalBytes / 1048576, 2),
+            'files' => $cleanFiles,
+        ];
+    }
+
+    /**
+     * Prune older backups in storage/app/backups, keeping only the most recent $keep files.
+     *
+     * @return array{deleted_count: int, deleted_files: list<string>, freed_bytes: int, freed_mb: float, remaining_count: int}
+     */
+    public function pruneOldBackups(int $keep = 1, ?string $backupDir = null): array
+    {
+        $backupDir = $backupDir ?: storage_path('app/backups');
+        $keep = max(1, $keep);
+        $summary = $this->getLocalBackupFilesSummary($backupDir);
+        $files = $summary['files'];
+
+        if (count($files) <= $keep) {
+            return [
+                'deleted_count' => 0,
+                'deleted_files' => [],
+                'freed_bytes' => 0,
+                'freed_mb' => 0.0,
+                'remaining_count' => count($files),
+            ];
+        }
+
+        $toDelete = array_slice($files, $keep);
+        $deletedFiles = [];
+        $freedBytes = 0;
+
+        foreach ($toDelete as $item) {
+            $path = $backupDir.DIRECTORY_SEPARATOR.$item['filename'];
+            if (File::exists($path) && @unlink($path)) {
+                $deletedFiles[] = $item['filename'];
+                $freedBytes += (int) ($item['size_bytes'] ?? 0);
+            }
+        }
+
+        $remainingCount = count($files) - count($deletedFiles);
+
+        return [
+            'deleted_count' => count($deletedFiles),
+            'deleted_files' => $deletedFiles,
+            'freed_bytes' => $freedBytes,
+            'freed_mb' => round($freedBytes / 1048576, 2),
+            'remaining_count' => $remainingCount,
         ];
     }
 

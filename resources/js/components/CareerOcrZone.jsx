@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Tesseract from 'tesseract.js';
 import {
     Camera,
     Upload,
@@ -446,6 +445,8 @@ export default function CareerOcrZone({
         setProgressPercent(5);
 
         try {
+            setProgressStatus('Memuat pustaka Tesseract OCR engine...');
+            const Tesseract = (await import('tesseract.js')).default;
             const enhancedBlob = await preprocessImage(file);
 
             // Recognize using eng+jpn

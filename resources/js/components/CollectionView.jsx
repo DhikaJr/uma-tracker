@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { 
     Layers, 
     Sparkles, 
@@ -19,17 +19,27 @@ import {
     Maximize2,
     X,
     BookOpen,
-    Info
+    Info,
+    ArrowRightLeft
 } from 'lucide-react';
-import CharacterDetailModal from './CharacterDetailModal';
-import SupportCardDetailModal from './SupportCardDetailModal';
+import ReverseSkillFinder from './ReverseSkillFinder';
+
+const CharacterDetailModal = lazy(() => import('./CharacterDetailModal'));
+const SupportCardDetailModal = lazy(() => import('./SupportCardDetailModal'));
+const SupportCardCompareModal = lazy(() => import('./SupportCardCompareModal'));
+const SkillDetailModal = lazy(() => import('./SkillDetailModal'));
 
 export default function CollectionView({ onNotify }) {
-    const [activeSection, setActiveSection] = useState('characters'); // 'characters' | 'cards'
+    const [activeSection, setActiveSection] = useState('characters'); // 'characters' | 'cards' | 'skills'
     const [previewCard, setPreviewCard] = useState(null);
     const [previewCharacter, setPreviewCharacter] = useState(null);
     const [selectedCharForDetail, setSelectedCharForDetail] = useState(null);
     const [selectedCardForDetail, setSelectedCardForDetail] = useState(null);
+
+    // Support card comparison & skill detail states
+    const [compareCards, setCompareCards] = useState([]); // up to 2 cards [cardA, cardB]
+    const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+    const [selectedSkillForDetail, setSelectedSkillForDetail] = useState(null);
 
     // Character collection states
     const [characters, setCharacters] = useState([]);
@@ -302,6 +312,52 @@ export default function CollectionView({ onNotify }) {
         }
     };
 
+    // Check if card is selected for comparison
+    const isCardInCompare = (card) => {
+        return compareCards.some(c => (c.id && c.id === card.id) || c.name === card.name);
+    };
+
+    // Toggle card selection for comparison (up to 2 cards)
+    const handleToggleCompareCard = (card) => {
+        if (isCardInCompare(card)) {
+            setCompareCards(prev => prev.filter(c => !((c.id && c.id === card.id) || c.name === card.name)));
+        } else {
+            if (compareCards.length >= 2) {
+                setCompareCards([compareCards[1], card]);
+                onNotify?.(`Mengganti slot kartu komparasi dengan ${card.name}`, 'info');
+            } else {
+                const next = [...compareCards, card];
+                setCompareCards(next);
+                if (next.length === 2) {
+                    onNotify?.(`2 kartu terpilih! Siap dibandingkan.`, 'success');
+                } else {
+                    onNotify?.(`Kartu 1 dipilih (${card.name}). Pilih 1 kartu lagi untuk membandingkan.`, 'info');
+                }
+            }
+        }
+    };
+
+    // Open Compare Modal with fallback cards if fewer than 2 selected
+    const handleOpenCompareModal = () => {
+        if (compareCards.length === 0) {
+            if (filteredCards.length >= 2) {
+                setCompareCards([filteredCards[0], filteredCards[1]]);
+                setIsCompareModalOpen(true);
+            } else if (cards.length >= 2) {
+                setCompareCards([cards[0], cards[1]]);
+                setIsCompareModalOpen(true);
+            } else {
+                onNotify?.('Minimal diperlukan 2 support card untuk dibandingkan.', 'error');
+            }
+        } else if (compareCards.length === 1) {
+            const otherCard = cards.find(c => !((c.id && c.id === compareCards[0].id) || c.name === compareCards[0].name)) || compareCards[0];
+            setCompareCards([compareCards[0], otherCard]);
+            setIsCompareModalOpen(true);
+        } else {
+            setIsCompareModalOpen(true);
+        }
+    };
+
     // Filter & sort characters
     const filteredCharacters = useMemo(() => {
         return characters.filter(char => {
@@ -468,7 +524,7 @@ export default function CollectionView({ onNotify }) {
                 </div>
             </div>
 
-            {/* Main Tabs Navigation: Characters vs Support Cards */}
+            {/* Main Tabs Navigation: Characters vs Support Cards vs Reverse Skill Finder */}
             <div className="flex bg-slate-100 dark:bg-slate-950/60 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 gap-1 sm:gap-2">
                 <button
                     type="button"
@@ -480,9 +536,9 @@ export default function CollectionView({ onNotify }) {
                     }`}
                 >
                     <Sparkles className="w-4 h-4" />
-                    <span>🌸 Koleksi Karakter (Uma Musume)</span>
+                    <span>🌸 Koleksi Karakter</span>
                     {charStats && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-pink-100 dark:bg-pink-950/80 text-pink-700 dark:text-pink-300">
+                        <span className="hidden md:inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-pink-100 dark:bg-pink-950/80 text-pink-700 dark:text-pink-300">
                             {charStats.total_owned}/{charStats.total_available} ({charStats.completion_rate}%)
                         </span>
                     )}
@@ -500,10 +556,26 @@ export default function CollectionView({ onNotify }) {
                     <Layers className="w-4 h-4" />
                     <span>🃏 Koleksi Support Card</span>
                     {cardStats && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300">
+                        <span className="hidden md:inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300">
                             {cardStats.total_owned}/{cardStats.total_available} ({cardStats.completion_rate}%)
                         </span>
                     )}
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => setActiveSection('skills')}
+                    className={`flex-1 py-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        activeSection === 'skills'
+                            ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200 dark:border-slate-700'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                >
+                    <Search className="w-4 h-4" />
+                    <span>🔎 Pencari Sumber Skill</span>
+                    <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300">
+                        Reverse Finder
+                    </span>
                 </button>
             </div>
 
@@ -1055,7 +1127,7 @@ export default function CollectionView({ onNotify }) {
                                 ))}
                             </div>
 
-                            {/* Sort Selector */}
+                            {/* Sort Selector & Compare Button */}
                             <div className="flex items-center gap-2 shrink-0">
                                 <select
                                     value={cardSort}
@@ -1068,6 +1140,16 @@ export default function CollectionView({ onNotify }) {
                                     <option value="owned_first">Dimiliki Terlebih Dahulu</option>
                                     <option value="name_asc">Nama Kartu (A - Z)</option>
                                 </select>
+
+                                <button
+                                    type="button"
+                                    onClick={handleOpenCompareModal}
+                                    className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white shadow-xs transition-all cursor-pointer shrink-0"
+                                    title="Bandingkan 2 support card side-by-side (0LB - MLB)"
+                                >
+                                    <ArrowRightLeft className="w-3.5 h-3.5" />
+                                    <span>Bandingkan ({compareCards.length}/2)</span>
+                                </button>
                             </div>
                         </div>
 
@@ -1308,22 +1390,90 @@ export default function CollectionView({ onNotify }) {
                                                     </span>
                                                 )}
                                             </div>
-                                            {/* Detail Efek 0LB-MLB & Event Button */}
-                                            <button
-                                                type="button"
-                                                onClick={() => setSelectedCardForDetail(card)}
-                                                className="w-full mt-2 py-1.5 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-950/70 text-amber-800 dark:text-amber-300 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-amber-200/60 dark:border-amber-800/50"
-                                                title="Lihat tabel stats efek 0LB s.d. MLB, skill hint, dan training event"
-                                            >
-                                                <BookOpen className="w-3.5 h-3.5" />
-                                                <span>Detail Efek (0LB-MLB) & Event</span>
-                                            </button>
+                                            {/* Detail Efek & Compare Button */}
+                                            <div className="flex items-center gap-1.5 mt-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedCardForDetail(card)}
+                                                    className="flex-1 py-1.5 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-950/70 text-amber-800 dark:text-amber-300 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-amber-200/60 dark:border-amber-800/50"
+                                                    title="Lihat tabel stats efek 0LB s.d. MLB, skill hint, dan training event"
+                                                >
+                                                    <BookOpen className="w-3.5 h-3.5" />
+                                                    <span>Detail Efek</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleToggleCompareCard(card)}
+                                                    className={`px-2.5 py-1.5 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer border ${
+                                                        isCardInCompare(card)
+                                                            ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                                                            : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                                                    }`}
+                                                    title={isCardInCompare(card) ? 'Hapus dari perbandingan' : 'Tambahkan ke perbandingan 2 kartu'}
+                                                >
+                                                    <ArrowRightLeft className="w-3.5 h-3.5" />
+                                                    <span>{isCardInCompare(card) ? 'Terpilih' : 'Banding'}</span>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 );
                             })}
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* SECTION 3: REVERSE SKILL FINDER                              */}
+            {/* ============================================================ */}
+            {activeSection === 'skills' && (
+                <ReverseSkillFinder
+                    onSkillDetail={(skill) => setSelectedSkillForDetail(skill)}
+                    onNotify={onNotify}
+                />
+            )}
+
+            {/* Floating Comparison Bar (when cards are selected for comparison) */}
+            {compareCards.length > 0 && activeSection === 'cards' && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-2xl border border-slate-700 flex flex-wrap items-center justify-center gap-3 animate-fadeIn">
+                    <div className="flex items-center gap-2">
+                        <ArrowRightLeft className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span className="text-xs font-bold whitespace-nowrap">
+                            {compareCards.length}/2 Kartu Terpilih:
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                            {compareCards.map((c) => (
+                                <span key={c.id || c.name} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-800 border border-slate-700">
+                                    <span className="truncate max-w-[110px]">{c.name}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleToggleCompareCard(c)}
+                                        className="text-slate-400 hover:text-white cursor-pointer font-bold"
+                                        title="Hapus"
+                                    >
+                                        &times;
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <button
+                            type="button"
+                            onClick={handleOpenCompareModal}
+                            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                            <span>Buka Komparator</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCompareCards([])}
+                            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all cursor-pointer"
+                        >
+                            Batal
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -1490,19 +1640,48 @@ export default function CollectionView({ onNotify }) {
                 </div>
             )}
 
-            {/* Character Detail & Skill Tree Modal */}
-            <CharacterDetailModal
-                character={selectedCharForDetail}
-                isOpen={!!selectedCharForDetail}
-                onClose={() => setSelectedCharForDetail(null)}
-            />
+            {/* Lazy Modals Wrapped in Suspense */}
+            <Suspense fallback={null}>
+                {/* Character Detail & Skill Tree Modal */}
+                {selectedCharForDetail && (
+                    <CharacterDetailModal
+                        character={selectedCharForDetail}
+                        isOpen={!!selectedCharForDetail}
+                        onClose={() => setSelectedCharForDetail(null)}
+                    />
+                )}
 
-            {/* Support Card Detail Modal (0LB to MLB, Hints, Training Events) */}
-            <SupportCardDetailModal
-                card={selectedCardForDetail}
-                isOpen={!!selectedCardForDetail}
-                onClose={() => setSelectedCardForDetail(null)}
-            />
+                {/* Support Card Detail Modal (0LB to MLB, Hints, Training Events) */}
+                {selectedCardForDetail && (
+                    <SupportCardDetailModal
+                        card={selectedCardForDetail}
+                        isOpen={!!selectedCardForDetail}
+                        onClose={() => setSelectedCardForDetail(null)}
+                    />
+                )}
+
+                {/* Support Card Side-by-Side Comparator Modal */}
+                {isCompareModalOpen && compareCards.length > 0 && (
+                    <SupportCardCompareModal
+                        cardA={compareCards[0]}
+                        cardB={compareCards[1] || cards.find(c => (c.id && c.id !== compareCards[0].id) || c.name !== compareCards[0].name) || compareCards[0]}
+                        isOpen={isCompareModalOpen}
+                        onClose={() => setIsCompareModalOpen(false)}
+                        allCards={cards}
+                        onSelectCardA={(c) => setCompareCards(prev => [c, prev[1] || null])}
+                        onSelectCardB={(c) => setCompareCards(prev => [prev[0] || null, c])}
+                        onSkillDetail={(s) => setSelectedSkillForDetail(s)}
+                    />
+                )}
+
+                {/* Skill Formula & Scaling Detail Modal */}
+                {selectedSkillForDetail && (
+                    <SkillDetailModal
+                        skill={selectedSkillForDetail}
+                        onClose={() => setSelectedSkillForDetail(null)}
+                    />
+                )}
+            </Suspense>
         </div>
     );
 }

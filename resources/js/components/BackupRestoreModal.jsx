@@ -14,13 +14,15 @@ import {
     BookOpen, 
     Settings, 
     Users,
-    HardDrive
+    HardDrive,
+    Trash2
 } from 'lucide-react';
 
 export default function BackupRestoreModal({ isOpen, onClose, onRestoreSuccess, notify }) {
     const [activeTab, setActiveTab] = useState('backup'); // 'backup' or 'restore'
     const [stats, setStats] = useState(null);
     const [loadingStats, setLoadingStats] = useState(false);
+    const [pruning, setPruning] = useState(false);
     
     // Restore states
     const [selectedFile, setSelectedFile] = useState(null);
@@ -93,6 +95,31 @@ export default function BackupRestoreModal({ isOpen, onClose, onRestoreSuccess, 
     const handleDownloadBackup = () => {
         window.location.href = '/api/backup/export?download=1';
         notify?.('Memulai pengunduhan file cadangan (.json)...', 'info');
+    };
+
+    // Prune Old Local Backups
+    const handlePruneBackups = async () => {
+        setPruning(true);
+        try {
+            const res = await fetch('/api/backup/prune', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ keep: 1 }),
+            });
+            const result = await res.json();
+            if (!res.ok || !result.success) {
+                throw new Error(result.message || 'Gagal membersihkan cadangan lama');
+            }
+            notify?.(result.message || 'Berkas cadangan lama berhasil dibersihkan!', 'success');
+            fetchStats();
+        } catch (err) {
+            notify?.(err.message, 'error');
+        } finally {
+            setPruning(false);
+        }
     };
 
     // Execute Restore
@@ -339,6 +366,51 @@ export default function BackupRestoreModal({ isOpen, onClose, onRestoreSuccess, 
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Local Server Backup Retention Card */}
+                            {stats?.local_backups && stats.local_backups.count > 0 && (
+                                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/70 space-y-3">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="p-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 shrink-0">
+                                                <HardDrive className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <h5 className="text-xs font-black text-slate-800 dark:text-slate-200">
+                                                    Penyimpanan Cadangan Lokal Server
+                                                </h5>
+                                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                    {stats.local_backups.count} arsip tersimpan ({stats.local_backups.total_size_mb} MB)
+                                                    {stats.local_backups.latest_file && (
+                                                        <span className="hidden sm:inline"> • Terbaru: {stats.local_backups.latest_file}</span>
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {stats.local_backups.count > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={handlePruneBackups}
+                                                disabled={pruning}
+                                                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800 transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+                                            >
+                                                {pruning ? (
+                                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                                ) : (
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                )}
+                                                <span>Bersihkan Arsip Lama (Simpan 1)</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                    {stats.local_backups.count > 1 && (
+                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                            Terdapat {stats.local_backups.count - 1} arsip cadangan lama yang dapat dihapus untuk menghemat ruang disk tanpa memengaruhi cadangan paling mutakhir.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Download Action */}
                             <div className="pt-2">

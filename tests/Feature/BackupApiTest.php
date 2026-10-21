@@ -8,6 +8,7 @@ use App\Models\GachaBanner;
 use App\Models\GachaPity;
 use App\Models\GachaPull;
 use App\Models\UmaCatalogItem;
+use App\Services\BackupService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
@@ -318,5 +319,47 @@ class BackupApiTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('unresolved_references.0.entity', 'user_characters')
             ->assertJsonPath('unresolved_references.0.record_name', 'Completely Unknown Character');
+    }
+
+    public function test_can_prune_old_local_backups(): void
+    {
+        $testDir = storage_path('framework/testing/test_backups_'.uniqid());
+        File::makeDirectory($testDir, 0755, true);
+
+        // Create 3 temporary dummy backup files with different timestamps
+        $file1 = $testDir.'/uma-companion-backup-2026-01-01_100000.json';
+        $file2 = $testDir.'/uma-companion-backup-2026-01-02_100000.json';
+        $file3 = $testDir.'/uma-companion-backup-2026-01-03_100000.json';
+
+        File::put($file1, json_encode(['test' => 1]));
+        @touch($file1, strtotime('2026-01-01 10:00:00'));
+        File::put($file2, json_encode(['test' => 2]));
+        @touch($file2, strtotime('2026-01-02 10:00:00'));
+        File::put($file3, json_encode(['test' => 3]));
+        @touch($file3, strtotime('2026-01-03 10:00:00'));
+
+        try {
+            $service = app(BackupService::class);
+            $result = $service->pruneOldBackups(1, $testDir);
+
+            $this->assertSame(2, $result['deleted_count']);
+            $this->assertSame(1, $result['remaining_count']);
+            $this->assertTrue(File::exists($file3));
+            $this->assertFalse(File::exists($file1));
+            $this->assertFalse(File::exists($file2));
+
+            // Also test the API endpoint response structure
+            $response = $this->postJson('/api/backup/prune', ['keep' => 10]);
+            $response->assertStatus(200)
+                ->assertJsonPath('success', true)
+                ->assertJsonStructure([
+                    'success',
+                    'message',
+                    'prune' => ['deleted_count', 'deleted_files', 'freed_bytes', 'freed_mb', 'remaining_count'],
+                    'stats',
+                ]);
+        } finally {
+            File::deleteDirectory($testDir);
+        }
     }
 }

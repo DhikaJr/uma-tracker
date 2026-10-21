@@ -32,7 +32,7 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
 
 ### 2. Fans Gain & Career Tracker (Circle Quota Monitor)
 - **Pencatatan Karir & Autorank Pintar (E s.d. LF24)**: Pencatatan sesi latihan mandiri maupun manual dengan pemetaan otomatis badge rank evaluasi dari Bronze E hingga Legendary Double-Crown LF24 ($\ge 104.800$ pts) berdasarkan total skor perolehan.
-- **Ekstraksi OCR Screenshot Sisi Klien (Tesseract.js)**: Ekstraksi data hasil evaluasi karir langsung dari clipboard (`Ctrl + V`) atau berkas tangkapan layar di browser tanpa beban server, dilengkapi kalkulasi tingkat keyakinan (*confidence score*) per kolom dan penanda peringatan jika akurasi $< 75\%$.
+- **Ekstraksi OCR Screenshot Sisi Klien Dinamis (Tesseract.js On-Demand)**: Ekstraksi data hasil evaluasi karir langsung dari clipboard (`Ctrl + V`) atau berkas tangkapan layar di browser tanpa beban server. Menggunakan pemuatan pustaka dinamis (*dynamic import* `await import('tesseract.js')`) yang hanya diunduh saat dibutuhkan, menghemat ~1 MB bundel awal. Dilengkapi kalkulasi tingkat keyakinan (*confidence score*) per kolom dan penanda peringatan jika akurasi $< 75\%$.
 - **Analitik Skenario & Penggunaan Karakter**: Agregasi performa per skenario latihan (rata-rata, rekor Max/Min fans, serta modal rincian karakter per skenario) dan modal statistik performa karakter komprehensif (kontribusi sesi, rata-rata fans, rekor rank, dan riwayat 5 sesi terakhir).
 - **Riwayat Akumulasi Fans Bulanan Lampau**: Kartu rekam jejak performa bulanan historis dengan pemilih periode bulan (*Historical Month Selector*), menyajikan 4 metrik ringkasan (Total Fans, Sesi Run, Rata-rata Fans, Status Kuota) dan grafik kurva harian interaktif.
 - **Target Kuota Kontekstual & Normalisasi Gambar GameTora**: Garis target kuota circle ditampilkan kontekstual pada tab bulan berjalan, serta integrasi engine normalisasi nama yang memastikan avatar resmi GameTora tampil akurat tanpa fallback inisial teks.
@@ -57,10 +57,14 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
 - **Penanganan Cerdas Tanggal Target & Daily Jewel Pack**: Penyesuaian reward Daily Missions ke 50 Carats/hari, formula Daily Jewel Pack yang menghitung penuh 50 Free Carats harian (total 2.000 Carat / 30 hari pack), tombol cepat rentang waktu (+30, +60, +90 Hari), dan proteksi auto-advance jika tanggal target telah lampau.
 - **Dukungan Penuh Hadiah Turnamen League of Heroes & Bonus Platinum 4**: Tabel hadiah kumulatif lengkap League of Heroes mulai dari Bronze 2 hingga Platinum 4 (30 s.d. 3.290 Carat + 4 Tiket dengan pemetaan presisi Tiket Karakter/Support pada tier Gold 1–4) serta milestone **Platinum 4 Score Rewards (+100 Carat per 2.000pt)** hingga skor liga +20.000pt (total 4.290 Carat) untuk proyeksi tabungan kompetitif yang akurat.
 
-### 6. Koleksi Karakter & Support Card (Server JP)
+### 6. Koleksi Karakter, Support Card, Reverse Finder & Komparator (Server JP)
 - **Katalog Koleksi Karakter**: Pelacakan status kepemilikan karakter dan varian kostum resmi yang disinkronkan dari GameTora JP, lengkap dengan modal tampilan ilustrasi berdiri (*Stand Zoom*).
 - **Konfigurasi Karakter Mendalam**: Pengaturan level bintang (1★ s.d. 5★ dengan proteksi bintang dasar), pohon status skill (Innate, Awakening Lv 2–5, Evolved), dan grade adaptasi lintasan (*Aptitudes*).
 - **Katalog Koleksi Support Card**: Pelacakan kartu bantuan berdasarkan kelangkaan (SSR, SR, R) dan tipe atribut, lengkap dengan matriks limit break (0LB s.d. 4LB/MLB), efek unik kartu, support hints, dan alur event latihan (*Continuous Events*).
+- **Parser & Formatter Efek Unik Support Card Otentik GameTora**: Mengeliminasi kode placeholder internal mentah seperti `"Type 101: +80%"` atau `"Type 103: +4%"`, menyajikan deskripsi bilingual (Bahasa Indonesia & Bahasa Inggris resmi GameTora), lencana kondisi pemicu aktivasi (*Gauge Ikatan ≥ 80*, *≥ 4 Jenis Kartu di Dek*, *Batas Energi > 100*), serta rincian lencana bonus status individual pada modal detail kartu dan komparator.
+- **Pencari Sumber Skill Global (*Reverse Skill Finder* / 逆引きスキル検索)**: Tab pencarian terbalik untuk menemukan Support Card dan karakter Uma Musume yang menyediakan skill tertentu (via Hints, Event Skills, Innate, Awakening Lv 2–5, Unique, atau Evolved Skills) lengkap dengan filter kelangkaan, jenis sumber, status kepemilikan, preset pencarian meta cepat (*Groundwork*, *Maestro*, *Curvature*, *Spurt*, *Fresh Air*), dan akses langsung ke kalkulator formula skill.
+- **Komparator Side-by-Side 2 Support Card (0LB–MLB)**: Alat perbandingan langsung dua kartu bantuan secara berdampingan dengan pemilih level Limit Break independen (0LB s.d. MLB) yang secara cerdas mendeteksi level kepemilikan riil, tabel perbandingan efek support terpadu dengan penandaan keunggulan otomatis (*Delta Highlight* hijau lembut), komparasi efek unik (*Unique Effects*), serta perbandingan *Hint Skills* dan *Event Skills*.
+- **Pemuatan Modular Asinkron (*Lazy Loaded Modals*)**: Seluruh modal detail karakter, detail support card, komparator kartu, dan formula skill dimuat secara dinamis (*lazy loading*) via `React.lazy()` guna menjaga performa rendering antarmuka tetap ringan dan responsif.
 - **Formula & Efek Skill Terintegrasi**: Akses rujukan formula skill GameTora mencakup tipe efek, target balapan dinamis, durasi dasar, dan kondisi pemicu aktivasi.
 
 ### 7. Inheritance Affinity & Compatibility Calculator (Server JP - 相性計算機)
@@ -80,9 +84,10 @@ Aplikasi ini dirancang untuk penggunaan personal di lingkungan lokal guna memper
 - **Katalog Skill Recovery & Pemisahan Multi-Efek**: Menampilkan 257 skill pemulihan stamina dari data GameTora lokal dengan klasifikasi terpisah antara *Recovery Utama* (murni efek Type 9) dan *Skill Multi-Efek dengan Recovery* (recovery + speed/akselerasi pendamping), lengkap dengan badge visual `Multi-Efek`, label atribusi karakter unik original/warisan, serta modal detail rincian formula.
 - **Penyaringan Rentang Jarak Otomatis Sesuai Turnamen**: Penyelarasan dinamis yang secara otomatis menampilkan skill recovery yang kompatibel dengan kategori jarak turnamen yang dipilih (Medium, Long, Mile, Sprint) berdampingan dengan skill untuk semua jarak, serta mengeksklusikan skill jarak lain yang tidak kompatibel.
 
-### 9. Sistem Pencadangan Data Teruji (Backup Schema v2.0)
+### 9. Sistem Pencadangan Data Teruji & Manajemen Retensi (Backup Schema v2.0)
 - **Integritas Transaksional & Skema Versi 2.0**: Validasi skema ketat dengan whitelist versi (`0.9`, `1.0`, `2.0`), proteksi nilai numerik `base_rate`, resolusi aman relasi foreign key via identitas unik katalog, dan transaksi atomik dengan rollback penuh jika terjadi kegagalan impor.
 - **Dua Mode Pemulihan Fleksibel**: Mode *Merge* (menggabungkan data cadangan ke basis data aktif dengan resolusi konflik deterministik) dan Mode *Overwrite* (mengosongkan 9 entitas database sebelum memulihkan data secara utuh).
+- **Manajemen Retensi Arsip & Pembersihan Berkas Usang**: Dukungan retensi pembersihan berkas cadangan lama pada `storage/app/backups/` via tombol antarmuka web *"Bersihkan Arsip Lama (Simpan 1)"*, endpoint REST `POST /api/backup/prune`, serta opsi baris perintah `php artisan uma:backup --keep=N`.
 - **Akses Web UI & Perintah CLI Artisan**: Pencadangan dan pemulihan data dapat dijalankan melalui antarmuka web interaktif maupun perintah command-line `php artisan uma:backup` dan `php artisan uma:restore`.
 
 ### 10. Progressive Web App (PWA) & Mobile Navigation
@@ -176,6 +181,9 @@ php artisan uma:backup
 # Simpan cadangan dengan indentasi JSON rapi (pretty-print)
 php artisan uma:backup --pretty
 
+# Simpan cadangan sekaligus bersihkan arsip lama (simpan 1 file terbaru)
+php artisan uma:backup --keep=1
+
 # Simpan cadangan ke jalur berkas spesifik
 php artisan uma:backup --output=C:/path/ke/backup-saya.json --pretty
 ```
@@ -202,9 +210,9 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 | **Gacha Tracker** (`/api/gacha/*`) | `banners`, `pulls`, `stats`, `luck-percentile`, `sync-catalog` | Manajemen riwayat tarikan (single, 10-pull, batch), rekalkulasi pity counter otomatis (target 200), audit rate banner standar/boosted, evaluasi keberuntungan binomial kumulatif, sinkronisasi katalog banner JP 2026+, serta sinkronisasi otomatis berita pengumuman resmi Cygames JP (`CygamesNewsService`) untuk lineup 10 kartu *Select Pickup*. |
 | **Career & Fans** (`/api/career/*`) | `runs`, `stats`, `metadata`, `bulk-delete` | Pencatatan sesi latihan karir, pemetaan autorank resmi (Bronze E hingga LF24), pelacakan kuota fans circle, analisis agregat performa skenario, dan metadata OCR. |
 | **Affinity Calculator** (`/api/affinity/*`) | `calculate`, `recommendations/{targetId}`, `races`, `career-runs` | Perhitungan kompatibilitas silsilah 7-slot (Base Affinity + G1 Shared Victory + Triple Affinity), penegakan aturan anti-duplikasi, serta rekomendasi pasangan parent terbaik dari koleksi lokal. |
-| **Koleksi** (`/api/collection/*`) | `characters`, `support-cards`, `skill-detail` | Pelacakan kepemilikan karakter (1★–5★, skill tree) dan support card (0LB–MLB, hint/event effect), serta perincian formula & efek skill GameTora. |
+| **Koleksi** (`/api/collection/*`) | `characters`, `support-cards`, `skill-detail`, `skill-sources` | Pelacakan kepemilikan karakter (1★–5★, skill tree) dan support card (0LB–MLB, hint/event effect), perincian formula & efek skill GameTora, serta pencarian terbalik sumber skill global (*Reverse Skill Finder*). |
 | **Competition Events** (`/api/competition-events/*`) | `competition-events`, `{id}` | Linimasa kronologis resmi CM & LoH (Zero Speculative Data), aturan khusus (misal No Debuff), rekomendasi green skills resmi, objek diagram layout sirkuit & fase balapan GameTora, serta penyajian `recommended_build_guide` (referensi rekomendasi benchmark target stats GameWith dan katalog skill recovery terklasifikasi sesuai jarak balapan). |
-| **Backup & Restore** (`/api/backup/*`) | `stats`, `export`, `import` | Ekspor dan impor data 9 entitas basis data terstruktur (Schema v2.0) dengan validasi whitelist versi, mode `merge` / `overwrite`, isolasi proteksi event resmi, dan atomic rollback transaksional. |
+| **Backup & Restore** (`/api/backup/*`) | `stats`, `export`, `import`, `prune` | Ekspor dan impor data 9 entitas basis data terstruktur (Schema v2.0) dengan validasi whitelist versi, mode `merge` / `overwrite`, isolasi proteksi event resmi, pembersihan retensi berkas lama server (`prune`), dan atomic rollback transaksional. |
 | **Circle Tracker** (`/api/circle-tracker/*`) | `status`, `refresh`, `track-player` | Pemantauan ritme kuota bulanan circle, indikator status pacing harian riil, arsip data historis bulanan, dan deteksi otomatis anggota yang telah keluar (*ex-member*). |
 | **Planner & Settings** (`/api/planner/*`, `/api/settings`, `/api/changelog`, `/api/dashboard/summary`) | `config`, `settings`, `changelog`, `summary` | Konfigurasi target tabungan Jewel/Carat, simulasi pengorbanan Jewel (farming vs gacha), pengaturan kuota circle, parsing berkas riwayat pembaruan Markdown ke JSON/HTML terstruktur (`/api/changelog`), dan ringkasan metrik dashboard utama. |
 
@@ -215,7 +223,7 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 Aplikasi dilengkapi rangkaian pengujian otomatis berbasis **PHPUnit** pada database memori terisolasi (`:memory:`):
 
 ```bash
-# Menjalankan seluruh pengujian (239 tests, 8.815 assertions)
+# Menjalankan seluruh pengujian (241 tests, 8.574 assertions)
 php artisan test --compact
 
 # Menjalankan pengujian spesifik

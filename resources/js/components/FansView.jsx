@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import {
     Trophy,
     Plus,
@@ -20,11 +20,11 @@ import {
     AlertTriangle
 } from 'lucide-react';
 import RankBadge from './RankBadge';
-import DeleteConfirmModal from './DeleteConfirmModal';
 import CareerOcrZone from './CareerOcrZone';
-import EditCareerRunModal from './EditCareerRunModal';
-import ScenarioDetailModal from './ScenarioDetailModal';
-import CharacterScenarioDetailModal from './CharacterScenarioDetailModal';
+const DeleteConfirmModal = lazy(() => import('./DeleteConfirmModal'));
+const EditCareerRunModal = lazy(() => import('./EditCareerRunModal'));
+const ScenarioDetailModal = lazy(() => import('./ScenarioDetailModal'));
+const CharacterScenarioDetailModal = lazy(() => import('./CharacterScenarioDetailModal'));
 import { formatIndonesianDate } from '../utils/dateHelper';
 
 // Categorized Rank Tiers for quick selection
@@ -1709,47 +1709,63 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
             )}
 
             {/* Delete Confirmation Modal */}
-            <DeleteConfirmModal
-                isOpen={deleteModal.isOpen}
-                onClose={() => setDeleteModal({ isOpen: false, mode: 'single', id: null, count: 1, loading: false })}
-                onConfirm={handleConfirmDelete}
-                title={deleteModal.mode === 'bulk' ? 'Hapus Data Career Run Terpilih?' : 'Hapus Record Career Run?'}
-                message={
-                    deleteModal.mode === 'bulk'
-                        ? `Apakah Anda yakin ingin menghapus ${deleteModal.count} data career training run yang dipilih? Data yang dihapus tidak dapat dikembalikan.`
-                        : 'Apakah Anda yakin ingin menghapus catatan career training run ini?'
-                }
-                itemCount={deleteModal.count}
-                confirmText={deleteModal.mode === 'bulk' ? `Ya, Hapus ${deleteModal.count} Data` : 'Ya, Hapus Data'}
-                loading={deleteModal.loading}
-            />
+            <Suspense fallback={null}>
+                {deleteModal.isOpen && (
+                    <DeleteConfirmModal
+                        isOpen={deleteModal.isOpen}
+                        onClose={() => setDeleteModal({ isOpen: false, mode: 'single', id: null, count: 1, loading: false })}
+                        onConfirm={handleConfirmDelete}
+                        title={deleteModal.mode === 'bulk' ? 'Hapus Data Career Run Terpilih?' : 'Hapus Record Career Run?'}
+                        message={
+                            deleteModal.mode === 'bulk'
+                                ? `Apakah Anda yakin ingin menghapus ${deleteModal.count} data career training run yang dipilih? Data yang dihapus tidak dapat dikembalikan.`
+                                : 'Apakah Anda yakin ingin menghapus catatan career training run ini?'
+                        }
+                        itemCount={deleteModal.count}
+                        confirmText={deleteModal.mode === 'bulk' ? `Ya, Hapus ${deleteModal.count} Data` : 'Ya, Hapus Data'}
+                        loading={deleteModal.loading}
+                    />
+                )}
+            </Suspense>
 
             {/* Edit Career Run Modal */}
-            <EditCareerRunModal
-                run={editingRun}
-                isOpen={!!editingRun}
-                onClose={() => setEditingRun(null)}
-                onSuccess={(updatedRun, msg) => {
-                    onNotify?.(msg || 'Catatan career run berhasil diperbarui.', 'success');
-                    fetchStats();
-                    fetchRuns();
-                }}
-                metadata={metadata}
-            />
+            <Suspense fallback={null}>
+                {editingRun && (
+                    <EditCareerRunModal
+                        run={editingRun}
+                        isOpen={!!editingRun}
+                        onClose={() => setEditingRun(null)}
+                        onSuccess={(updatedRun, msg) => {
+                            onNotify?.(msg || 'Catatan career run berhasil diperbarui.', 'success');
+                            fetchStats();
+                            fetchRuns();
+                        }}
+                        metadata={metadata}
+                    />
+                )}
+            </Suspense>
 
             {/* Scenario Performance Detail Modal */}
-            <ScenarioDetailModal
-                isOpen={!!selectedScenarioForDetail}
-                scenarioName={selectedScenarioForDetail}
-                onClose={() => setSelectedScenarioForDetail(null)}
-            />
+            <Suspense fallback={null}>
+                {selectedScenarioForDetail && (
+                    <ScenarioDetailModal
+                        isOpen={!!selectedScenarioForDetail}
+                        scenarioName={selectedScenarioForDetail}
+                        onClose={() => setSelectedScenarioForDetail(null)}
+                    />
+                )}
+            </Suspense>
 
             {/* Character Scenario Performance Detail Modal */}
-            <CharacterScenarioDetailModal
-                isOpen={!!selectedCharacterForDetail}
-                umaName={selectedCharacterForDetail}
-                onClose={() => setSelectedCharacterForDetail(null)}
-            />
+            <Suspense fallback={null}>
+                {selectedCharacterForDetail && (
+                    <CharacterScenarioDetailModal
+                        isOpen={!!selectedCharacterForDetail}
+                        umaName={selectedCharacterForDetail}
+                        onClose={() => setSelectedCharacterForDetail(null)}
+                    />
+                )}
+            </Suspense>
         </div>
     );
 }

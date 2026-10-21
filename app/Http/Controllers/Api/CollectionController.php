@@ -10,6 +10,7 @@ use App\Models\UserCharacter;
 use App\Models\UserSupportCard;
 use App\Services\GameToraSyncService;
 use App\Services\UmaAffinityService;
+use App\Support\SupportCardUniqueEffectFormatter;
 use App\Support\UmaCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -153,6 +154,32 @@ class CollectionController extends Controller
         }
 
         return $this->resolveSupportCardImageUrl($item);
+    }
+
+    /**
+     * Enrich support card details with formatted unique effects and badges.
+     *
+     * @return array<string, mixed>|null
+     */
+    protected function enrichSupportCardDetails(?UmaCatalogItem $item, ?string $cardType = null): ?array
+    {
+        if (! $item || empty($item->details) || ! is_array($item->details)) {
+            return $item?->details;
+        }
+
+        $details = $item->details;
+        if (! empty($item->raw_data['unique']) || ! empty($details['unique_effect'])) {
+            $formattedUe = SupportCardUniqueEffectFormatter::format(
+                $item->raw_data['unique'] ?? null,
+                $details['unique_effect'] ?? null,
+                $cardType
+            );
+            if ($formattedUe) {
+                $details['unique_effect'] = $formattedUe;
+            }
+        }
+
+        return $details;
     }
 
     /**
@@ -528,7 +555,8 @@ class CollectionController extends Controller
                 'image_url' => $imageUrl,
                 'icon_url' => $imageUrl,
                 'image_full' => $this->resolveSupportCardFullImageUrl($catalogItem),
-                'details' => $catalogItem?->details,
+                'raw_unique' => $catalogItem?->raw_data['unique'] ?? null,
+                'details' => $this->enrichSupportCardDetails($catalogItem, $cardType),
             ];
         }
 
@@ -616,7 +644,8 @@ class CollectionController extends Controller
                 'is_owned' => $userCard ? (bool) $userCard->is_owned : false,
                 'image_url' => $this->resolveSupportCardImageUrl($catalogItem),
                 'image_full' => $this->resolveSupportCardFullImageUrl($catalogItem),
-                'details' => $details,
+                'raw_unique' => $catalogItem->raw_data['unique'] ?? null,
+                'details' => $this->enrichSupportCardDetails($catalogItem, $cardType),
             ],
         ]);
     }
@@ -820,6 +849,349 @@ class CollectionController extends Controller
         return response()->json([
             'success' => true,
             'skill' => $enriched,
+        ]);
+    }
+
+    /**
+     * Search global skill sources across support cards and characters (Reverse Skill Finder).
+     */
+    public function searchSkillSources(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->query('q', ''));
+        $rarityFilter = strtolower(trim((string) $request->query('rarity', 'all')));
+        $sourceTypeFilter = strtolower(trim((string) $request->query('source_type', 'all')));
+        $ownedOnly = $request->boolean('owned_only', false);
+        $limit = min(100, max(1, (int) $request->query('limit', 40)));
+
+        $needle = $q !== '' ? mb_strtolower($q) : null;
+
+        // Fetch ownership maps
+        $userCharacters = UserCharacter::query()->get()->keyBy('name');
+        $userSupportCards = UserSupportCard::query()->get()->keyBy('name');
+
+        $skillsIndex = [];
+
+        $resolveRarity = function ($r): string {
+            return match (is_numeric($r) ? (int) $r : strtolower((string) $r)) {
+                2, '2', 'rare' => 'rare',
+                3, 4, 5, '3', '4', '5', 'unique', 'upgraded unique' => 'unique',
+                6, '6', 'evolved' => 'evolved',
+                default => 'normal',
+            };
+        };
+
+        $matchesQuery = function (array $sk, ?string $needle): bool {
+            if ($needle === null) {
+                return true;
+            }
+
+            $nEn = mb_strtolower((string) ($sk['name_en'] ?? $sk['enname'] ?? ''));
+            $nJa = mb_strtolower((string) ($sk['name_ja'] ?? $sk['jpname'] ?? ''));
+            $descEn = mb_strtolower((string) ($sk['description_en'] ?? ''));
+            $descJa = mb_strtolower((string) ($sk['description_ja'] ?? ''));
+            $cond = mb_strtolower((string) ($sk['condition_translated'] ?? $sk['condition'] ?? ''));
+
+            return str_contains($nEn, $needle)
+                || str_contains($nJa, $needle)
+                || str_contains($descEn, $needle)
+                || str_contains($descJa, $needle)
+                || str_contains($cond, $needle);
+        };
+
+        // 1. Scan Support Cards (Hints and Event Skills)
+        if ($sourceTypeFilter === 'all' || $sourceTypeFilter === 'support_card') {
+            $supportItems = UmaCatalogItem::where('type', 'support_card')->get();
+
+            foreach ($supportItems as $cardItem) {
+                $meta = $this->resolveSupportCardMeta($cardItem->name, $cardItem);
+                $userCard = $userSupportCards->get($cardItem->name);
+                $isOwned = $userCard ? (bool) $userCard->is_owned : false;
+                $limitBreak = $userCard ? (int) $userCard->limit_break : 0;
+
+                if ($ownedOnly && ! $isOwned) {
+                    continue;
+                }
+
+                $cardSummary = [
+                    'id' => $userCard?->id ?? $cardItem->id,
+                    'catalog_id' => $cardItem->id,
+                    'gametora_id' => $cardItem->gametora_id,
+                    'name' => $cardItem->name,
+                    'char_name' => $meta['char_name'],
+                    'rarity' => $meta['rarity'],
+                    'card_type' => $meta['card_type'],
+                    'image_url' => $this->resolveSupportCardImageUrl($cardItem),
+                    'is_owned' => $isOwned,
+                    'limit_break' => $limitBreak,
+                ];
+
+                $details = $cardItem->details ?? [];
+
+                // Hints
+                foreach ($details['hints']['skills'] ?? [] as $sk) {
+                    if (! is_array($sk)) {
+                        continue;
+                    }
+                    $sRarity = $resolveRarity($sk['rarity'] ?? 1);
+                    if ($rarityFilter !== 'all' && $sRarity !== $rarityFilter) {
+                        continue;
+                    }
+                    if (! $matchesQuery($sk, $needle)) {
+                        continue;
+                    }
+
+                    $sId = (int) ($sk['id'] ?? 0);
+                    $sKey = $sId > 0 ? (string) $sId : mb_strtolower((string) ($sk['name_en'] ?? $sk['enname'] ?? '')).'|'.((string) ($sk['name_ja'] ?? $sk['jpname'] ?? ''));
+                    if ($sKey === '|') {
+                        continue;
+                    }
+
+                    if (! isset($skillsIndex[$sKey])) {
+                        $skillsIndex[$sKey] = [
+                            'skill' => $sk,
+                            'support_cards' => [],
+                            'characters' => [],
+                        ];
+                    }
+
+                    if (! isset($skillsIndex[$sKey]['support_cards'][$cardItem->id])) {
+                        $skillsIndex[$sKey]['support_cards'][$cardItem->id] = array_merge($cardSummary, [
+                            'obtain_method' => 'hint',
+                        ]);
+                    }
+                }
+
+                // Event Skills
+                foreach ($details['event_skills'] ?? [] as $sk) {
+                    if (! is_array($sk)) {
+                        continue;
+                    }
+                    $sRarity = $resolveRarity($sk['rarity'] ?? 1);
+                    if ($rarityFilter !== 'all' && $sRarity !== $rarityFilter) {
+                        continue;
+                    }
+                    if (! $matchesQuery($sk, $needle)) {
+                        continue;
+                    }
+
+                    $sId = (int) ($sk['id'] ?? 0);
+                    $sKey = $sId > 0 ? (string) $sId : mb_strtolower((string) ($sk['name_en'] ?? $sk['enname'] ?? '')).'|'.((string) ($sk['name_ja'] ?? $sk['jpname'] ?? ''));
+                    if ($sKey === '|') {
+                        continue;
+                    }
+
+                    if (! isset($skillsIndex[$sKey])) {
+                        $skillsIndex[$sKey] = [
+                            'skill' => $sk,
+                            'support_cards' => [],
+                            'characters' => [],
+                        ];
+                    }
+
+                    if (isset($skillsIndex[$sKey]['support_cards'][$cardItem->id])) {
+                        $skillsIndex[$sKey]['support_cards'][$cardItem->id]['obtain_method'] = 'both';
+                    } else {
+                        $skillsIndex[$sKey]['support_cards'][$cardItem->id] = array_merge($cardSummary, [
+                            'obtain_method' => 'event',
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // 2. Scan Characters (Unique, Innate, Awakening, Evolved)
+        if ($sourceTypeFilter === 'all' || $sourceTypeFilter === 'character') {
+            $charItems = UmaCatalogItem::where('type', 'character')->get();
+
+            foreach ($charItems as $charItem) {
+                $baseStars = $this->resolveBaseStars($charItem->name, $charItem);
+                $userChar = $userCharacters->get($charItem->name);
+                $isOwned = $userChar ? (bool) $userChar->is_owned : false;
+                $currentStars = $userChar && $userChar->current_stars ? (int) $userChar->current_stars : $baseStars;
+
+                if ($ownedOnly && ! $isOwned) {
+                    continue;
+                }
+
+                $charSummary = [
+                    'id' => $userChar?->id ?? $charItem->id,
+                    'catalog_id' => $charItem->id,
+                    'gametora_id' => $charItem->gametora_id,
+                    'name' => $charItem->name,
+                    'base_stars' => $baseStars,
+                    'image_url' => $this->resolveCharacterImageUrl($charItem),
+                    'is_owned' => $isOwned,
+                    'current_stars' => $currentStars,
+                ];
+
+                $skillsData = $charItem->skills ?? [];
+
+                // Unique skill(s)
+                $uniqueList = [];
+                if (! empty($skillsData['unique_versions'])) {
+                    $uniqueList = $skillsData['unique_versions'];
+                } elseif (! empty($skillsData['unique'])) {
+                    $uniqueList = [$skillsData['unique']];
+                }
+
+                foreach ($uniqueList as $sk) {
+                    $this->collectCharacterSkill($skillsIndex, $sk, $charSummary, 'unique', $rarityFilter, $needle, $resolveRarity, $matchesQuery);
+                }
+
+                // Innate skills
+                foreach ($skillsData['innate'] ?? [] as $sk) {
+                    $this->collectCharacterSkill($skillsIndex, $sk, $charSummary, 'innate', $rarityFilter, $needle, $resolveRarity, $matchesQuery);
+                }
+
+                // Awakening skills
+                foreach ($skillsData['awakening'] ?? [] as $sk) {
+                    $lvl = isset($sk['level']) ? "Awakening Lv {$sk['level']}" : 'awakening';
+                    $this->collectCharacterSkill($skillsIndex, $sk, $charSummary, $lvl, $rarityFilter, $needle, $resolveRarity, $matchesQuery);
+                }
+
+                // Evolved skills
+                foreach ($skillsData['evolve'] ?? [] as $sk) {
+                    $this->collectCharacterSkill($skillsIndex, $sk, $charSummary, 'evolved', $rarityFilter, $needle, $resolveRarity, $matchesQuery);
+                }
+            }
+        }
+
+        // Format and sort results
+        $results = [];
+        foreach ($skillsIndex as $entry) {
+            $cards = array_values($entry['support_cards']);
+            $chars = array_values($entry['characters']);
+
+            if ($ownedOnly && empty($cards) && empty($chars)) {
+                continue;
+            }
+
+            if ($sourceTypeFilter === 'support_card' && empty($cards)) {
+                continue;
+            }
+            if ($sourceTypeFilter === 'character' && empty($chars)) {
+                continue;
+            }
+
+            usort($cards, function ($a, $b) {
+                if ($a['is_owned'] !== $b['is_owned']) {
+                    return $b['is_owned'] <=> $a['is_owned'];
+                }
+                if ($a['limit_break'] !== $b['limit_break']) {
+                    return $b['limit_break'] <=> $a['limit_break'];
+                }
+                $rWeight = ['SSR' => 3, 'SR' => 2, 'R' => 1];
+                $ra = $rWeight[$a['rarity']] ?? 0;
+                $rb = $rWeight[$b['rarity']] ?? 0;
+                if ($ra !== $rb) {
+                    return $rb <=> $ra;
+                }
+
+                return strcasecmp($a['name'], $b['name']);
+            });
+
+            usort($chars, function ($a, $b) {
+                if ($a['is_owned'] !== $b['is_owned']) {
+                    return $b['is_owned'] <=> $a['is_owned'];
+                }
+                if ($a['current_stars'] !== $b['current_stars']) {
+                    return $b['current_stars'] <=> $a['current_stars'];
+                }
+
+                return strcasecmp($a['name'], $b['name']);
+            });
+
+            $hasOwned = (! empty($cards) && $cards[0]['is_owned']) || (! empty($chars) && $chars[0]['is_owned']);
+            $totalSources = count($cards) + count($chars);
+
+            $results[] = [
+                'skill' => $entry['skill'],
+                'has_owned_source' => $hasOwned,
+                'total_sources' => $totalSources,
+                'support_cards' => $cards,
+                'characters' => $chars,
+            ];
+        }
+
+        usort($results, function ($a, $b) use ($needle) {
+            if ($needle !== null) {
+                $aName = mb_strtolower((string) ($a['skill']['name_en'] ?? $a['skill']['enname'] ?? ''));
+                $bName = mb_strtolower((string) ($b['skill']['name_en'] ?? $b['skill']['enname'] ?? ''));
+                $aExact = $aName === $needle ? 1 : (str_starts_with($aName, $needle) ? 0.5 : 0);
+                $bExact = $bName === $needle ? 1 : (str_starts_with($bName, $needle) ? 0.5 : 0);
+                if ($aExact !== $bExact) {
+                    return $bExact <=> $aExact;
+                }
+            }
+
+            if ($a['has_owned_source'] !== $b['has_owned_source']) {
+                return $b['has_owned_source'] <=> $a['has_owned_source'];
+            }
+
+            if ($a['total_sources'] !== $b['total_sources']) {
+                return $b['total_sources'] <=> $a['total_sources'];
+            }
+
+            $aName = (string) ($a['skill']['name_en'] ?? $a['skill']['enname'] ?? '');
+            $bName = (string) ($b['skill']['name_en'] ?? $b['skill']['enname'] ?? '');
+
+            return strcasecmp($aName, $bName);
+        });
+
+        $totalFound = count($results);
+        $sliced = array_slice($results, 0, $limit);
+
+        return response()->json([
+            'success' => true,
+            'total' => $totalFound,
+            'limit' => $limit,
+            'skills' => $sliced,
+        ]);
+    }
+
+    /**
+     * Helper to collect character skill into reverse lookup index.
+     */
+    protected function collectCharacterSkill(
+        array &$skillsIndex,
+        mixed $sk,
+        array $charSummary,
+        string $category,
+        string $rarityFilter,
+        ?string $needle,
+        callable $resolveRarity,
+        callable $matchesQuery
+    ): void {
+        if (! is_array($sk)) {
+            return;
+        }
+
+        $sRarity = $resolveRarity($sk['rarity'] ?? 1);
+        if ($rarityFilter !== 'all' && $sRarity !== $rarityFilter) {
+            return;
+        }
+
+        if (! $matchesQuery($sk, $needle)) {
+            return;
+        }
+
+        $sId = (int) ($sk['id'] ?? 0);
+        $sKey = $sId > 0 ? (string) $sId : mb_strtolower((string) ($sk['name_en'] ?? $sk['enname'] ?? '')).'|'.((string) ($sk['name_ja'] ?? $sk['jpname'] ?? ''));
+        if ($sKey === '|') {
+            return;
+        }
+
+        if (! isset($skillsIndex[$sKey])) {
+            $skillsIndex[$sKey] = [
+                'skill' => $sk,
+                'support_cards' => [],
+                'characters' => [],
+            ];
+        }
+
+        $charId = $charSummary['catalog_id'];
+        $skillsIndex[$sKey]['characters'][$charId] = array_merge($charSummary, [
+            'skill_category' => $category,
         ]);
     }
 }

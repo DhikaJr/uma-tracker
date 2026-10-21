@@ -8,6 +8,7 @@ use App\Models\AppSetting;
 use App\Models\GachaBanner;
 use App\Models\UmaCatalogItem;
 use App\Support\SkillConditionTranslator;
+use App\Support\SupportCardUniqueEffectFormatter;
 use App\Support\UmaCatalog;
 use Exception;
 use Illuminate\Support\Facades\Http;
@@ -2442,25 +2443,28 @@ class GameToraSyncService
         // Unique effect
         $uniqueEffect = null;
         if (! empty($s['unique'])) {
-            $uLevel = (int) ($s['unique']['level'] ?? ($rarity === 3 ? 30 : 0));
-            $uEffects = [];
-            foreach ($s['unique']['effects'] ?? [] as $ue) {
-                $ueType = (int) ($ue['type'] ?? 0);
-                $def = $effectsMap[$ueType] ?? [];
-                $uNameEn = $def['name_en'] ?? $def['name_en_eon'] ?? ($ueType === 32 ? 'Initial Skill Points Up' : "Type {$ueType}");
-                $uEffects[] = [
-                    'type' => $ueType,
-                    'name_en' => $uNameEn,
-                    'name_ja' => $def['name_ja'] ?? null,
-                    'value' => $ue['value'] ?? null,
-                    'value_1' => $ue['value_1'] ?? null,
-                    'value_2' => $ue['value_2'] ?? null,
+            $uniqueEffect = SupportCardUniqueEffectFormatter::format($s['unique'], null, $s['type'] ?? null);
+            if (! $uniqueEffect) {
+                $uLevel = (int) ($s['unique']['level'] ?? ($rarity === 3 ? 30 : 0));
+                $uEffects = [];
+                foreach ($s['unique']['effects'] ?? [] as $ue) {
+                    $ueType = (int) ($ue['type'] ?? 0);
+                    $def = $effectsMap[$ueType] ?? [];
+                    $uNameEn = $def['name_en'] ?? $def['name_en_eon'] ?? ($ueType === 32 ? 'Initial Skill Points Up' : "Type {$ueType}");
+                    $uEffects[] = [
+                        'type' => $ueType,
+                        'name_en' => $uNameEn,
+                        'name_ja' => $def['name_ja'] ?? null,
+                        'value' => $ue['value'] ?? null,
+                        'value_1' => $ue['value_1'] ?? null,
+                        'value_2' => $ue['value_2'] ?? null,
+                    ];
+                }
+                $uniqueEffect = [
+                    'level' => $uLevel,
+                    'effects' => $uEffects,
                 ];
             }
-            $uniqueEffect = [
-                'level' => $uLevel,
-                'effects' => $uEffects,
-            ];
         }
 
         // Hints

@@ -110,4 +110,26 @@ class BackupController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Prune old local backup files in storage/app/backups.
+     */
+    public function prune(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'keep' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+
+        $keep = (int) ($validated['keep'] ?? 1);
+        $result = $this->backupService->pruneOldBackups($keep);
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['deleted_count'] > 0
+                ? "Berhasil membersihkan {$result['deleted_count']} file backup lama ({$result['freed_mb']} MB dibebaskan)."
+                : 'Tidak ada file backup lama yang perlu dibersihkan.',
+            'prune' => $result,
+            'stats' => $this->backupService->stats(),
+        ]);
+    }
 }

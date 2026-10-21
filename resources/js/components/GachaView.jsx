@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import {
     Sparkles,
     Plus,
@@ -21,11 +21,11 @@ import {
     Pencil
 } from 'lucide-react';
 import RarityBadge from './RarityBadge';
-import Quick10PullModal from './Quick10PullModal';
-import DeleteConfirmModal from './DeleteConfirmModal';
-import GachaProbabilitySimulator from './GachaProbabilitySimulator';
-import EditGachaPullModal from './EditGachaPullModal';
-import BulkEditGachaPullModal from './BulkEditGachaPullModal';
+const Quick10PullModal = lazy(() => import('./Quick10PullModal'));
+const DeleteConfirmModal = lazy(() => import('./DeleteConfirmModal'));
+const GachaProbabilitySimulator = lazy(() => import('./GachaProbabilitySimulator'));
+const EditGachaPullModal = lazy(() => import('./EditGachaPullModal'));
+const BulkEditGachaPullModal = lazy(() => import('./BulkEditGachaPullModal'));
 
 export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
     // State
@@ -1065,7 +1065,9 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
 
             {/* TAB CONTENT 1: PROBABILITY & BINOMIAL LUCK SIMULATOR */}
             {activeMainTab === 'simulator' && (
-                <GachaProbabilitySimulator stats={stats} onNotify={onNotify} />
+                <Suspense fallback={null}>
+                    <GachaProbabilitySimulator stats={stats} onNotify={onNotify} />
+                </Suspense>
             )}
 
             {/* TAB CONTENT 2: PULL HISTORY, FORMS, & TABLES */}
@@ -2899,62 +2901,78 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
             )}
 
             {/* Quick 10-Pull Input Modal */}
-            <Quick10PullModal
-                isOpen={showQuick10Modal}
-                onClose={() => setShowQuick10Modal(false)}
-                onSuccess={() => {
-                    fetchStats();
-                    fetchPulls();
-                }}
-                banners={banners}
-                gachaMeta={gachaMeta}
-                onNotify={onNotify}
-            />
+            <Suspense fallback={null}>
+                {showQuick10Modal && (
+                    <Quick10PullModal
+                        isOpen={showQuick10Modal}
+                        onClose={() => setShowQuick10Modal(false)}
+                        onSuccess={() => {
+                            fetchStats();
+                            fetchPulls();
+                        }}
+                        banners={banners}
+                        gachaMeta={gachaMeta}
+                        onNotify={onNotify}
+                    />
+                )}
+            </Suspense>
 
             {/* Delete Confirmation Modal */}
-            <DeleteConfirmModal
-                isOpen={deleteModal.isOpen}
-                onClose={() => setDeleteModal({ isOpen: false, mode: 'single', id: null, count: 1, loading: false })}
-                onConfirm={handleConfirmDelete}
-                title={deleteModal.mode === 'bulk' ? 'Hapus Data Tarikan Terpilih?' : 'Hapus Record Gacha?'}
-                message={
-                    deleteModal.mode === 'bulk'
-                        ? `Apakah Anda yakin ingin menghapus ${deleteModal.count} data tarikan gacha yang dipilih? Pity counter banner terkait akan dihitung ulang secara otomatis.`
-                        : 'Apakah Anda yakin ingin menghapus catatan gacha ini? Pity counter banner terkait akan diperbarui secara otomatis.'
-                }
-                itemCount={deleteModal.count}
-                confirmText={deleteModal.mode === 'bulk' ? `Ya, Hapus ${deleteModal.count} Data` : 'Ya, Hapus Data'}
-                loading={deleteModal.loading}
-            />
+            <Suspense fallback={null}>
+                {deleteModal.isOpen && (
+                    <DeleteConfirmModal
+                        isOpen={deleteModal.isOpen}
+                        onClose={() => setDeleteModal({ isOpen: false, mode: 'single', id: null, count: 1, loading: false })}
+                        onConfirm={handleConfirmDelete}
+                        title={deleteModal.mode === 'bulk' ? 'Hapus Data Tarikan Terpilih?' : 'Hapus Record Gacha?'}
+                        message={
+                            deleteModal.mode === 'bulk'
+                                ? `Apakah Anda yakin ingin menghapus ${deleteModal.count} data tarikan gacha yang dipilih? Pity counter banner terkait akan dihitung ulang secara otomatis.`
+                                : 'Apakah Anda yakin ingin menghapus catatan gacha ini? Pity counter banner terkait akan diperbarui secara otomatis.'
+                        }
+                        itemCount={deleteModal.count}
+                        confirmText={deleteModal.mode === 'bulk' ? `Ya, Hapus ${deleteModal.count} Data` : 'Ya, Hapus Data'}
+                        loading={deleteModal.loading}
+                    />
+                )}
+            </Suspense>
 
             {/* Edit Gacha Pull Modal */}
-            <EditGachaPullModal
-                pull={editingPull}
-                isOpen={!!editingPull}
-                onClose={() => setEditingPull(null)}
-                onSuccess={(updatedPull, msg) => {
-                    onNotify?.(msg || 'Data pull berhasil diperbarui.', 'success');
-                    fetchStats();
-                    fetchPulls();
-                }}
-                banners={banners}
-                gachaMeta={gachaMeta}
-            />
+            <Suspense fallback={null}>
+                {editingPull && (
+                    <EditGachaPullModal
+                        pull={editingPull}
+                        isOpen={!!editingPull}
+                        onClose={() => setEditingPull(null)}
+                        onSuccess={(updatedPull, msg) => {
+                            onNotify?.(msg || 'Data pull berhasil diperbarui.', 'success');
+                            fetchStats();
+                            fetchPulls();
+                        }}
+                        banners={banners}
+                        gachaMeta={gachaMeta}
+                    />
+                )}
+            </Suspense>
 
             {/* Bulk Edit Gacha Pull Modal */}
-            <BulkEditGachaPullModal
-                isOpen={showBulkEditModal}
-                onClose={() => setShowBulkEditModal(false)}
-                selectedIds={selectedPullIds}
-                banners={banners}
-                onSuccess={(count, msg) => {
-                    onNotify?.(msg || `${count} data pull gacha berhasil diperbarui.`, 'success');
-                    setSelectedPullIds([]);
-                    fetchStats();
-                    fetchPulls();
-                }}
-                onNotify={onNotify}
-            />
+            <Suspense fallback={null}>
+                {showBulkEditModal && (
+                    <BulkEditGachaPullModal
+                        isOpen={showBulkEditModal}
+                        onClose={() => setShowBulkEditModal(false)}
+                        selectedIds={selectedPullIds}
+                        banners={banners}
+                        onSuccess={(count, msg) => {
+                            onNotify?.(msg || `${count} data pull gacha berhasil diperbarui.`, 'success');
+                            setSelectedPullIds([]);
+                            fetchStats();
+                            fetchPulls();
+                        }}
+                        onNotify={onNotify}
+                    />
+                )}
+            </Suspense>
         </div>
     );
 }

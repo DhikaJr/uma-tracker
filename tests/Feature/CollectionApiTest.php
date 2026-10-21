@@ -487,6 +487,114 @@ class CollectionApiTest extends TestCase
             ->assertJsonPath('card.details.dates.0.is_date', true);
     }
 
+    public function test_support_cards_api_returns_enriched_unique_effects(): void
+    {
+        $efforia = UmaCatalogItem::create([
+            'type' => 'support_card',
+            'name' => 'SSR [As if Guided] Efforia (Speed)',
+            'rarity' => 'SSR',
+            'raw_data' => [
+                'rarity' => 3,
+                'char_name' => 'Efforia',
+                'type' => 'speed',
+                'support_id' => 30311,
+                'unique' => [
+                    'level' => 0,
+                    'effects' => [
+                        [
+                            'type' => 101,
+                            'value' => 80,
+                            'value_1' => 5,
+                            'value_2' => 1,
+                            'value_3' => 8,
+                            'value_4' => 5,
+                        ],
+                    ],
+                ],
+            ],
+            'details' => [
+                'unique_effect' => [
+                    'level' => 0,
+                    'effects' => [
+                        [
+                            'type' => 101,
+                            'name_en' => 'Type 101',
+                            'value' => 80,
+                            'value_1' => 5,
+                            'value_2' => 1,
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $satono = UmaCatalogItem::create([
+            'type' => 'support_card',
+            'name' => 'SSR [Special Dreamers!] Satono Diamond (Intelligence)',
+            'rarity' => 'SSR',
+            'raw_data' => [
+                'rarity' => 3,
+                'char_name' => 'Satono Diamond',
+                'type' => 'wit',
+                'support_id' => 30040,
+                'unique' => [
+                    'level' => 40,
+                    'effects' => [
+                        [
+                            'type' => 103,
+                            'value' => 4,
+                            'value_1' => 10,
+                        ],
+                    ],
+                ],
+            ],
+            'details' => [
+                'unique_effect' => [
+                    'level' => 40,
+                    'effects' => [
+                        [
+                            'type' => 103,
+                            'name_en' => 'Type 103',
+                            'value' => 4,
+                            'value_1' => 10,
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        // 1. Test collection list endpoint
+        $listRes = $this->getJson('/api/collection/support-cards');
+        $listRes->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $cards = collect($listRes->json('cards'))->keyBy('name');
+
+        $effCard = $cards->get('SSR [As if Guided] Efforia (Speed)');
+        $this->assertNotNull($effCard);
+        $this->assertStringContainsString('Gain Power Bonus (1) and Training Effectiveness (5%) when the bond gauge is at least 80', $effCard['details']['unique_effect']['description_en']);
+        $this->assertStringContainsString('Mendapatkan Bonus Power (+1) dan Efektivitas Latihan (+5%) saat gauge ikatan mencapai minimal 80', $effCard['details']['unique_effect']['description_id']);
+        $this->assertSame('Bond Gauge ≥ 80', $effCard['details']['unique_effect']['condition']);
+        $this->assertSame('Gauge Ikatan ≥ 80', $effCard['details']['unique_effect']['condition_id']);
+        $this->assertSame('+1', $effCard['details']['unique_effect']['bonuses'][0]['formatted']);
+        $this->assertSame('+5%', $effCard['details']['unique_effect']['bonuses'][1]['formatted']);
+        $this->assertSame('Power Bonus & Training Effectiveness', $effCard['details']['unique_effect']['effects'][0]['name_en']);
+
+        $satCard = $cards->get('SSR [Special Dreamers!] Satono Diamond (Intelligence)');
+        $this->assertNotNull($satCard);
+        $this->assertStringContainsString('If there are at least 4 different types of support cards in your deck', $satCard['details']['unique_effect']['description_en']);
+        $this->assertSame('+10%', $satCard['details']['unique_effect']['bonuses'][0]['formatted']);
+        $this->assertSame('Deck Diversity Increased Training', $satCard['details']['unique_effect']['effects'][0]['name_en']);
+
+        // 2. Test single detail endpoint
+        $detailRes = $this->getJson('/api/collection/support-cards/detail?id='.$efforia->id);
+        $detailRes->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('card.details.unique_effect.condition', 'Bond Gauge ≥ 80')
+            ->assertJsonPath('card.details.unique_effect.bonuses.0.formatted', '+1')
+            ->assertJsonPath('card.details.unique_effect.bonuses.1.formatted', '+5%');
+    }
+
     public function test_can_get_character_base_stats_and_dual_unique_skills(): void
     {
         $item = UmaCatalogItem::create([
@@ -648,5 +756,91 @@ class CollectionApiTest extends TestCase
             ->assertJsonPath('character.objectives.0.turn_text', 'Turn 12')
             ->assertJsonPath('character.objectives.1.turn_text', 'Turn 60 (previous + 13)')
             ->assertJsonPath('character.skills.unique.effects.0.special_scaling.tiers.4.total', 0.18);
+    }
+
+    public function test_can_search_global_skill_sources_with_filters_and_ownership(): void
+    {
+        $testSkill = [
+            'id' => 2001,
+            'name_en' => 'Swinging Maestro',
+            'name_ja' => '円弧のマエストロ',
+            'rarity' => 2,
+            'base_cost' => 170,
+            'description_en' => 'Recover stamina on corners.',
+            'condition_translated' => 'Aktivasi di tikungan.',
+        ];
+
+        // 1. Create a Support Card with this skill in hints and event_skills
+        $supportItem = UmaCatalogItem::create([
+            'type' => 'support_card',
+            'name' => '[One Cut Above] Super Creek',
+            'rarity' => 'SSR',
+            'gametora_id' => 3001,
+            'raw_data' => [
+                'char_name' => 'Super Creek',
+                'rarity' => 3,
+                'support_id' => 3001,
+            ],
+            'details' => [
+                'hints' => [
+                    'skills' => [$testSkill],
+                ],
+                'event_skills' => [$testSkill],
+            ],
+        ]);
+
+        // 2. Create a Character with this skill in awakening
+        $charItem = UmaCatalogItem::create([
+            'type' => 'character',
+            'name' => 'Super Creek [Default]',
+            'rarity' => 'SSR',
+            'gametora_id' => 1010,
+            'raw_data' => [
+                'char_id' => 1010,
+                'card_id' => 101001,
+                'rarity' => 3,
+            ],
+            'skills' => [
+                'awakening' => [
+                    array_merge($testSkill, ['level' => 5]),
+                ],
+            ],
+        ]);
+
+        // 3. Mark the support card as owned with MLB (4)
+        UserSupportCard::create([
+            'uma_catalog_item_id' => $supportItem->id,
+            'name' => '[One Cut Above] Super Creek',
+            'char_name' => 'Super Creek',
+            'rarity' => 'SSR',
+            'card_type' => 'stamina',
+            'limit_break' => 4,
+            'is_owned' => true,
+        ]);
+
+        // 4. Test search by name query
+        $res = $this->getJson('/api/collection/skill-sources?q=Maestro');
+        $res->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('skills.0.skill.name_en', 'Swinging Maestro')
+            ->assertJsonPath('skills.0.has_owned_source', true)
+            ->assertJsonPath('skills.0.support_cards.0.name', '[One Cut Above] Super Creek')
+            ->assertJsonPath('skills.0.support_cards.0.is_owned', true)
+            ->assertJsonPath('skills.0.support_cards.0.obtain_method', 'both')
+            ->assertJsonPath('skills.0.characters.0.name', 'Super Creek [Default]');
+
+        // 5. Test owned_only filter
+        $resOwned = $this->getJson('/api/collection/skill-sources?q=Maestro&owned_only=1');
+        $resOwned->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(1, 'skills.0.support_cards')
+            ->assertJsonCount(0, 'skills.0.characters'); // Character not owned yet
+
+        // 6. Test source_type filter
+        $resSource = $this->getJson('/api/collection/skill-sources?q=Maestro&source_type=character');
+        $resSource->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonCount(0, 'skills.0.support_cards')
+            ->assertJsonCount(1, 'skills.0.characters');
     }
 }

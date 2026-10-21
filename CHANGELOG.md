@@ -2,6 +2,36 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.9.0] - 19 Oktober 2026
+
+### 🚀 Optimasi Kinerja Bundel, Manajemen Retensi Backup & Fitur Lanjutan Koleksi
+- **Optimasi Dynamic Import `tesseract.js` & Modular Code-Splitting Modal (`CareerOcrZone.jsx`, `GachaView.jsx`, `FansView.jsx`, `CollectionView.jsx`)**:
+  - Mengubah pemuatan pustaka OCR `tesseract.js` (~1 MB) menjadi impor dinamis *on-demand* (`await import('tesseract.js')`), sehingga pustaka OCR hanya diunduh saat pengguna pertama kali memproses tangkapan layar.
+  - Memecah seluruh modal sekunder pada [`GachaView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/GachaView.jsx) (*Quick10PullModal*, *DeleteConfirmModal*, *GachaProbabilitySimulator*, *EditGachaPullModal*, *BulkEditGachaPullModal*), [`FansView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/FansView.jsx) (*DeleteConfirmModal*, *EditCareerRunModal*, *ScenarioDetailModal*, *CharacterScenarioDetailModal*), dan [`CollectionView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CollectionView.jsx) (*CharacterDetailModal*, *SupportCardDetailModal*, *SupportCardCompareModal*, *SkillDetailModal*) menjadi `React.lazy()` yang terbungkus `<Suspense fallback={null}>`.
+  - Mengeliminasi beban muat modal yang tidak aktif pada saat render awal halaman dan menjaga seluruh ukuran chunk modular tetap berada di bawah batas 500 kB.
+- **Manajemen Retensi Arsip Backup Lokal Server & Opsi CLI `--keep` (`BackupService.php`, `BackupRestoreModal.jsx`)**:
+  - Mengimplementasikan metode `BackupService::pruneOldBackups` dan `getLocalBackupFilesSummary` untuk memantau jumlah serta ukuran berkas cadangan `.json` di `storage/app/backups/`.
+  - Menambahkan opsi `--keep=N` pada perintah Artisan `php artisan uma:backup --keep=N` untuk pembersihan otomatis berkas cadangan lama pasca ekspor berhasil.
+  - Menyediakan endpoint REST `POST /api/backup/prune` dengan validasi parameter `keep` (default 1) untuk membersihkan arsip lama dan hanya mempertahankan cadangan paling mutakhir.
+  - Menambahkan kartu ringkasan status cadangan lokal server serta tombol aksi *"🧹 Bersihkan Arsip Lama (Simpan 1)"* pada tab Cadangkan Data di [`BackupRestoreModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/BackupRestoreModal.jsx).
+- **Pencari Sumber Skill Global / Reverse Skill Finder / 逆引きスキル検索 (`ReverseSkillFinder.jsx`, `GET /api/collection/skill-sources`)**:
+  - Menambahkan Tab ke-3 pada modul Koleksi: *"🔎 Pencari Sumber Skill"* yang mengindeks seluruh skill dari database lokal GameTora.
+  - Membangun endpoint `GET /api/collection/skill-sources` yang mendukung pencarian bilingual EN/JP (`q`), filter kelangkaan (`rarity`: Gold, White, Unique, Evolved), filter jenis sumber (`source_type`: Support Card atau Karakter), filter kepemilikan (`owned_only=1`), dan paginasi.
+  - Antarmuka pencarian dengan debouncing 300ms, preset pencarian cepat (*Groundwork / 地固め*, *Swinging Maestro / 円弧のマエストロ*, *Professor of Curvature / 弧線のプロフェッサー*, *Straightaway Spurt / 直線一気*, *Breath of Fresh Air / 好転一息*), indikator status kepemilikan kartu (LB) & karakter (★), rincian cara perolehan (*Hint Skill Lv* vs *Event Skill*), serta tombol *"Detail Formula"* yang terhubung langsung ke modal [`SkillDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/SkillDetailModal.jsx).
+- **Komparator Side-by-Side 2 Support Card / 0LB–MLB Comparator (`SupportCardCompareModal.jsx`)**:
+  - Menyediakan fitur komparasi dua kartu bantuan secara berdampingan dengan pemilih level Limit Break independen (0LB, 1LB, 2LB, 3LB, MLB) yang secara cerdas mendeteksi level kepemilikan riil pengguna.
+  - Menggabungkan seluruh efek support dari kedua kartu ke dalam satu tabel komparasi terpadu dengan *Delta Highlight* hijau lembut (`bg-emerald-500/10`) pada kartu yang memiliki keunggulan nilai efek beserta selisih nilainya (`+X%` / `+X`).
+  - Menyajikan komparasi Efek Unik (*Unique Effects*) dan komparasi daftar *Hint Skills* & *Event Skills* yang dapat diklik untuk memeriksa formula matematisnya secara mendalam.
+  - Memfasilitasi pemilihan kartu via tombol *"Bandingkan"* pada grid kartu, tombol toolbar *"Bandingkan Kartu"*, dan *Floating Comparison Bar* di bagian bawah layar saat 1 atau 2 kartu dipilih.
+- **Parser & Formatter Efek Unik Kartu Support Otentik GameTora (`SupportCardUniqueEffectFormatter.php`, `supportUniqueEffectFormatter.js`, `SupportCardDetailModal.jsx`, `SupportCardCompareModal.jsx`)**:
+  - Mengeliminasi label placeholder mentah seperti `"Type 101: +80%"` atau `"Type 103: +4%"` pada seluruh kartu support SSR, menggantikannya dengan parser komprehensif untuk seluruh jenis Efek Unik GameTora (Tipe 101–122, 9991, serta efek dasar < 100).
+  - Menyajikan narasi deskripsi bilingual yang presisi (Bahasa Indonesia & Bahasa Inggris resmi GameTora) lengkap dengan badge kondisi aktivasi (seperti *Gauge Ikatan ≥ 80*, *≥ 4 Jenis Kartu di Dek*, *Batas Energi > 100*), serta rincian lencana bonus stat individual (seperti *Bonus Power (+1)*, *Efektivitas Latihan (+5%)*).
+  - Mengintegrasikan formatter dinamis dua lapis: pada *backend* via `CollectionController::enrichSupportCardDetails` tanpa modifikasi destruktif pada berkas basis data SQLite fisik, serta modul utilitas *frontend* mandiri di [`supportUniqueEffectFormatter.js`](file:///c:/Projects/uma-tracker/resources/js/utils/supportUniqueEffectFormatter.js).
+  - Menyelaraskan tampilan Efek Unik pada modal detail kartu ([`SupportCardDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/SupportCardDetailModal.jsx)) dan arena komparasi berdampingan ([`SupportCardCompareModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/SupportCardCompareModal.jsx)).
+- **Integritas Basis Data & Pengujian Otomatis**:
+  - Menjaga keaslian berkas fisik `database/database.sqlite` tetap aman dan utuh dengan hash SHA-256 identik (`989D0E39E62D6CE0239DDE356EC86576C49A0CFD8F15B603F0FD94E9E7F1D246`).
+  - Menambahkan pengujian pada [`BackupApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/BackupApiTest.php), [`CollectionApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CollectionApiTest.php), dan [`SupportCardUniqueEffectFormatterTest.php`](file:///c:/Projects/uma-tracker/tests/Unit/SupportCardUniqueEffectFormatterTest.php). Seluruh rangkaian 251 pengujian otomatis PHPUnit lulus 100% pada SQLite `:memory:`.
+
 ## [Versi 2.8.0] - 15 Oktober 2026
 
 ### 🏆 Modul Perencana Turnamen (CM / LoH): Referensi Target Stats, Panduan Recovery & Katalog Komprehensif

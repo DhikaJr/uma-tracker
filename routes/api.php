@@ -83,6 +83,7 @@ Route::prefix('backup')->group(function () {
     Route::get('/stats', [BackupController::class, 'stats']);
     Route::get('/export', [BackupController::class, 'export']);
     Route::post('/import', [BackupController::class, 'import']);
+    Route::post('/prune', [BackupController::class, 'prune']);
 });
 
 // Jewel & Spark Planner Endpoints
@@ -105,6 +106,7 @@ Route::prefix('collection')->group(function () {
     Route::post('/support-cards/limit-break', [CollectionController::class, 'updateSupportCardLimitBreak']);
     Route::post('/support-cards/batch', [CollectionController::class, 'batchSupportCards']);
 
+    Route::get('/skill-sources', [CollectionController::class, 'searchSkillSources']);
     Route::get('/skill-detail', [CollectionController::class, 'getSkillDetail']);
 });
 
