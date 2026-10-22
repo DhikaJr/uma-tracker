@@ -75,8 +75,9 @@ function ConditionCategoryIcon({ category, icon, className = "w-3.5 h-3.5" }) {
     }
 }
 
-export default function SkillDetailModal({ skill, onClose }) {
-    if (!skill) return null;
+export default function SkillDetailModal({ skill: rawSkill, onClose }) {
+    if (!rawSkill) return null;
+    const skill = rawSkill.skill || rawSkill;
 
     const [openScalings, setOpenScalings] = useState(() => ({ '0-0': true }));
     const [openRawFormulas, setOpenRawFormulas] = useState({});

@@ -321,20 +321,22 @@ export default function ReverseSkillFinder({ onSkillDetail, onNotify }) {
                 </div>
             ) : (
                 <div className="space-y-4">
-                    {skills.map((skill) => {
-                        const isExpanded = expandedCards[skill.id] !== false; // Default expanded
-                        const cardSources = skill.support_cards || [];
-                        const charSources = skill.characters || [];
-                        const totalSources = cardSources.length + charSources.length;
+                    {skills.map((item, idx) => {
+                        const skill = item.skill || item;
+                        const skillKey = skill.id || skill.name || `skill-${idx}`;
+                        const isExpanded = expandedCards[skillKey] !== false; // Default expanded
+                        const cardSources = item.support_cards || skill.support_cards || [];
+                        const charSources = item.characters || skill.characters || [];
+                        const totalSources = item.total_sources ?? (cardSources.length + charSources.length);
 
                         return (
                             <div
-                                key={skill.id || skill.name}
+                                key={skillKey}
                                 className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden transition-all hover:border-indigo-300 dark:hover:border-indigo-800/80"
                             >
                                 {/* Skill Header */}
                                 <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/60">
-                                    <div className="flex items-start gap-3.5">
+                                    <div className="flex items-start gap-3.5 min-w-0">
                                         {/* Skill Icon */}
                                         <div className="relative shrink-0">
                                             {skill.icon_url ? (
@@ -344,40 +346,44 @@ export default function ReverseSkillFinder({ onSkillDetail, onNotify }) {
                                                     className="w-12 h-12 rounded-2xl object-contain bg-slate-900/80 border border-slate-700 shadow-xs"
                                                     onError={(e) => {
                                                         e.currentTarget.style.display = 'none';
+                                                        e.currentTarget.nextSibling.style.display = 'flex';
                                                     }}
                                                 />
-                                            ) : (
-                                                <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                                                    <Zap className="w-6 h-6" />
-                                                </div>
-                                            )}
+                                            ) : null}
+                                            <div className={`w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 ${skill.icon_url ? 'hidden' : 'flex'}`}>
+                                                <Zap className="w-6 h-6" />
+                                            </div>
                                         </div>
 
-                                        <div className="space-y-1">
+                                        <div className="space-y-1.5 min-w-0 flex-1">
+                                            {/* Rarity, Skill Name, Cost, and Sources Count in a single unified row */}
                                             <div className="flex flex-wrap items-center gap-2">
                                                 {getRarityBadge(skill.rarity)}
+
+                                                {/* Nama skill tepat di antara rarity badge dan jumlah sumber perolehan */}
+                                                <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight flex items-baseline gap-1.5">
+                                                    <span>{skill.name_en || skill.name || 'Skill Tanpa Nama'}</span>
+                                                    {skill.name_ja && skill.name_ja !== (skill.name_en || skill.name) && (
+                                                        <span className="text-xs font-normal text-slate-400">
+                                                            ({skill.name_ja})
+                                                        </span>
+                                                    )}
+                                                </span>
+
                                                 {skill.cost && (
                                                     <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                                                         Cost: {skill.cost} Pt
                                                     </span>
                                                 )}
+
                                                 <span className="text-[11px] font-bold text-slate-400">
-                                                    {totalSources} Sumber Perolehan
+                                                    • {totalSources} Sumber Perolehan
                                                 </span>
                                             </div>
 
-                                            <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight flex items-baseline gap-2">
-                                                <span>{skill.name_en || skill.name}</span>
-                                                {skill.name_ja && (
-                                                    <span className="text-xs font-normal text-slate-400">
-                                                        {skill.name_ja}
-                                                    </span>
-                                                )}
-                                            </h3>
-
-                                            {(skill.desc_en || skill.desc || skill.desc_ja) && (
+                                            {(skill.desc_en || skill.desc || skill.desc_ja || skill.description_en || skill.description) && (
                                                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
-                                                    {skill.desc_en || skill.desc || skill.desc_ja}
+                                                    {skill.desc_en || skill.desc || skill.desc_ja || skill.description_en || skill.description}
                                                 </p>
                                             )}
                                         </div>
@@ -397,7 +403,7 @@ export default function ReverseSkillFinder({ onSkillDetail, onNotify }) {
 
                                         <button
                                             type="button"
-                                            onClick={() => toggleExpandSources(skill.id)}
+                                            onClick={() => toggleExpandSources(skillKey)}
                                             className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                                             title={isExpanded ? 'Sembunyikan sumber' : 'Tampilkan sumber'}
                                         >
@@ -428,56 +434,60 @@ export default function ReverseSkillFinder({ onSkillDetail, onNotify }) {
                                                     Tidak ada support card pemberi untuk skill ini.
                                                 </div>
                                             ) : (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[300px] overflow-y-auto pr-1">
+                                                <div className="grid grid-cols-1 gap-2.5 max-h-[380px] overflow-y-auto pr-1">
                                                     {cardSources.map((card, cIdx) => (
                                                         <div
                                                             key={`${card.id || card.name}-${cIdx}`}
-                                                            className={`p-2.5 rounded-2xl border transition-all flex items-start gap-2.5 ${
+                                                            className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
                                                                 card.is_owned
                                                                     ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/80'
                                                                     : 'bg-slate-50/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800'
                                                             }`}
                                                         >
-                                                            {/* Card Thumbnail */}
-                                                            <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-300 dark:border-slate-700">
-                                                                <img
-                                                                    src={card.image_url || card.icon_url}
-                                                                    alt={card.name}
-                                                                    className="w-full h-full object-cover"
-                                                                    onError={(e) => {
-                                                                        e.currentTarget.src = 'https://gametora.com/images/umamusume/characters/support_card_default.png';
-                                                                    }}
-                                                                />
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                {/* Card Thumbnail */}
+                                                                <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-300 dark:border-slate-700">
+                                                                    <img
+                                                                        src={card.image_url || card.icon_url}
+                                                                        alt={card.name}
+                                                                        className="w-full h-full object-cover"
+                                                                        onError={(e) => {
+                                                                            e.currentTarget.src = 'https://gametora.com/images/umamusume/characters/support_card_default.png';
+                                                                        }}
+                                                                    />
+                                                                </div>
+
+                                                                <div className="min-w-0 space-y-0.5">
+                                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-slate-900 text-white">
+                                                                            {card.rarity || 'SSR'}
+                                                                        </span>
+                                                                        {card.card_type && (
+                                                                            <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${getTypeColor(card.card_type)}`}>
+                                                                                {card.card_type}
+                                                                            </span>
+                                                                        )}
+                                                                        {card.is_owned ? (
+                                                                            <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-600 text-white">
+                                                                                {card.limit_break === 4 ? 'MLB' : `${card.limit_break}LB`}
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold text-slate-400 bg-slate-200 dark:bg-slate-700">
+                                                                                Belum Punya
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <div className="text-xs font-bold text-slate-900 dark:text-white truncate" title={card.name}>
+                                                                        {card.name}
+                                                                    </div>
+                                                                </div>
                                                             </div>
 
-                                                            <div className="min-w-0 flex-1 space-y-1">
-                                                                <div className="flex items-center gap-1.5 flex-wrap">
-                                                                    <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-slate-900 text-white">
-                                                                        {card.rarity || 'SSR'}
-                                                                    </span>
-                                                                    {card.card_type && (
-                                                                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${getTypeColor(card.card_type)}`}>
-                                                                            {card.card_type}
-                                                                        </span>
-                                                                    )}
-                                                                    {card.is_owned ? (
-                                                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-600 text-white">
-                                                                            {card.limit_break === 4 ? 'MLB' : `${card.limit_break}LB`}
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold text-slate-400 bg-slate-200 dark:bg-slate-700">
-                                                                            Belum Punya
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-
-                                                                <div className="text-xs font-bold text-slate-900 dark:text-white truncate" title={card.name}>
-                                                                    {card.name}
-                                                                </div>
-
-                                                                <div className="text-[10px] text-amber-700 dark:text-amber-300 font-semibold truncate" title={card.obtain_method}>
-                                                                    🎯 {card.obtain_method || 'Hint / Event Skill'}
-                                                                </div>
+                                                            <div className="shrink-0 text-right">
+                                                                <span className="text-[10px] text-amber-700 dark:text-amber-300 font-bold bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full" title={card.obtain_method}>
+                                                                    🎯 {card.obtain_method === 'hint' ? 'Hint Skill' : card.obtain_method === 'event' ? 'Event Skill' : 'Hint & Event'}
+                                                                </span>
                                                             </div>
                                                         </div>
                                                     ))}
@@ -504,51 +514,55 @@ export default function ReverseSkillFinder({ onSkillDetail, onNotify }) {
                                                     Tidak ada karakter langsung yang memiliki skill ini di status dasar / awakening.
                                                 </div>
                                             ) : (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[300px] overflow-y-auto pr-1">
+                                                <div className="grid grid-cols-1 gap-2.5 max-h-[380px] overflow-y-auto pr-1">
                                                     {charSources.map((char, chIdx) => (
                                                         <div
                                                             key={`${char.id || char.name}-${chIdx}`}
-                                                            className={`p-2.5 rounded-2xl border transition-all flex items-start gap-2.5 ${
+                                                            className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
                                                                 char.is_owned
                                                                     ? 'bg-pink-50/50 dark:bg-pink-950/20 border-pink-300 dark:border-pink-800/80'
                                                                     : 'bg-slate-50/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800'
                                                             }`}
                                                         >
-                                                            {/* Char Thumbnail */}
-                                                            <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-300 dark:border-slate-700">
-                                                                <img
-                                                                    src={char.image_url}
-                                                                    alt={char.name}
-                                                                    className="w-full h-full object-cover"
-                                                                    onError={(e) => {
-                                                                        e.currentTarget.src = 'https://gametora.com/images/umamusume/characters/uma_default.png';
-                                                                    }}
-                                                                />
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                {/* Char Thumbnail */}
+                                                                <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-300 dark:border-slate-700">
+                                                                    <img
+                                                                        src={char.image_url}
+                                                                        alt={char.name}
+                                                                        className="w-full h-full object-cover"
+                                                                        onError={(e) => {
+                                                                            e.currentTarget.src = 'https://gametora.com/images/umamusume/characters/uma_default.png';
+                                                                        }}
+                                                                    />
+                                                                </div>
+
+                                                                <div className="min-w-0 space-y-0.5">
+                                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-400 text-slate-900">
+                                                                            {char.stars || char.base_stars || 3}★
+                                                                        </span>
+                                                                        {char.is_owned ? (
+                                                                            <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-600 text-white">
+                                                                                Dimiliki ({char.stars || char.base_stars}★)
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold text-slate-400 bg-slate-200 dark:bg-slate-700">
+                                                                                Belum Punya
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <div className="text-xs font-bold text-slate-900 dark:text-white truncate" title={char.name}>
+                                                                        {char.name}
+                                                                    </div>
+                                                                </div>
                                                             </div>
 
-                                                            <div className="min-w-0 flex-1 space-y-1">
-                                                                <div className="flex items-center gap-1.5 flex-wrap">
-                                                                    <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-400 text-slate-900">
-                                                                        {char.stars || char.base_stars || 3}★
-                                                                    </span>
-                                                                    {char.is_owned ? (
-                                                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-600 text-white">
-                                                                            Dimiliki ({char.stars || char.base_stars}★)
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold text-slate-400 bg-slate-200 dark:bg-slate-700">
-                                                                            Belum Punya
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-
-                                                                <div className="text-xs font-bold text-slate-900 dark:text-white truncate" title={char.name}>
-                                                                    {char.name}
-                                                                </div>
-
-                                                                <div className="text-[10px] text-pink-700 dark:text-pink-300 font-semibold truncate" title={char.obtain_method}>
-                                                                    🌸 {char.obtain_method || 'Skill Alami / Awakening'}
-                                                                </div>
+                                                            <div className="shrink-0 text-right">
+                                                                <span className="text-[10px] text-pink-700 dark:text-pink-300 font-bold bg-pink-50 dark:bg-pink-950/40 border border-pink-200 dark:border-pink-800 px-2 py-0.5 rounded-full" title={char.skill_category || char.obtain_method}>
+                                                                    🌸 {char.skill_category || char.obtain_method || 'Skill Alami'}
+                                                                </span>
                                                             </div>
                                                         </div>
                                                     ))}
