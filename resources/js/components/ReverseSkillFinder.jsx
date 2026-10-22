@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import AllSkillsCatalogModal from './AllSkillsCatalogModal';
 import {
     Search,
     Filter,
@@ -20,8 +21,6 @@ const PRESET_QUICK_SEARCHES = [
     { label: 'Groundwork / 地固め', query: 'Groundwork' },
     { label: 'Swinging Maestro / 円弧のマエストロ', query: 'Swinging Maestro' },
     { label: 'Professor of Curvature / 弧線のプロフェッサー', query: 'Professor of Curvature' },
-    { label: 'Straightaway Spurt / 直線一気', query: 'Straightaway Spurt' },
-    { label: 'Breath of Fresh Air / 好転一息', query: 'Breath of Fresh Air' },
 ];
 
 export default function ReverseSkillFinder({ onSkillDetail, onNotify }) {
@@ -35,6 +34,7 @@ export default function ReverseSkillFinder({ onSkillDetail, onNotify }) {
     const [loading, setLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
     const [expandedCards, setExpandedCards] = useState({});
+    const [showAllSkillsModal, setShowAllSkillsModal] = useState(false);
 
     // 300ms Debounce Query
     useEffect(() => {
@@ -192,25 +192,41 @@ export default function ReverseSkillFinder({ onSkillDetail, onNotify }) {
                         )}
                     </div>
 
-                    {/* Quick Search Chips */}
-                    <div className="flex items-center gap-2 flex-wrap pt-1">
-                        <span className="text-[11px] font-bold text-indigo-300/80 flex items-center gap-1">
-                            <span>Preset Populer:</span>
-                        </span>
-                        {PRESET_QUICK_SEARCHES.map((preset) => (
-                            <button
-                                key={preset.query}
-                                type="button"
-                                onClick={() => setQuery(preset.query)}
-                                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer border ${
-                                    query === preset.query
-                                        ? 'bg-indigo-500 text-white border-indigo-400 shadow-sm'
-                                        : 'bg-indigo-950/60 text-indigo-200 border-indigo-800/70 hover:bg-indigo-900 hover:text-white'
-                                }`}
-                            >
-                                {preset.label}
-                            </button>
-                        ))}
+                    {/* Quick Search Chips & View All Skills Button */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[11px] font-bold text-indigo-300/80 flex items-center gap-1 shrink-0">
+                                <span>Preset Populer:</span>
+                            </span>
+                            {PRESET_QUICK_SEARCHES.map((preset) => (
+                                <button
+                                    key={preset.query}
+                                    type="button"
+                                    onClick={() => {
+                                        setQuery(preset.query);
+                                        setDebouncedQuery(preset.query);
+                                    }}
+                                    className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer border ${
+                                        query === preset.query
+                                            ? 'bg-indigo-500 text-white border-indigo-400 shadow-sm'
+                                            : 'bg-indigo-950/60 text-indigo-200 border-indigo-800/70 hover:bg-indigo-900 hover:text-white'
+                                    }`}
+                                >
+                                    {preset.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Button Lihat Semua Skill */}
+                        <button
+                            type="button"
+                            onClick={() => setShowAllSkillsModal(true)}
+                            className="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 hover:from-indigo-500 hover:to-indigo-500 text-white shadow-sm flex items-center gap-1.5 border border-indigo-400/40 shrink-0 self-start sm:self-auto hover:scale-[1.02]"
+                            title="Buka daftar seluruh skill yang tersedia di game"
+                        >
+                            <BookOpen className="w-3.5 h-3.5 text-indigo-200" />
+                            <span>Lihat Semua Skill</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -546,6 +562,16 @@ export default function ReverseSkillFinder({ onSkillDetail, onNotify }) {
                     })}
                 </div>
             )}
+
+            {/* Modal Daftar Semua Skill */}
+            <AllSkillsCatalogModal
+                isOpen={showAllSkillsModal}
+                onClose={() => setShowAllSkillsModal(false)}
+                onSelectSkill={(selectedName) => {
+                    setQuery(selectedName);
+                    setDebouncedQuery(selectedName);
+                }}
+            />
         </div>
     );
 }

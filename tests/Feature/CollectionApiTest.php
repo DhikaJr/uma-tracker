@@ -8,6 +8,7 @@ use App\Models\UmaCatalogItem;
 use App\Models\UserCharacter;
 use App\Models\UserSupportCard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class CollectionApiTest extends TestCase
@@ -842,5 +843,94 @@ class CollectionApiTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonCount(0, 'skills.0.support_cards')
             ->assertJsonCount(1, 'skills.0.characters');
+    }
+
+    public function test_can_get_all_skills_catalog_with_filters(): void
+    {
+        Cache::forget('collection_all_skills_list_v2');
+
+        $skillRare = [
+            'id' => 3001,
+            'name_en' => 'Swinging Maestro',
+            'name_ja' => '円弧のマエストロ',
+            'rarity' => 2,
+            'description_en' => 'Stamina recovery skill.',
+        ];
+
+        $skillNormal = [
+            'id' => 3002,
+            'name_en' => 'Groundwork',
+            'name_ja' => '地固め',
+            'rarity' => 1,
+            'description_en' => 'Acceleration skill.',
+        ];
+
+        $skillUnique = [
+            'id' => 3003,
+            'name_en' => 'Shooting Star',
+            'name_ja' => 'シューティングスター',
+            'rarity' => 3,
+            'description_en' => 'Special Week unique skill.',
+        ];
+
+        $skillEvolveJpOnly = [
+            'id' => 101803111,
+            'name_en' => '',
+            'name_jp' => '“標”に足るために',
+            'rarity' => 6,
+            'desc_jp' => 'レース中盤のコーナーのどこかでしばらくの間前に出る＜先行・中距離＞',
+        ];
+
+        UmaCatalogItem::create([
+            'type' => 'support_card',
+            'name' => 'SSR [Test Support] Super Creek',
+            'rarity' => 'SSR',
+            'details' => [
+                'hints' => ['skills' => [$skillRare, $skillNormal]],
+            ],
+        ]);
+
+        UmaCatalogItem::create([
+            'type' => 'character',
+            'name' => 'Special Week [Default]',
+            'rarity' => 'SSR',
+            'skills' => [
+                'unique' => $skillUnique,
+                'evolve' => [$skillEvolveJpOnly],
+            ],
+        ]);
+
+        // 1. Get all skills
+        $resAll = $this->getJson('/api/collection/skills');
+        $resAll->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('total', 4);
+
+        // Verify fallback naming on evolve skill with name_jp
+        $evolvedItem = collect($resAll->json('skills'))->firstWhere('id', 101803111);
+        $this->assertNotNull($evolvedItem);
+        $this->assertSame('To Be Worthy of the Standard', $evolvedItem['name_en']);
+        $this->assertSame('“標”に足るために', $evolvedItem['name_ja']);
+
+        // 2. Filter by rarity
+        $resRare = $this->getJson('/api/collection/skills?rarity=rare');
+        $resRare->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('skills.0.name_en', 'Swinging Maestro');
+
+        // 3. Search by query
+        $resSearch = $this->getJson('/api/collection/skills?q=Groundwork');
+        $resSearch->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('skills.0.name_en', 'Groundwork');
+
+        // 4. Search skill sources with JP name
+        $resJpSearch = $this->getJson('/api/collection/skill-sources?q=“標”に足るために');
+        $resJpSearch->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('skills.0.skill.name_en', 'To Be Worthy of the Standard');
     }
 }

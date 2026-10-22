@@ -106,6 +106,7 @@ Route::prefix('collection')->group(function () {
     Route::post('/support-cards/limit-break', [CollectionController::class, 'updateSupportCardLimitBreak']);
     Route::post('/support-cards/batch', [CollectionController::class, 'batchSupportCards']);
 
+    Route::get('/skills', [CollectionController::class, 'getAllSkills']);
     Route::get('/skill-sources', [CollectionController::class, 'searchSkillSources']);
     Route::get('/skill-detail', [CollectionController::class, 'getSkillDetail']);
 });

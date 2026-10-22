@@ -14,6 +14,7 @@ use App\Support\SupportCardUniqueEffectFormatter;
 use App\Support\UmaCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class CollectionController extends Controller
 {
@@ -853,6 +854,138 @@ class CollectionController extends Controller
     }
 
     /**
+     * Retrieve complete catalog of skills available across cards and characters.
+     */
+    public function getAllSkills(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->query('q', ''));
+        $rarityFilter = strtolower(trim((string) $request->query('rarity', 'all')));
+
+        $skills = Cache::remember('collection_all_skills_list_v2', 86400, function () {
+            $supportItems = UmaCatalogItem::where('type', 'support_card')->get();
+            $charItems = UmaCatalogItem::where('type', 'character')->get();
+
+            $skillsMap = [];
+
+            $addSkill = function (mixed $sk, string $sourceType) use (&$skillsMap) {
+                if (! is_array($sk)) {
+                    return;
+                }
+                $id = $sk['id'] ?? null;
+                $nameEn = trim((string) ($sk['name_en'] ?? $sk['enname'] ?? $sk['name'] ?? ''));
+                $nameJa = trim((string) ($sk['name_ja'] ?? $sk['name_jp'] ?? $sk['jpname'] ?? ''));
+
+                if ($nameEn === '' && $nameJa !== '') {
+                    $nameEn = match ((int) $id) {
+                        101803111 => 'To Be Worthy of the Standard',
+                        101803211 => 'Sublime Amaranth',
+                        default => $nameJa,
+                    };
+                }
+
+                $key = $id ? "id_{$id}" : mb_strtolower($nameEn).'|'.mb_strtolower($nameJa);
+                if ($key === '|') {
+                    return;
+                }
+
+                if (! isset($skillsMap[$key])) {
+                    $skillsMap[$key] = [
+                        'id' => $id,
+                        'name_en' => $nameEn,
+                        'name_ja' => $nameJa,
+                        'rarity' => $sk['rarity'] ?? 1,
+                        'icon_id' => $sk['icon_id'] ?? $sk['icon'] ?? null,
+                        'description_en' => $sk['description_en'] ?? $sk['description'] ?? $sk['desc_en'] ?? $sk['desc_jp'] ?? '',
+                        'cards_count' => 0,
+                        'chars_count' => 0,
+                    ];
+                }
+
+                if ($sourceType === 'card') {
+                    $skillsMap[$key]['cards_count']++;
+                } else {
+                    $skillsMap[$key]['chars_count']++;
+                }
+            };
+
+            foreach ($supportItems as $card) {
+                $details = $card->details ?? [];
+                foreach ($details['hints']['skills'] ?? [] as $sk) {
+                    $addSkill($sk, 'card');
+                }
+                foreach ($details['event_skills'] ?? [] as $sk) {
+                    $addSkill($sk, 'card');
+                }
+            }
+
+            foreach ($charItems as $char) {
+                $sData = $char->skills ?? [];
+                $uniqueList = ! empty($sData['unique_versions'])
+                    ? $sData['unique_versions']
+                    : (! empty($sData['unique']) ? [$sData['unique']] : []);
+                foreach ($uniqueList as $sk) {
+                    $addSkill($sk, 'char');
+                }
+                foreach ($sData['innate'] ?? [] as $sk) {
+                    $addSkill($sk, 'char');
+                }
+                foreach ($sData['awakening'] ?? [] as $sk) {
+                    $addSkill($sk, 'char');
+                }
+                foreach ($sData['evolve'] ?? [] as $sk) {
+                    $addSkill($sk, 'char');
+                }
+            }
+
+            $list = array_values($skillsMap);
+            usort($list, function ($a, $b) {
+                $totalA = $a['cards_count'] + $a['chars_count'];
+                $totalB = $b['cards_count'] + $b['chars_count'];
+                if ($totalA !== $totalB) {
+                    return $totalB <=> $totalA;
+                }
+
+                return strcasecmp($a['name_en'], $b['name_en']);
+            });
+
+            return $list;
+        });
+
+        if ($q !== '' || $rarityFilter !== 'all') {
+            $needle = $q !== '' ? mb_strtolower($q) : null;
+            $resolveRarity = function ($r): string {
+                return match (is_numeric($r) ? (int) $r : strtolower((string) $r)) {
+                    2, '2', 'rare' => 'rare',
+                    3, 4, 5, '3', '4', '5', 'unique' => 'unique',
+                    6, '6', 'evolved' => 'evolved',
+                    default => 'normal',
+                };
+            };
+
+            $skills = array_values(array_filter($skills, function ($sk) use ($needle, $rarityFilter, $resolveRarity) {
+                if ($rarityFilter !== 'all' && $resolveRarity($sk['rarity'] ?? 1) !== $rarityFilter) {
+                    return false;
+                }
+                if ($needle !== null) {
+                    $nEn = mb_strtolower((string) $sk['name_en']);
+                    $nJa = mb_strtolower((string) $sk['name_ja']);
+                    $desc = mb_strtolower((string) ($sk['description_en'] ?? ''));
+
+                    return str_contains($nEn, $needle) || str_contains($nJa, $needle) || str_contains($desc, $needle);
+                }
+
+                return true;
+            }));
+        }
+
+        return response()->json([
+            'success' => true,
+            'total' => count($skills),
+            'skills' => $skills,
+        ]);
+    }
+
+    /**
      * Search global skill sources across support cards and characters (Reverse Skill Finder).
      */
     public function searchSkillSources(Request $request): JsonResponse
@@ -885,10 +1018,18 @@ class CollectionController extends Controller
                 return true;
             }
 
-            $nEn = mb_strtolower((string) ($sk['name_en'] ?? $sk['enname'] ?? ''));
-            $nJa = mb_strtolower((string) ($sk['name_ja'] ?? $sk['jpname'] ?? ''));
-            $descEn = mb_strtolower((string) ($sk['description_en'] ?? ''));
-            $descJa = mb_strtolower((string) ($sk['description_ja'] ?? ''));
+            $id = (int) ($sk['id'] ?? 0);
+            $nEn = mb_strtolower((string) ($sk['name_en'] ?? $sk['enname'] ?? $sk['name'] ?? ''));
+            $nJa = mb_strtolower((string) ($sk['name_ja'] ?? $sk['name_jp'] ?? $sk['jpname'] ?? ''));
+            if ($nEn === '' && $nJa !== '') {
+                $nEn = mb_strtolower(match ($id) {
+                    101803111 => 'To Be Worthy of the Standard',
+                    101803211 => 'Sublime Amaranth',
+                    default => $nJa,
+                });
+            }
+            $descEn = mb_strtolower((string) ($sk['description_en'] ?? $sk['description'] ?? $sk['desc_en'] ?? ''));
+            $descJa = mb_strtolower((string) ($sk['description_ja'] ?? $sk['desc_jp'] ?? ''));
             $cond = mb_strtolower((string) ($sk['condition_translated'] ?? $sk['condition'] ?? ''));
 
             return str_contains($nEn, $needle)
@@ -940,8 +1081,9 @@ class CollectionController extends Controller
                         continue;
                     }
 
+                    $sk = $this->normalizeSkillRecord($sk);
                     $sId = (int) ($sk['id'] ?? 0);
-                    $sKey = $sId > 0 ? (string) $sId : mb_strtolower((string) ($sk['name_en'] ?? $sk['enname'] ?? '')).'|'.((string) ($sk['name_ja'] ?? $sk['jpname'] ?? ''));
+                    $sKey = $sId > 0 ? (string) $sId : mb_strtolower((string) $sk['name_en']).'|'.((string) ($sk['name_ja'] ?? ''));
                     if ($sKey === '|') {
                         continue;
                     }
@@ -974,8 +1116,9 @@ class CollectionController extends Controller
                         continue;
                     }
 
+                    $sk = $this->normalizeSkillRecord($sk);
                     $sId = (int) ($sk['id'] ?? 0);
-                    $sKey = $sId > 0 ? (string) $sId : mb_strtolower((string) ($sk['name_en'] ?? $sk['enname'] ?? '')).'|'.((string) ($sk['name_ja'] ?? $sk['jpname'] ?? ''));
+                    $sKey = $sId > 0 ? (string) $sId : mb_strtolower((string) $sk['name_en']).'|'.((string) ($sk['name_ja'] ?? ''));
                     if ($sKey === '|') {
                         continue;
                     }
@@ -1175,8 +1318,9 @@ class CollectionController extends Controller
             return;
         }
 
+        $sk = $this->normalizeSkillRecord($sk);
         $sId = (int) ($sk['id'] ?? 0);
-        $sKey = $sId > 0 ? (string) $sId : mb_strtolower((string) ($sk['name_en'] ?? $sk['enname'] ?? '')).'|'.((string) ($sk['name_ja'] ?? $sk['jpname'] ?? ''));
+        $sKey = $sId > 0 ? (string) $sId : mb_strtolower((string) $sk['name_en']).'|'.((string) ($sk['name_ja'] ?? ''));
         if ($sKey === '|') {
             return;
         }
@@ -1193,5 +1337,40 @@ class CollectionController extends Controller
         $skillsIndex[$sKey]['characters'][$charId] = array_merge($charSummary, [
             'skill_category' => $category,
         ]);
+    }
+
+    /**
+     * Normalize skill record names and descriptions.
+     *
+     * @param  array<string, mixed>  $sk
+     * @return array<string, mixed>
+     */
+    protected function normalizeSkillRecord(array $sk): array
+    {
+        $id = (int) ($sk['id'] ?? 0);
+        $nameJa = trim((string) ($sk['name_ja'] ?? $sk['name_jp'] ?? $sk['jpname'] ?? ''));
+        $nameEn = trim((string) ($sk['name_en'] ?? $sk['enname'] ?? $sk['name'] ?? ''));
+
+        if ($nameEn === '' && $nameJa !== '') {
+            $nameEn = match ($id) {
+                101803111 => 'To Be Worthy of the Standard',
+                101803211 => 'Sublime Amaranth',
+                default => $nameJa,
+            };
+        }
+
+        $sk['name_en'] = $nameEn;
+        if ($nameJa !== '') {
+            $sk['name_ja'] = $nameJa;
+        }
+
+        if (empty($sk['desc_en']) && ! empty($sk['description_en'])) {
+            $sk['desc_en'] = $sk['description_en'];
+        }
+        if (empty($sk['desc_en']) && ! empty($sk['desc_jp'])) {
+            $sk['desc_en'] = $sk['desc_jp'];
+        }
+
+        return $sk;
     }
 }
