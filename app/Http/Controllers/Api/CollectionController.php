@@ -18,6 +18,13 @@ use Illuminate\Support\Facades\Cache;
 
 class CollectionController extends Controller
 {
+    public const ALL_SKILLS_CACHE_KEY = 'collection_all_skills_list_v3';
+
+    /**
+     * Cache key for indexed catalog skills lookup map.
+     */
+    public const INDEXED_SKILLS_CACHE_KEY = 'collection_indexed_skills_map_v1';
+
     /**
      * Helper to determine base star rating (1, 2, or 3) for a character.
      */
@@ -860,8 +867,11 @@ class CollectionController extends Controller
     {
         $q = trim((string) $request->query('q', ''));
         $rarityFilter = strtolower(trim((string) $request->query('rarity', 'all')));
+        $distanceFilter = strtolower(trim((string) $request->query('distance', 'all')));
+        $styleFilter = strtolower(trim((string) $request->query('running_style', 'all')));
+        $categoryFilter = strtolower(trim((string) $request->query('category', 'all')));
 
-        $skills = Cache::remember('collection_all_skills_list_v2', 86400, function () {
+        $skills = Cache::remember(self::ALL_SKILLS_CACHE_KEY, 86400, function () {
             $supportItems = UmaCatalogItem::where('type', 'support_card')->get();
             $charItems = UmaCatalogItem::where('type', 'character')->get();
 
@@ -888,6 +898,8 @@ class CollectionController extends Controller
                     return;
                 }
 
+                $tactical = $this->extractTacticalMetadata($sk);
+
                 if (! isset($skillsMap[$key])) {
                     $skillsMap[$key] = [
                         'id' => $id,
@@ -896,9 +908,32 @@ class CollectionController extends Controller
                         'rarity' => $sk['rarity'] ?? 1,
                         'icon_id' => $sk['icon_id'] ?? $sk['icon'] ?? null,
                         'description_en' => $sk['description_en'] ?? $sk['description'] ?? $sk['desc_en'] ?? $sk['desc_jp'] ?? '',
+                        'distance_types' => $tactical['distance_types'],
+                        'running_styles' => $tactical['running_styles'],
+                        'ground_types' => $tactical['ground_types'],
+                        'effect_categories' => $tactical['effect_categories'],
                         'cards_count' => 0,
                         'chars_count' => 0,
                     ];
+                } else {
+                    if (! in_array('all', $tactical['distance_types'], true)) {
+                        $skillsMap[$key]['distance_types'] = array_values(array_unique(array_merge(
+                            array_diff($skillsMap[$key]['distance_types'], ['all']),
+                            $tactical['distance_types']
+                        )));
+                    }
+                    if (! in_array('all', $tactical['running_styles'], true)) {
+                        $skillsMap[$key]['running_styles'] = array_values(array_unique(array_merge(
+                            array_diff($skillsMap[$key]['running_styles'], ['all']),
+                            $tactical['running_styles']
+                        )));
+                    }
+                    if (! empty($tactical['effect_categories'])) {
+                        $skillsMap[$key]['effect_categories'] = array_values(array_unique(array_merge(
+                            $skillsMap[$key]['effect_categories'],
+                            $tactical['effect_categories']
+                        )));
+                    }
                 }
 
                 if ($sourceType === 'card') {
@@ -951,7 +986,7 @@ class CollectionController extends Controller
             return $list;
         });
 
-        if ($q !== '' || $rarityFilter !== 'all') {
+        if ($q !== '' || $rarityFilter !== 'all' || $distanceFilter !== 'all' || $styleFilter !== 'all' || $categoryFilter !== 'all') {
             $needle = $q !== '' ? mb_strtolower($q) : null;
             $resolveRarity = function ($r): string {
                 return match (is_numeric($r) ? (int) $r : strtolower((string) $r)) {
@@ -962,8 +997,17 @@ class CollectionController extends Controller
                 };
             };
 
-            $skills = array_values(array_filter($skills, function ($sk) use ($needle, $rarityFilter, $resolveRarity) {
+            $skills = array_values(array_filter($skills, function ($sk) use ($needle, $rarityFilter, $distanceFilter, $styleFilter, $categoryFilter, $resolveRarity) {
                 if ($rarityFilter !== 'all' && $resolveRarity($sk['rarity'] ?? 1) !== $rarityFilter) {
+                    return false;
+                }
+                if ($distanceFilter !== 'all' && ! in_array($distanceFilter, $sk['distance_types'] ?? [], true)) {
+                    return false;
+                }
+                if ($styleFilter !== 'all' && ! in_array($styleFilter, $sk['running_styles'] ?? [], true)) {
+                    return false;
+                }
+                if ($categoryFilter !== 'all' && ! in_array($categoryFilter, $sk['effect_categories'] ?? [], true)) {
                     return false;
                 }
                 if ($needle !== null) {
@@ -1200,6 +1244,7 @@ class CollectionController extends Controller
         }
 
         // Format and sort results
+        $catalogIndex = $this->getCatalogSkillsIndex();
         $results = [];
         foreach ($skillsIndex as $entry) {
             $cards = array_values($entry['support_cards']);
@@ -1247,8 +1292,13 @@ class CollectionController extends Controller
             $hasOwned = (! empty($cards) && $cards[0]['is_owned']) || (! empty($chars) && $chars[0]['is_owned']);
             $totalSources = count($cards) + count($chars);
 
+            $relatedSkills = $this->resolveRelatedSkills($entry['skill'], $catalogIndex['by_id'], $catalogIndex['by_name']);
+            $skillRecord = $entry['skill'];
+            $skillRecord['related_skills'] = $relatedSkills;
+
             $results[] = [
-                'skill' => $entry['skill'],
+                'skill' => $skillRecord,
+                'related_skills' => $relatedSkills,
                 'has_owned_source' => $hasOwned,
                 'total_sources' => $totalSources,
                 'support_cards' => $cards,
@@ -1372,5 +1422,348 @@ class CollectionController extends Controller
         }
 
         return $sk;
+    }
+
+    /**
+     * Extract multi-dimensional tactical metadata from skill condition, effects, and descriptions.
+     *
+     * @param  array<string, mixed>  $sk
+     * @return array{distance_types: array<string>, running_styles: array<string>, ground_types: array<string>, effect_categories: array<string>}
+     */
+    protected function extractTacticalMetadata(array $sk): array
+    {
+        $condStr = json_encode($sk['condition_groups'] ?? $sk['condition'] ?? $sk['conditions'] ?? '');
+        $descEn = strtolower((string) ($sk['description_en'] ?? $sk['description'] ?? $sk['desc_en'] ?? ''));
+        $descJp = (string) ($sk['desc_jp'] ?? $sk['description_ja'] ?? '');
+        $iconId = (string) ($sk['icon_id'] ?? $sk['icon'] ?? '');
+
+        // 1. Distance types
+        $distances = [];
+        if (preg_match('/distance_type\s*==\s*1/', $condStr) || preg_match('/\b(short|sprint)\b/i', $descEn) || str_contains($descJp, '短距離')) {
+            $distances[] = 'short';
+        }
+        if (preg_match('/distance_type\s*==\s*2/', $condStr) || preg_match('/\b(mile)\b/i', $descEn) || str_contains($descJp, 'マイル')) {
+            $distances[] = 'mile';
+        }
+        if (preg_match('/distance_type\s*==\s*3/', $condStr) || preg_match('/\b(medium)\b/i', $descEn) || str_contains($descJp, '中距離')) {
+            $distances[] = 'medium';
+        }
+        if (preg_match('/distance_type\s*==\s*4/', $condStr) || preg_match('/\b(long)\b/i', $descEn) || str_contains($descJp, '長距離')) {
+            $distances[] = 'long';
+        }
+        if (empty($distances)) {
+            $distances[] = 'all';
+        }
+
+        // 2. Running styles
+        $styles = [];
+        if (preg_match('/running_style\s*==\s*1/', $condStr) || preg_match('/\b(front\s*runner|runner|nige)\b/i', $descEn) || str_contains($descJp, '逃げ')) {
+            $styles[] = 'front';
+        }
+        if (preg_match('/running_style\s*==\s*2/', $condStr) || preg_match('/\b(leader|pace|senko)\b/i', $descEn) || str_contains($descJp, '先行')) {
+            $styles[] = 'pace';
+        }
+        if (preg_match('/running_style\s*==\s*3/', $condStr) || preg_match('/\b(betweener|late|sashi)\b/i', $descEn) || str_contains($descJp, '差し')) {
+            $styles[] = 'late';
+        }
+        if (preg_match('/running_style\s*==\s*4/', $condStr) || preg_match('/\b(chaser|end|oikomi)\b/i', $descEn) || str_contains($descJp, '追込')) {
+            $styles[] = 'end';
+        }
+        if (empty($styles)) {
+            $styles[] = 'all';
+        }
+
+        // 3. Ground types
+        $grounds = [];
+        if (preg_match('/ground_type\s*==\s*1/', $condStr) || preg_match('/\b(turf)\b/i', $descEn) || str_contains($descJp, '芝')) {
+            $grounds[] = 'turf';
+        }
+        if (preg_match('/ground_type\s*==\s*2/', $condStr) || preg_match('/\b(dirt)\b/i', $descEn) || str_contains($descJp, 'ダート')) {
+            $grounds[] = 'dirt';
+        }
+        if (empty($grounds)) {
+            $grounds[] = 'all';
+        }
+
+        // 4. Effect categories
+        $categories = [];
+        $effects = $sk['effects'] ?? [];
+        if (empty($effects) && ! empty($sk['condition_groups']) && is_array($sk['condition_groups'])) {
+            foreach ($sk['condition_groups'] as $cg) {
+                if (is_array($cg) && ! empty($cg['effects']) && is_array($cg['effects'])) {
+                    foreach ($cg['effects'] as $eff) {
+                        $effects[] = $eff;
+                    }
+                }
+            }
+        }
+
+        foreach ($effects as $eff) {
+            if (! is_array($eff)) {
+                continue;
+            }
+            $t = (int) ($eff['type'] ?? 0);
+            $val = (float) ($eff['value'] ?? $eff['formatted_value'] ?? 0);
+            $name = strtolower((string) ($eff['name'] ?? ''));
+
+            if ($t === 9 || str_contains($name, 'stamina restore') || str_contains($name, 'hp restore')) {
+                $categories['recovery'] = true;
+            }
+            if ($t === 27 || $t === 22 || str_contains($name, 'target speed') || str_contains($name, 'current speed')) {
+                if ($val < 0 || str_contains($name, 'decrease') || $t === 28) {
+                    $categories['debuff'] = true;
+                } else {
+                    $categories['speed'] = true;
+                }
+            }
+            if ($t === 31 || str_contains($name, 'acceleration')) {
+                if ($val < 0 || str_contains($name, 'decrease')) {
+                    $categories['debuff'] = true;
+                } else {
+                    $categories['accel'] = true;
+                }
+            }
+            if ($t === 28 || $t === 10 || str_contains($name, 'decrease') || str_contains($name, 'fatigue')) {
+                $categories['debuff'] = true;
+            }
+            if (in_array($t, [1, 2, 3, 4, 5, 6, 7, 8, 21], true)) {
+                $categories['passive'] = true;
+            }
+        }
+
+        if (str_starts_with($iconId, '3') || str_contains($descEn, 'slow down') || str_contains($descEn, 'decrease') || str_contains($descEn, 'lose stamina') || str_contains($descJp, '下がる') || str_contains($descJp, '疲労')) {
+            $categories['debuff'] = true;
+        }
+        if (str_starts_with($iconId, '1')) {
+            $categories['passive'] = true;
+        }
+        if (str_contains($descEn, 'stamina') && (str_contains($descEn, 'recover') || str_contains($descEn, 'restore') || str_contains($descEn, 'stamina recovery'))) {
+            $categories['recovery'] = true;
+        }
+        if (str_contains($descEn, 'speed') || str_contains($descEn, 'velocity') || str_contains($descEn, 'surge ahead')) {
+            if (! isset($categories['debuff'])) {
+                $categories['speed'] = true;
+            }
+        }
+        if (str_contains($descEn, 'acceleration') && ! isset($categories['debuff'])) {
+            $categories['accel'] = true;
+        }
+
+        return [
+            'distance_types' => $distances,
+            'running_styles' => $styles,
+            'ground_types' => $grounds,
+            'effect_categories' => array_keys($categories),
+        ];
+    }
+
+    /**
+     * Build indexed lookup table of all catalog skills for relation detection.
+     *
+     * @return array{by_id: array<int, array<string, mixed>>, by_name: array<string, array<string, mixed>>}
+     */
+    protected function getCatalogSkillsIndex(): array
+    {
+        return Cache::remember(self::INDEXED_SKILLS_CACHE_KEY, 86400, function (): array {
+            $supportItems = UmaCatalogItem::where('type', 'support_card')->get();
+            $charItems = UmaCatalogItem::where('type', 'character')->get();
+
+            $indexById = [];
+            $indexByName = [];
+
+            $record = function (mixed $sk) use (&$indexById, &$indexByName): void {
+                if (! is_array($sk)) {
+                    return;
+                }
+                $id = (int) ($sk['id'] ?? 0);
+                $nameEn = trim((string) ($sk['name_en'] ?? $sk['enname'] ?? $sk['name'] ?? ''));
+                $nameJa = trim((string) ($sk['name_ja'] ?? $sk['name_jp'] ?? $sk['jpname'] ?? ''));
+
+                if ($nameEn === '' && $nameJa !== '') {
+                    $nameEn = match ($id) {
+                        101803111 => 'To Be Worthy of the Standard',
+                        101803211 => 'Sublime Amaranth',
+                        default => $nameJa,
+                    };
+                }
+
+                $iconId = $sk['icon_id'] ?? $sk['icon'] ?? null;
+                $iconUrl = $sk['icon_url'] ?? ($iconId ? "https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_{$iconId}.png" : null);
+
+                $entry = [
+                    'id' => $id,
+                    'name_en' => $nameEn,
+                    'name_ja' => $nameJa,
+                    'rarity' => (int) ($sk['rarity'] ?? 1),
+                    'icon_url' => $iconUrl,
+                    'base_skill_id' => isset($sk['base_skill_id']) ? (int) $sk['base_skill_id'] : null,
+                ];
+
+                if ($id > 0 && ! isset($indexById[$id])) {
+                    $indexById[$id] = $entry;
+                }
+                if ($nameEn !== '' && ! isset($indexByName[mb_strtolower($nameEn)])) {
+                    $indexByName[mb_strtolower($nameEn)] = $entry;
+                }
+                if ($nameJa !== '' && ! isset($indexByName[mb_strtolower($nameJa)])) {
+                    $indexByName[mb_strtolower($nameJa)] = $entry;
+                }
+            };
+
+            foreach ($supportItems as $card) {
+                $details = $card->details ?? [];
+                foreach ($details['hints']['skills'] ?? [] as $sk) {
+                    $record($sk);
+                }
+                foreach ($details['event_skills'] ?? [] as $sk) {
+                    $record($sk);
+                }
+            }
+
+            foreach ($charItems as $char) {
+                $sData = $char->skills ?? [];
+                $uniqueList = ! empty($sData['unique_versions'])
+                    ? $sData['unique_versions']
+                    : (! empty($sData['unique']) ? [$sData['unique']] : []);
+                foreach ($uniqueList as $sk) {
+                    $record($sk);
+                }
+                foreach ($sData['innate'] ?? [] as $sk) {
+                    $record($sk);
+                }
+                foreach ($sData['awakening'] ?? [] as $sk) {
+                    $record($sk);
+                }
+                foreach ($sData['evolve'] ?? [] as $sk) {
+                    $record($sk);
+                }
+            }
+
+            return [
+                'by_id' => $indexById,
+                'by_name' => $indexByName,
+            ];
+        });
+    }
+
+    /**
+     * Resolve related skills (Gold <-> White, Evolved <-> Base, Symbol variants) for a skill.
+     *
+     * @param  array<string, mixed>  $sk
+     * @param  array<int, array<string, mixed>>  $indexById
+     * @param  array<string, array<string, mixed>>  $indexByName
+     * @return array<int, array{id: int, name_en: string, name_ja: string, rarity: int, icon_url: ?string, relation_type: string}>
+     */
+    protected function resolveRelatedSkills(array $sk, array $indexById, array $indexByName): array
+    {
+        $related = [];
+        $id = (int) ($sk['id'] ?? 0);
+        $rarity = (int) ($sk['rarity'] ?? 1);
+        $nameEn = (string) ($sk['name_en'] ?? $sk['enname'] ?? $sk['name'] ?? '');
+        $nameJa = (string) ($sk['name_ja'] ?? $sk['name_jp'] ?? $sk['jpname'] ?? '');
+
+        // 1. Direct ID Pair: 2xxxx1 (Gold) <-> 2xxxx2 (White)
+        if ($id >= 200000 && $id < 300000) {
+            $lastDigit = $id % 10;
+            if ($lastDigit === 1) {
+                $partnerId = $id + 1;
+                if (isset($indexById[$partnerId])) {
+                    $p = $indexById[$partnerId];
+                    $related[] = [
+                        'id' => $p['id'],
+                        'name_en' => $p['name_en'],
+                        'name_ja' => $p['name_ja'],
+                        'rarity' => $p['rarity'],
+                        'icon_url' => $p['icon_url'],
+                        'relation_type' => 'white_base',
+                    ];
+                }
+            } elseif ($lastDigit === 2) {
+                $partnerId = $id - 1;
+                if (isset($indexById[$partnerId])) {
+                    $p = $indexById[$partnerId];
+                    $related[] = [
+                        'id' => $p['id'],
+                        'name_en' => $p['name_en'],
+                        'name_ja' => $p['name_ja'],
+                        'rarity' => $p['rarity'],
+                        'icon_url' => $p['icon_url'],
+                        'relation_type' => 'gold_upgrade',
+                    ];
+                }
+            }
+        }
+
+        // 2. Evolved Skill (rarity 6) -> Base Gold Skill
+        $baseSkillId = (int) ($sk['base_skill_id'] ?? 0);
+        if ($rarity === 6 && $baseSkillId > 0 && isset($indexById[$baseSkillId])) {
+            $p = $indexById[$baseSkillId];
+            $related[] = [
+                'id' => $p['id'],
+                'name_en' => $p['name_en'],
+                'name_ja' => $p['name_ja'],
+                'rarity' => $p['rarity'],
+                'icon_url' => $p['icon_url'],
+                'relation_type' => 'base_gold',
+            ];
+        }
+
+        // 3. Gold Skill (rarity 2) -> Evolved Skills
+        if ($rarity === 2 && $id > 0) {
+            foreach ($indexById as $cand) {
+                if ($cand['rarity'] === 6 && (int) ($cand['base_skill_id'] ?? 0) === $id) {
+                    $related[] = [
+                        'id' => $cand['id'],
+                        'name_en' => $cand['name_en'],
+                        'name_ja' => $cand['name_ja'],
+                        'rarity' => $cand['rarity'],
+                        'icon_url' => $cand['icon_url'],
+                        'relation_type' => 'evolved_skill',
+                    ];
+                }
+            }
+        }
+
+        // 4. Symbol variants (○ <-> ◎ <-> ×)
+        if (str_contains($nameEn, '○') || str_contains($nameEn, '◯') || str_contains($nameJa, '○') || str_contains($nameJa, '◯')) {
+            $targetEn = str_replace(['○', '◯'], '◎', $nameEn);
+            $targetJa = str_replace(['○', '◯'], '◎', $nameJa);
+            $cand = $indexByName[mb_strtolower($targetEn)] ?? $indexByName[mb_strtolower($targetJa)] ?? null;
+            if ($cand !== null && $cand['id'] !== $id) {
+                $related[] = [
+                    'id' => $cand['id'],
+                    'name_en' => $cand['name_en'],
+                    'name_ja' => $cand['name_ja'],
+                    'rarity' => $cand['rarity'],
+                    'icon_url' => $cand['icon_url'],
+                    'relation_type' => 'double_circle',
+                ];
+            }
+        } elseif (str_contains($nameEn, '◎') || str_contains($nameJa, '◎')) {
+            $targetEn = str_replace('◎', '○', $nameEn);
+            $targetJa = str_replace('◎', '○', $nameJa);
+            $cand = $indexByName[mb_strtolower($targetEn)] ?? $indexByName[mb_strtolower($targetJa)] ?? null;
+            if ($cand !== null && $cand['id'] !== $id) {
+                $related[] = [
+                    'id' => $cand['id'],
+                    'name_en' => $cand['name_en'],
+                    'name_ja' => $cand['name_ja'],
+                    'rarity' => $cand['rarity'],
+                    'icon_url' => $cand['icon_url'],
+                    'relation_type' => 'single_circle',
+                ];
+            }
+        }
+
+        // Deduplicate by ID
+        $unique = [];
+        foreach ($related as $r) {
+            $k = $r['id'] > 0 ? (string) $r['id'] : $r['name_en'];
+            if (! isset($unique[$k])) {
+                $unique[$k] = $r;
+            }
+        }
+
+        return array_values($unique);
     }
 }

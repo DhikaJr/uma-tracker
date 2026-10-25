@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Api\CollectionController;
 use App\Models\UmaCatalogItem;
 use App\Models\UserCharacter;
 use App\Models\UserSupportCard;
@@ -932,5 +933,168 @@ class CollectionApiTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('total', 1)
             ->assertJsonPath('skills.0.skill.name_en', 'To Be Worthy of the Standard');
+    }
+
+    public function test_can_get_all_skills_with_tactical_metadata_and_filters(): void
+    {
+        Cache::forget(CollectionController::ALL_SKILLS_CACHE_KEY);
+
+        $staminaSkill = [
+            'id' => 200351,
+            'name_en' => 'Swinging Maestro',
+            'name_ja' => '円弧のマエストロ',
+            'rarity' => 2,
+            'description_en' => 'Slightly recover stamina when rounding a corner smoothly.',
+            'condition_groups' => [
+                [
+                    'condition' => 'distance_type==3&running_style==2',
+                    'effects' => [
+                        ['type' => 9, 'value' => 5.5, 'name' => 'stamina restore'],
+                    ],
+                ],
+            ],
+        ];
+
+        $speedSkill = [
+            'id' => 200581,
+            'name_en' => 'Speed Star',
+            'name_ja' => 'スピードスター',
+            'rarity' => 2,
+            'description_en' => 'Increase speed on the final corner <Leader / Pace>.',
+            'condition_groups' => [
+                [
+                    'condition' => 'running_style==2',
+                    'effects' => [
+                        ['type' => 27, 'value' => 0.35, 'name' => 'target speed'],
+                    ],
+                ],
+            ],
+        ];
+
+        UmaCatalogItem::create([
+            'type' => 'support_card',
+            'name' => 'SSR [Test Support] Super Creek',
+            'rarity' => 'SSR',
+            'details' => [
+                'hints' => ['skills' => [$staminaSkill, $speedSkill]],
+            ],
+        ]);
+
+        // 1. Get all skills and verify metadata structure
+        $resAll = $this->getJson('/api/collection/skills');
+        $resAll->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('total', 2);
+
+        $maestro = collect($resAll->json('skills'))->firstWhere('id', 200351);
+        $this->assertNotNull($maestro);
+        $this->assertContains('medium', $maestro['distance_types']);
+        $this->assertContains('pace', $maestro['running_styles']);
+        $this->assertContains('recovery', $maestro['effect_categories']);
+
+        $speedStar = collect($resAll->json('skills'))->firstWhere('id', 200581);
+        $this->assertNotNull($speedStar);
+        $this->assertContains('pace', $speedStar['running_styles']);
+        $this->assertContains('speed', $speedStar['effect_categories']);
+
+        // 2. Filter by distance=medium
+        $resDist = $this->getJson('/api/collection/skills?distance=medium');
+        $resDist->assertStatus(200)
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('skills.0.name_en', 'Swinging Maestro');
+
+        // 3. Filter by category=recovery
+        $resCat = $this->getJson('/api/collection/skills?category=recovery');
+        $resCat->assertStatus(200)
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('skills.0.name_en', 'Swinging Maestro');
+
+        // 4. Filter by category=speed
+        $resSpeed = $this->getJson('/api/collection/skills?category=speed');
+        $resSpeed->assertStatus(200)
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('skills.0.name_en', 'Speed Star');
+    }
+
+    public function test_can_detect_and_link_related_skills_in_reverse_skill_finder(): void
+    {
+        Cache::forget(CollectionController::ALL_SKILLS_CACHE_KEY);
+        Cache::forget(CollectionController::INDEXED_SKILLS_CACHE_KEY);
+
+        $goldSkill = [
+            'id' => 200581,
+            'name_en' => 'Speed Star',
+            'name_ja' => 'スピードスター',
+            'rarity' => 2,
+            'description_en' => 'Increase speed on final corner.',
+        ];
+
+        $whiteSkill = [
+            'id' => 200582,
+            'name_en' => 'Prepared to Pass',
+            'name_ja' => '抜け出し準備',
+            'rarity' => 1,
+            'description_en' => 'Increase speed slightly on final corner.',
+        ];
+
+        $evolvedSkill = [
+            'id' => 100581111,
+            'name_en' => 'Evolved Speed Star',
+            'name_ja' => '進化したスピードスター',
+            'rarity' => 6,
+            'base_skill_id' => 200581,
+            'description_en' => 'Evolved variant of Speed Star.',
+        ];
+
+        UmaCatalogItem::create([
+            'type' => 'support_card',
+            'name' => 'SSR [Test Card] Fine Motion',
+            'rarity' => 'SSR',
+            'details' => [
+                'hints' => ['skills' => [$goldSkill, $whiteSkill]],
+            ],
+        ]);
+
+        UmaCatalogItem::create([
+            'type' => 'character',
+            'name' => 'Fine Motion [Default]',
+            'rarity' => 'SSR',
+            'skills' => [
+                'evolve' => [$evolvedSkill],
+            ],
+        ]);
+
+        // 1. Search for Gold Skill (Speed Star) and verify related White + Evolved skills
+        $resGold = $this->getJson('/api/collection/skill-sources?q=Speed%20Star');
+        $resGold->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $goldEntry = collect($resGold->json('skills'))->firstWhere('skill.id', 200581);
+        $this->assertNotNull($goldEntry);
+        $this->assertNotEmpty($goldEntry['related_skills']);
+
+        // Check White counterpart relation
+        $whiteRel = collect($goldEntry['related_skills'])->firstWhere('id', 200582);
+        $this->assertNotNull($whiteRel);
+        $this->assertSame('Prepared to Pass', $whiteRel['name_en']);
+        $this->assertSame('white_base', $whiteRel['relation_type']);
+
+        // Check Evolved counterpart relation
+        $evolvedRel = collect($goldEntry['related_skills'])->firstWhere('id', 100581111);
+        $this->assertNotNull($evolvedRel);
+        $this->assertSame('Evolved Speed Star', $evolvedRel['name_en']);
+        $this->assertSame('evolved_skill', $evolvedRel['relation_type']);
+
+        // 2. Search for White Skill (Prepared to Pass) and verify related Gold skill
+        $resWhite = $this->getJson('/api/collection/skill-sources?q=Prepared%20to%20Pass');
+        $resWhite->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $whiteEntry = collect($resWhite->json('skills'))->firstWhere('skill.id', 200582);
+        $this->assertNotNull($whiteEntry);
+        $goldRel = collect($whiteEntry['related_skills'])->firstWhere('id', 200581);
+        $this->assertNotNull($goldRel);
+        $this->assertSame('Speed Star', $goldRel['name_en']);
+        $this->assertSame('gold_upgrade', $goldRel['relation_type']);
     }
 }

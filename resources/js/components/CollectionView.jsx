@@ -358,6 +358,38 @@ export default function CollectionView({ onNotify }) {
         }
     };
 
+    // Auto-switch to 'skills' section when reverse skill lookup is requested
+    useEffect(() => {
+        if (sessionStorage.getItem('uma_pending_skill_search')) {
+            setActiveSection('skills');
+        }
+
+        const handleFindSkillSources = () => {
+            setActiveSection('skills');
+        };
+        window.addEventListener('uma:find-skill-sources', handleFindSkillSources);
+        return () => window.removeEventListener('uma:find-skill-sources', handleFindSkillSources);
+    }, []);
+
+    // Handlers for ReverseSkillFinder interactions
+    const handleOpenSupportCardFromFinder = (cardItem) => {
+        if (!cardItem) return;
+        const fullCard = cards.find(c => (c.catalog_id && c.catalog_id === cardItem.catalog_id) || c.name === cardItem.name || (c.id && c.id === cardItem.id)) || cardItem;
+        setSelectedCardForDetail(fullCard);
+    };
+
+    const handleOpenCharacterFromFinder = (charItem) => {
+        if (!charItem) return;
+        const fullChar = characters.find(c => (c.catalog_id && c.catalog_id === charItem.catalog_id) || c.name === charItem.name || (c.id && c.id === charItem.id)) || charItem;
+        setSelectedCharForDetail(fullChar);
+    };
+
+    const handleToggleCompareCardFromFinder = (cardItem) => {
+        if (!cardItem) return;
+        const fullCard = cards.find(c => (c.catalog_id && c.catalog_id === cardItem.catalog_id) || c.name === cardItem.name || (c.id && c.id === cardItem.id)) || cardItem;
+        handleToggleCompareCard(fullCard);
+    };
+
     // Filter & sort characters
     const filteredCharacters = useMemo(() => {
         return characters.filter(char => {
@@ -1430,12 +1462,16 @@ export default function CollectionView({ onNotify }) {
             {activeSection === 'skills' && (
                 <ReverseSkillFinder
                     onSkillDetail={(skill) => setSelectedSkillForDetail(skill)}
+                    onOpenSupportCard={handleOpenSupportCardFromFinder}
+                    onOpenCharacter={handleOpenCharacterFromFinder}
+                    onToggleCompareCard={handleToggleCompareCardFromFinder}
+                    compareCards={compareCards}
                     onNotify={onNotify}
                 />
             )}
 
             {/* Floating Comparison Bar (when cards are selected for comparison) */}
-            {compareCards.length > 0 && activeSection === 'cards' && (
+            {compareCards.length > 0 && (activeSection === 'cards' || activeSection === 'skills') && (
                 <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-2xl border border-slate-700 flex flex-wrap items-center justify-center gap-3 animate-fadeIn">
                     <div className="flex items-center gap-2">
                         <ArrowRightLeft className="w-4 h-4 text-amber-400 shrink-0" />

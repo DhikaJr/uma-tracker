@@ -23,9 +23,23 @@ const PRESET_QUICK_SEARCHES = [
     { label: 'Professor of Curvature / 弧線のプロフェッサー', query: 'Professor of Curvature' },
 ];
 
-export default function ReverseSkillFinder({ onSkillDetail, onNotify }) {
-    const [query, setQuery] = useState('');
-    const [debouncedQuery, setDebouncedQuery] = useState('');
+export default function ReverseSkillFinder({ 
+    onSkillDetail, 
+    onOpenSupportCard, 
+    onOpenCharacter, 
+    onToggleCompareCard, 
+    compareCards = [], 
+    onNotify 
+}) {
+    const [query, setQuery] = useState(() => {
+        const pending = sessionStorage.getItem('uma_pending_skill_search');
+        if (pending) {
+            sessionStorage.removeItem('uma_pending_skill_search');
+            return pending;
+        }
+        return '';
+    });
+    const [debouncedQuery, setDebouncedQuery] = useState(query);
     const [rarityFilter, setRarityFilter] = useState('all'); // all, rare, normal, unique, evolved
     const [sourceTypeFilter, setSourceTypeFilter] = useState('all'); // all, support_card, character
     const [ownedOnly, setOwnedOnly] = useState(false);
@@ -35,6 +49,19 @@ export default function ReverseSkillFinder({ onSkillDetail, onNotify }) {
     const [hasSearched, setHasSearched] = useState(false);
     const [expandedCards, setExpandedCards] = useState({});
     const [showAllSkillsModal, setShowAllSkillsModal] = useState(false);
+
+    // Global listener for shortcut events to find skill sources
+    useEffect(() => {
+        const handleFindSkillSources = (e) => {
+            const q = e.detail?.query;
+            if (q) {
+                setQuery(q);
+                setDebouncedQuery(q);
+            }
+        };
+        window.addEventListener('uma:find-skill-sources', handleFindSkillSources);
+        return () => window.removeEventListener('uma:find-skill-sources', handleFindSkillSources);
+    }, []);
 
     // 300ms Debounce Query
     useEffect(() => {
@@ -386,6 +413,36 @@ export default function ReverseSkillFinder({ onSkillDetail, onNotify }) {
                                                     {skill.desc_en || skill.desc || skill.desc_ja || skill.description_en || skill.description}
                                                 </p>
                                             )}
+
+                                            {/* Related Skills (Gold <-> White, Evolved, Variants) */}
+                                            {Boolean((item.related_skills || skill.related_skills)?.length) && (
+                                                <div className="pt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                                                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                                        🔗 Skill Terkait (Versi Dasar / Upgrade):
+                                                    </span>
+                                                    {(item.related_skills || skill.related_skills).map((rel) => (
+                                                        <button
+                                                            key={rel.id || rel.name_en}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const targetName = rel.name_en || rel.name_ja;
+                                                                setQuery(targetName);
+                                                                setDebouncedQuery(targetName);
+                                                            }}
+                                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/70 text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer shadow-2xs"
+                                                            title={`Cari sumber untuk ${rel.name_en || rel.name_ja}`}
+                                                        >
+                                                            {rel.icon_url && (
+                                                                <img src={rel.icon_url} alt="" className="w-3.5 h-3.5 rounded object-contain shrink-0" />
+                                                            )}
+                                                            <span>{rel.name_en || rel.name_ja}</span>
+                                                            {rel.rarity === 2 && <span className="text-[9px] text-amber-600 dark:text-amber-400 font-bold">(Gold)</span>}
+                                                            {rel.rarity === 1 && <span className="text-[9px] text-slate-400 font-bold">(White)</span>}
+                                                            {rel.rarity === 6 && <span className="text-[9px] text-pink-600 dark:text-pink-400 font-bold">(Evolved)</span>}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -435,62 +492,86 @@ export default function ReverseSkillFinder({ onSkillDetail, onNotify }) {
                                                 </div>
                                             ) : (
                                                 <div className="grid grid-cols-1 gap-2.5 max-h-[380px] overflow-y-auto pr-1">
-                                                    {cardSources.map((card, cIdx) => (
-                                                        <div
-                                                            key={`${card.id || card.name}-${cIdx}`}
-                                                            className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
-                                                                card.is_owned
-                                                                    ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/80'
-                                                                    : 'bg-slate-50/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800'
-                                                            }`}
-                                                        >
-                                                            <div className="flex items-center gap-3 min-w-0">
-                                                                {/* Card Thumbnail */}
-                                                                <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-300 dark:border-slate-700">
-                                                                    <img
-                                                                        src={card.image_url || card.icon_url}
-                                                                        alt={card.name}
-                                                                        className="w-full h-full object-cover"
-                                                                        onError={(e) => {
-                                                                            e.currentTarget.src = 'https://gametora.com/images/umamusume/characters/support_card_default.png';
+                                                    {cardSources.map((card, cIdx) => {
+                                                        const isInCompare = compareCards?.some(c => (c.id && c.id === card.id) || c.name === card.name);
+
+                                                        return (
+                                                            <div
+                                                                key={`${card.id || card.name}-${cIdx}`}
+                                                                onClick={() => onOpenSupportCard?.(card)}
+                                                                role="button"
+                                                                tabIndex={0}
+                                                                title="Klik untuk membuka detail kartu"
+                                                                className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer group hover:border-emerald-400 dark:hover:border-emerald-600 hover:shadow-xs ${
+                                                                    card.is_owned
+                                                                        ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/80'
+                                                                        : 'bg-slate-50/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800'
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center gap-3 min-w-0">
+                                                                    {/* Card Thumbnail */}
+                                                                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-300 dark:border-slate-700 group-hover:ring-2 group-hover:ring-emerald-400/50 transition-all">
+                                                                        <img
+                                                                            src={card.image_url || card.icon_url}
+                                                                            alt={card.name}
+                                                                            className="w-full h-full object-cover"
+                                                                            onError={(e) => {
+                                                                                e.currentTarget.src = 'https://gametora.com/images/umamusume/characters/support_card_default.png';
+                                                                            }}
+                                                                        />
+                                                                    </div>
+
+                                                                    <div className="min-w-0 space-y-0.5">
+                                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                                            <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-slate-900 text-white">
+                                                                                {card.rarity || 'SSR'}
+                                                                            </span>
+                                                                            {card.card_type && (
+                                                                                <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${getTypeColor(card.card_type)}`}>
+                                                                                    {card.card_type}
+                                                                                </span>
+                                                                            )}
+                                                                            {card.is_owned ? (
+                                                                                <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-600 text-white">
+                                                                                    {card.limit_break === 4 ? 'MLB' : `${card.limit_break}LB`}
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold text-slate-400 bg-slate-200 dark:bg-slate-700">
+                                                                                    Belum Punya
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+
+                                                                        <div className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" title={card.name}>
+                                                                            {card.name}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="shrink-0 flex items-center gap-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            onToggleCompareCard?.(card);
                                                                         }}
-                                                                    />
-                                                                </div>
+                                                                        className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer ${
+                                                                            isInCompare
+                                                                                ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-2xs'
+                                                                                : 'bg-slate-200 dark:bg-slate-700 hover:bg-amber-100 hover:text-amber-800 dark:hover:bg-amber-950/60 dark:hover:text-amber-300 text-slate-700 dark:text-slate-300 border border-transparent hover:border-amber-300 dark:hover:border-amber-700'
+                                                                        }`}
+                                                                        title={isInCompare ? 'Hapus kartu dari perbandingan' : 'Pilih kartu ini untuk dikomparasi side-by-side'}
+                                                                    >
+                                                                        <span>{isInCompare ? '✓ Dipilih' : '⚖️ Banding'}</span>
+                                                                    </button>
 
-                                                                <div className="min-w-0 space-y-0.5">
-                                                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-slate-900 text-white">
-                                                                            {card.rarity || 'SSR'}
-                                                                        </span>
-                                                                        {card.card_type && (
-                                                                            <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${getTypeColor(card.card_type)}`}>
-                                                                                {card.card_type}
-                                                                            </span>
-                                                                        )}
-                                                                        {card.is_owned ? (
-                                                                            <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-600 text-white">
-                                                                                {card.limit_break === 4 ? 'MLB' : `${card.limit_break}LB`}
-                                                                            </span>
-                                                                        ) : (
-                                                                            <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold text-slate-400 bg-slate-200 dark:bg-slate-700">
-                                                                                Belum Punya
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-
-                                                                    <div className="text-xs font-bold text-slate-900 dark:text-white truncate" title={card.name}>
-                                                                        {card.name}
-                                                                    </div>
+                                                                    <span className="text-[10px] text-amber-700 dark:text-amber-300 font-bold bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full" title={card.obtain_method}>
+                                                                        🎯 {card.obtain_method === 'hint' ? 'Hint Skill' : card.obtain_method === 'event' ? 'Event Skill' : 'Hint & Event'}
+                                                                    </span>
                                                                 </div>
                                                             </div>
-
-                                                            <div className="shrink-0 text-right">
-                                                                <span className="text-[10px] text-amber-700 dark:text-amber-300 font-bold bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full" title={card.obtain_method}>
-                                                                    🎯 {card.obtain_method === 'hint' ? 'Hint Skill' : card.obtain_method === 'event' ? 'Event Skill' : 'Hint & Event'}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
                                         </div>
@@ -518,7 +599,11 @@ export default function ReverseSkillFinder({ onSkillDetail, onNotify }) {
                                                     {charSources.map((char, chIdx) => (
                                                         <div
                                                             key={`${char.id || char.name}-${chIdx}`}
-                                                            className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                                                            onClick={() => onOpenCharacter?.(char)}
+                                                            role="button"
+                                                            tabIndex={0}
+                                                            title="Klik untuk membuka detail karakter & skill tree"
+                                                            className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer group hover:border-pink-400 dark:hover:border-pink-600 hover:shadow-xs ${
                                                                 char.is_owned
                                                                     ? 'bg-pink-50/50 dark:bg-pink-950/20 border-pink-300 dark:border-pink-800/80'
                                                                     : 'bg-slate-50/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800'
@@ -526,7 +611,7 @@ export default function ReverseSkillFinder({ onSkillDetail, onNotify }) {
                                                         >
                                                             <div className="flex items-center gap-3 min-w-0">
                                                                 {/* Char Thumbnail */}
-                                                                <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-300 dark:border-slate-700">
+                                                                <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-300 dark:border-slate-700 group-hover:ring-2 group-hover:ring-pink-400/50 transition-all">
                                                                     <img
                                                                         src={char.image_url}
                                                                         alt={char.name}
@@ -553,7 +638,7 @@ export default function ReverseSkillFinder({ onSkillDetail, onNotify }) {
                                                                         )}
                                                                     </div>
 
-                                                                    <div className="text-xs font-bold text-slate-900 dark:text-white truncate" title={char.name}>
+                                                                    <div className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors" title={char.name}>
                                                                         {char.name}
                                                                     </div>
                                                                 </div>

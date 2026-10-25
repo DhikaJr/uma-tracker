@@ -20,6 +20,9 @@ export default function AllSkillsCatalogModal({ isOpen, onClose, onSelectSkill }
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState('');
     const [rarityFilter, setRarityFilter] = useState('all'); // all, rare, normal, unique, evolved
+    const [distanceFilter, setDistanceFilter] = useState('all'); // all, short, mile, medium, long
+    const [styleFilter, setStyleFilter] = useState('all'); // all, front, pace, late, end
+    const [categoryFilter, setCategoryFilter] = useState('all'); // all, speed, accel, recovery, passive, debuff
     const [sortBy, setSortBy] = useState('popular'); // popular, name
     const [displayLimit, setDisplayLimit] = useState(60);
 
@@ -51,7 +54,7 @@ export default function AllSkillsCatalogModal({ isOpen, onClose, onSelectSkill }
     // Reset pagination when search or filter changes
     useEffect(() => {
         setDisplayLimit(60);
-    }, [search, rarityFilter, sortBy]);
+    }, [search, rarityFilter, distanceFilter, styleFilter, categoryFilter, sortBy]);
 
     // Close on Escape key
     useEffect(() => {
@@ -80,6 +83,30 @@ export default function AllSkillsCatalogModal({ isOpen, onClose, onSelectSkill }
             });
         }
 
+        // Tactical Filter: Distance
+        if (distanceFilter !== 'all') {
+            result = result.filter((sk) => {
+                const dists = sk.distance_types || [];
+                return dists.includes(distanceFilter);
+            });
+        }
+
+        // Tactical Filter: Running Style
+        if (styleFilter !== 'all') {
+            result = result.filter((sk) => {
+                const styles = sk.running_styles || [];
+                return styles.includes(styleFilter);
+            });
+        }
+
+        // Tactical Filter: Effect Category
+        if (categoryFilter !== 'all') {
+            result = result.filter((sk) => {
+                const cats = sk.effect_categories || [];
+                return cats.includes(categoryFilter);
+            });
+        }
+
         // Search Filter
         if (search.trim()) {
             const q = search.trim().toLowerCase();
@@ -105,7 +132,7 @@ export default function AllSkillsCatalogModal({ isOpen, onClose, onSelectSkill }
         }
 
         return result;
-    }, [skills, search, rarityFilter, sortBy]);
+    }, [skills, search, rarityFilter, distanceFilter, styleFilter, categoryFilter, sortBy]);
 
     if (!isOpen) return null;
 
@@ -267,6 +294,88 @@ export default function AllSkillsCatalogModal({ isOpen, onClose, onSelectSkill }
                             </button>
                         </div>
                     </div>
+
+                    {/* Tactical Multi-Dimensional Filters */}
+                    <div className="pt-2.5 border-t border-slate-200/80 dark:border-slate-800/80 space-y-2">
+                        {/* Row 1: Distance & Running Style */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 text-xs">
+                            {/* Distance Filter */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0">Jarak:</span>
+                                {[
+                                    { key: 'all', label: 'Semua Jarak' },
+                                    { key: 'short', label: 'Short' },
+                                    { key: 'mile', label: 'Mile' },
+                                    { key: 'medium', label: 'Medium' },
+                                    { key: 'long', label: 'Long' },
+                                ].map((item) => (
+                                    <button
+                                        key={item.key}
+                                        type="button"
+                                        onClick={() => setDistanceFilter(item.key)}
+                                        className={`px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                            distanceFilter === item.key
+                                                ? 'bg-sky-600 text-white shadow-2xs'
+                                                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700/60'
+                                        }`}
+                                    >
+                                        {item.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Running Style Filter */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0">Gaya:</span>
+                                {[
+                                    { key: 'all', label: 'Semua Gaya' },
+                                    { key: 'front', label: 'Front (Nige)' },
+                                    { key: 'pace', label: 'Pace (Senko)' },
+                                    { key: 'late', label: 'Late (Sashi)' },
+                                    { key: 'end', label: 'End (Oikomi)' },
+                                ].map((item) => (
+                                    <button
+                                        key={item.key}
+                                        type="button"
+                                        onClick={() => setStyleFilter(item.key)}
+                                        className={`px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                            styleFilter === item.key
+                                                ? 'bg-amber-600 text-white shadow-2xs'
+                                                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700/60'
+                                        }`}
+                                    >
+                                        {item.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Row 2: Effect Category */}
+                        <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0">Kategori Efek:</span>
+                            {[
+                                { key: 'all', label: 'Semua Efek' },
+                                { key: 'speed', label: '⚡ Speed' },
+                                { key: 'accel', label: '🚀 Acceleration' },
+                                { key: 'recovery', label: '💙 Recovery' },
+                                { key: 'passive', label: '🟢 Green / Passive' },
+                                { key: 'debuff', label: '🔻 Debuff' },
+                            ].map((item) => (
+                                <button
+                                    key={item.key}
+                                    type="button"
+                                    onClick={() => setCategoryFilter(item.key)}
+                                    className={`px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                        categoryFilter === item.key
+                                            ? 'bg-emerald-600 text-white shadow-2xs'
+                                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700/60'
+                                    }`}
+                                >
+                                    {item.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Skill List Content */}
@@ -344,6 +453,36 @@ export default function AllSkillsCatalogModal({ isOpen, onClose, onSelectSkill }
                                                             {sk.chars_count > 0 && `${sk.chars_count} Karakter`}
                                                         </span>
                                                     )}
+
+                                                    {/* Tactical Badges: Distance */}
+                                                    {sk.distance_types && sk.distance_types.length > 0 && !sk.distance_types.includes('all') && (
+                                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                                                            {sk.distance_types.join('/')}
+                                                        </span>
+                                                    )}
+
+                                                    {/* Tactical Badges: Running Style */}
+                                                    {sk.running_styles && sk.running_styles.length > 0 && !sk.running_styles.includes('all') && (
+                                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                                            {sk.running_styles.join('/')}
+                                                        </span>
+                                                    )}
+
+                                                    {/* Tactical Badges: Effect Categories */}
+                                                    {sk.effect_categories && sk.effect_categories.map((cat) => {
+                                                        const catLabel = {
+                                                            speed: '⚡ Speed',
+                                                            accel: '🚀 Accel',
+                                                            recovery: '💙 Heal',
+                                                            passive: '🟢 Green',
+                                                            debuff: '🔻 Debuff',
+                                                        }[cat] || cat;
+                                                        return (
+                                                            <span key={cat} className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                                                {catLabel}
+                                                            </span>
+                                                        );
+                                                    })}
                                                 </div>
 
                                                 <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">

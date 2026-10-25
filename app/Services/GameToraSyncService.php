@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Http\Controllers\Api\CollectionController;
 use App\Models\AppSetting;
 use App\Models\GachaBanner;
 use App\Models\UmaCatalogItem;
@@ -11,6 +12,7 @@ use App\Support\SkillConditionTranslator;
 use App\Support\SupportCardUniqueEffectFormatter;
 use App\Support\UmaCatalog;
 use Exception;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -297,6 +299,11 @@ class GameToraSyncService
 
             // Reset in-memory cache in UmaCatalog
             UmaCatalog::clearCache();
+
+            // Invalidate collection skills and indexed lookup caches
+            Cache::forget(CollectionController::ALL_SKILLS_CACHE_KEY);
+            Cache::forget('collection_all_skills_list_v2');
+            Cache::forget(CollectionController::INDEXED_SKILLS_CACHE_KEY);
 
             return [
                 'success' => true,

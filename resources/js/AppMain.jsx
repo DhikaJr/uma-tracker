@@ -73,6 +73,19 @@ export default function AppMain() {
         loadSettings();
     }, []);
 
+    // Global listener for reverse skill lookup shortcut from any module
+    useEffect(() => {
+        const handleFindSkillSources = (e) => {
+            const query = e.detail?.query;
+            if (query) {
+                sessionStorage.setItem('uma_pending_skill_search', query);
+                setActiveTab('collection');
+            }
+        };
+        window.addEventListener('uma:find-skill-sources', handleFindSkillSources);
+        return () => window.removeEventListener('uma:find-skill-sources', handleFindSkillSources);
+    }, []);
+
     // Dark Mode Theme (persisted in localStorage)
     const [darkMode, setDarkMode] = useState(() => {
         const saved = localStorage.getItem('uma_dark_mode');

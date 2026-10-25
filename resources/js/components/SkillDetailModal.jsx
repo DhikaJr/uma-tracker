@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { 
     X, 
+    Search,
     Sparkles, 
     Zap, 
     ChevronDown, 
@@ -75,12 +76,23 @@ function ConditionCategoryIcon({ category, icon, className = "w-3.5 h-3.5" }) {
     }
 }
 
-export default function SkillDetailModal({ skill: rawSkill, onClose }) {
+export default function SkillDetailModal({ skill: rawSkill, onClose, onFindSkillSources }) {
     if (!rawSkill) return null;
     const skill = rawSkill.skill || rawSkill;
 
     const [openScalings, setOpenScalings] = useState(() => ({ '0-0': true }));
     const [openRawFormulas, setOpenRawFormulas] = useState({});
+
+    const handleFindSkillSources = () => {
+        const skillName = skill.name_en || skill.name_ja || skill.name || '';
+        onClose?.();
+        if (onFindSkillSources) {
+            onFindSkillSources(skillName);
+        }
+        window.dispatchEvent(new CustomEvent('uma:find-skill-sources', {
+            detail: { query: skillName }
+        }));
+    };
 
     const toggleScaling = (key) => {
         setOpenScalings(prev => ({
@@ -590,11 +602,21 @@ export default function SkillDetailModal({ skill: rawSkill, onClose }) {
                 </div>
 
                 {/* Footer */}
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex justify-end shrink-0">
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5 shrink-0">
+                    <button
+                        type="button"
+                        onClick={handleFindSkillSources}
+                        className="px-4 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-xs flex items-center gap-2 transition-all cursor-pointer"
+                        title="Cari Support Card & Karakter yang memiliki skill ini"
+                    >
+                        <Search className="w-3.5 h-3.5" />
+                        <span>🔎 Cari Kartu & Karakter Pemberi Skill Ini</span>
+                    </button>
+
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-5 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white transition-colors cursor-pointer shadow-xs"
+                        className="px-5 py-2 rounded-xl text-xs font-bold bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                     >
                         Tutup
                     </button>
