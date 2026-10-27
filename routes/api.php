@@ -109,6 +109,11 @@ Route::prefix('collection')->group(function () {
     Route::get('/skills', [CollectionController::class, 'getAllSkills']);
     Route::get('/skill-sources', [CollectionController::class, 'searchSkillSources']);
     Route::get('/skill-detail', [CollectionController::class, 'getSkillDetail']);
+
+    // Support Deck Presets Endpoints
+    Route::get('/deck-presets', [CollectionController::class, 'getDeckPresets']);
+    Route::post('/deck-presets', [CollectionController::class, 'saveDeckPreset']);
+    Route::delete('/deck-presets/{id}', [CollectionController::class, 'deleteDeckPreset']);
 });
 
 // Inheritance Affinity & Compatibility Calculator Endpoints

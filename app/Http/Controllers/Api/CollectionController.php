@@ -15,9 +15,16 @@ use App\Support\UmaCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 class CollectionController extends Controller
 {
+    /**
+     * Optional custom path for support deck presets JSON file (useful for isolated tests).
+     */
+    public static ?string $deckPresetsFilePath = null;
+
     public const ALL_SKILLS_CACHE_KEY = 'collection_all_skills_list_v3';
 
     /**
@@ -1765,5 +1772,154 @@ class CollectionController extends Controller
         }
 
         return array_values($unique);
+    }
+
+    /**
+     * Resolve the filesystem path to the support deck presets JSON file.
+     */
+    protected function getDeckPresetsFilePath(): string
+    {
+        return self::$deckPresetsFilePath ?? storage_path('app/support_deck_presets.json');
+    }
+
+    /**
+     * Get all saved support deck presets.
+     */
+    public function getDeckPresets(): JsonResponse
+    {
+        $filePath = $this->getDeckPresetsFilePath();
+        if (! File::exists($filePath)) {
+            return response()->json([]);
+        }
+
+        $content = File::get($filePath);
+        $presets = json_decode($content, true);
+        if (! is_array($presets)) {
+            $presets = [];
+        }
+
+        return response()->json($presets);
+    }
+
+    /**
+     * Save (create or update) a support deck preset.
+     */
+    public function saveDeckPreset(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'id' => 'nullable|string|max:64',
+            'name' => 'required|string|max:80',
+            'scenario' => 'nullable|string|max:80',
+            'notes' => 'nullable|string|max:1000',
+            'slots' => 'required|array|size:6',
+            'slots.*.slot_index' => 'required|integer|min:0|max:5',
+            'slots.*.card_id' => 'nullable',
+            'slots.*.gametora_id' => 'nullable|integer',
+            'slots.*.card_name' => 'nullable|string|max:120',
+            'slots.*.limit_break' => 'nullable|integer|min:0|max:4',
+            'slots.*.is_friend' => 'nullable|boolean',
+        ]);
+
+        $filePath = $this->getDeckPresetsFilePath();
+        $dir = dirname($filePath);
+        if (! File::isDirectory($dir)) {
+            File::makeDirectory($dir, 0755, true);
+        }
+
+        $presets = [];
+        if (File::exists($filePath)) {
+            $decoded = json_decode(File::get($filePath), true);
+            if (is_array($decoded)) {
+                $presets = $decoded;
+            }
+        }
+
+        $presetId = ! empty($validated['id']) ? (string) $validated['id'] : (string) Str::uuid();
+        $updatedAt = now()->toIso8601String();
+
+        $presetData = [
+            'id' => $presetId,
+            'name' => trim($validated['name']),
+            'scenario' => ! empty($validated['scenario']) ? trim($validated['scenario']) : 'The Shuntaisai Festival',
+            'notes' => $validated['notes'] ?? '',
+            'slots' => array_map(function ($slot, $idx) {
+                return [
+                    'slot_index' => (int) ($slot['slot_index'] ?? $idx),
+                    'card_id' => $slot['card_id'] ?? null,
+                    'gametora_id' => isset($slot['gametora_id']) ? (int) $slot['gametora_id'] : null,
+                    'card_name' => $slot['card_name'] ?? null,
+                    'limit_break' => isset($slot['limit_break']) ? (int) $slot['limit_break'] : 4,
+                    'is_friend' => ! empty($slot['is_friend']),
+                ];
+            }, $validated['slots'], array_keys($validated['slots'])),
+            'updated_at' => $updatedAt,
+        ];
+
+        // If preset already exists, update in-place; otherwise prepend
+        $existingIndex = null;
+        foreach ($presets as $idx => $p) {
+            if (isset($p['id']) && (string) $p['id'] === $presetId) {
+                $existingIndex = $idx;
+                break;
+            }
+        }
+
+        if ($existingIndex !== null) {
+            $presets[$existingIndex] = $presetData;
+        } else {
+            array_unshift($presets, $presetData);
+        }
+
+        File::put($filePath, json_encode($presets, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        return response()->json([
+            'success' => true,
+            'preset' => $presetData,
+            'message' => 'Preset deck berhasil disimpan.',
+        ]);
+    }
+
+    /**
+     * Delete a support deck preset by ID.
+     */
+    public function deleteDeckPreset(string $id): JsonResponse
+    {
+        $filePath = $this->getDeckPresetsFilePath();
+        if (! File::exists($filePath)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Preset deck tidak ditemukan.',
+            ], 404);
+        }
+
+        $presets = json_decode(File::get($filePath), true);
+        if (! is_array($presets)) {
+            $presets = [];
+        }
+
+        $found = false;
+        $filtered = [];
+        foreach ($presets as $p) {
+            if (isset($p['id']) && (string) $p['id'] === (string) $id) {
+                $found = true;
+
+                continue;
+            }
+            $filtered[] = $p;
+        }
+
+        if (! $found) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Preset deck tidak ditemukan.',
+            ], 404);
+        }
+
+        File::put($filePath, json_encode($filtered, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Preset deck berhasil dihapus.',
+        ]);
     }
 }

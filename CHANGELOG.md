@@ -2,6 +2,44 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.0.0] - 27 Oktober 2026
+
+### 🃏 Simulasi Deck 6 Support Card (6-Card Support Deck Builder) & Manajemen Preset Formasi
+- **Simulasi Formasi 6 Kartu Bantuan (Deck Builder) pada Modul Koleksi (`SupportDeckBuilder.jsx`, `CollectionView.jsx`)**:
+  - Menambahkan sub-tab ke-4 pada menu Koleksi: **"🃏 Simulasi Deck (6 Kartu)"** yang dimuat secara asinkron (*lazy-loaded*) dengan arsitektur modular ringan.
+  - Menyediakan 6 slot formasi terstruktur: **5 Slot Koleksi Sendiri** (terkunci secara default pada kartu yang dimiliki pelatih, dengan sakelar opsi untuk melihat seluruh kartu katalog bila diperlukan) dan **1 Slot Pinjaman Teman (*Friend Borrow*)** yang bebas memilih kartu mana pun dari katalog penuh server JP dengan status bawaan 4LB / MLB.
+  - Setiap slot kartu dilengkapi pemilih Limit Break independen (0LB, 1LB, 2LB, 3LB, MLB) yang otomatis mendeteksi status kepemilikan lokal pengguna.
+  - Deteksi dan peringatan cerdas jika terdapat kartu bantuan dari karakter Uma Musume yang sama di dalam dek (*Character Duplicate Alert*), mematuhi aturan resmi pembentukan formasi game.
+- **Kalkulasi & Agregasi Efek Latihan dengan Pemisahan Ketat 2 Bagian (Bagian A vs Bagian B)**:
+  - **Bagian A (HANYA 4 Stat Ini yang Dijumlahkan)**:
+    - *Race Bonus (%)*: Akumulasi bonus balapan dari seluruh kartu di dek.
+    - *Fan Bonus (%)*: Akumulasi bonus perolehan fans dari seluruh kartu di dek.
+    - *Initial Stats (+Speed, +Stamina, +Power, +Guts, +Wit)*: Akumulasi penambahan status awal latihan untuk kelima atribut.
+    - *Initial Skill Points Up (+Pt)*: Akumulasi bonus Skill Points (Pt) pada awal sesi latihan.
+  - **Bagian B (Rincian Efek Lainnya, DILARANG MENJUMLAHKAN)**:
+    - Seluruh efek latihan lainnya (*Friendship Bonus*, *Specialty Priority*, *Mood Effect*, *Training Effectiveness*, *Stat Bonuses*, *Initial Friendship*, *Hint Levels*, *Hint Frequency*, *Event Recovery*, dst.) ditampilkan secara berurutan per kelompok efek dengan penomoran berurutan per kartu (`[Efek] 1`, `[Efek] 2`, dst.) yang bernilai $> 0$.
+    - Mengeliminasi kekeliruan asumsi akumulasi linier pada efek-efek yang beroperasi secara multiplikatif atau berbasis probabilitas per kartu.
+- **Validator Efek Unik Dek (*Deck Unique Effect Validator*)**:
+  - Mengintegrasikan mesin pemformat efek unik (`formatSupportUniqueEffect`) untuk membedah kondisi pasif efek unik dari setiap kartu di formasi.
+  - Mengevaluasi pemenuhan syarat kondisi formasi dek secara *real-time*:
+    - **Tipe 103 (*Deck Diversity*)**: Menghitung jumlah tipe kartu berbeda di dalam formasi (Speed, Stamina, Power, Guts, Wit, Friend, Group) dan memvalidasi apakah syarat $N$ jenis kartu berbeda telah terpenuhi, disertai indikator visual *Aktif* atau *Belum Terpenuhi*.
+    - **Tipe 105 & Efek Kondisi Latihan**: Memberikan penandaan status *Efek Dinamis Latihan* untuk kondisi yang dievaluasi sepanjang sesi latihan (seperti batas energi maksimum $> 100$ atau gauge ikatan $\ge 80$).
+- **Agregator Skill Dek (*Deck Skills Aggregator*) & Integrasi Modal Formula**:
+  - Menghimpun seluruh skill yang dapat diperoleh dari 6 kartu di dalam formasi, terbagi rapi ke dalam kategori *Gold / Rare*, *Hint Skills*, dan *Event Skills*.
+  - Melakukan deduplikasi skill dengan menampilkan lencana indikator kartu penyedia (`🔥 X Kartu di Deck` bila skill disediakan oleh lebih dari 1 kartu di formasi).
+  - Menyediakan filter taktis (Semua, Gold/Rare, Hint, Event) serta kotak pencarian instan untuk kemudahan menyusun rencana skill karakter.
+  - Setiap skill dapat diklik langsung untuk memunculkan modal detail formula matematis ([`SkillDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/SkillDetailModal.jsx)) tanpa kehilangan status formasi dek.
+- **Backend API Penyimpanan & Manajemen Preset Formasi Dek (`CollectionController.php`, `routes/api.php`)**:
+  - Mendaftarkan endpoint RESTful terpadu:
+    - `GET /api/collection/deck-presets`: Mengambil seluruh preset formasi dek tersimpan.
+    - `POST /api/collection/deck-presets`: Menyimpan formasi baru atau memperbarui formasi yang sudah ada (dengan nama preset, skenario target bawaan *The Shuntaisai Festival*, catatan taktis, dan konfigurasi 6 slot).
+    - `DELETE /api/collection/deck-presets/{id}`: Menghapus preset formasi dek.
+  - Menggunakan penyimpanan file JSON terisolasi di `storage/app/support_deck_presets.json` dengan dukungan pengalihan path dinamis (`CollectionController::$deckPresetsFilePath`) untuk menjamin keselamatan dan isolasi database SQLite fisik selama eksekusi pengujian otomatis.
+- **Verifikasi Pengujian & Integritas Kode**:
+  - Menambahkan pengujian CRUD lengkap pada [`CollectionApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CollectionApiTest.php) untuk memvalidasi pembuatan, pembacaan, pembaruan, penghapusan, dan validasi field preset dek.
+  - Memperbarui pengujian [`ChangelogApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/ChangelogApiTest.php) ke versi `3.0.0`.
+  - Seluruh pengujian otomatis PHPUnit lulus 100% dan integritas berkas fisik basis data SQLite tetap terlindungi.
+
 ## [Versi 2.9.2] - 27 Oktober 2026
 
 ### 🌟 Integrasi Skenario The Shuntaisai Festival, Kalibrasi Kategori Gacha & Penutupan Bertingkat Modal

@@ -10,6 +10,7 @@ use App\Models\UserCharacter;
 use App\Models\UserSupportCard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 class CollectionApiTest extends TestCase
@@ -1096,5 +1097,182 @@ class CollectionApiTest extends TestCase
         $this->assertNotNull($goldRel);
         $this->assertSame('Speed Star', $goldRel['name_en']);
         $this->assertSame('gold_upgrade', $goldRel['relation_type']);
+    }
+
+    protected function setUpTestDeckPresetPath(): string
+    {
+        $testDir = storage_path('framework/testing');
+        if (! File::isDirectory($testDir)) {
+            File::makeDirectory($testDir, 0755, true);
+        }
+        $testPath = $testDir.'/test_deck_presets_'.uniqid().'.json';
+        CollectionController::$deckPresetsFilePath = $testPath;
+
+        return $testPath;
+    }
+
+    protected function tearDownTestDeckPresetPath(string $path): void
+    {
+        if (File::exists($path)) {
+            File::delete($path);
+        }
+        CollectionController::$deckPresetsFilePath = null;
+    }
+
+    public function test_can_get_empty_support_deck_presets(): void
+    {
+        $testPath = $this->setUpTestDeckPresetPath();
+
+        $response = $this->getJson('/api/collection/deck-presets');
+        $response->assertStatus(200)
+            ->assertExactJson([]);
+
+        $this->tearDownTestDeckPresetPath($testPath);
+    }
+
+    public function test_can_save_and_retrieve_support_deck_preset(): void
+    {
+        $testPath = $this->setUpTestDeckPresetPath();
+
+        $presetPayload = [
+            'name' => 'Speed-Wit Shuntaisai Build',
+            'scenario' => 'The Shuntaisai Festival',
+            'notes' => 'Fokus latihan Speed dan Wit dengan Kitasan Black & Fine Motion',
+            'slots' => [
+                ['slot_index' => 0, 'card_id' => 1, 'gametora_id' => 3001, 'card_name' => 'SSR Kitasan Black', 'limit_break' => 4, 'is_friend' => false],
+                ['slot_index' => 1, 'card_id' => 2, 'gametora_id' => 3002, 'card_name' => 'SSR Fine Motion', 'limit_break' => 3, 'is_friend' => false],
+                ['slot_index' => 2, 'card_id' => 3, 'gametora_id' => 3003, 'card_name' => 'SSR El Condor Pasa', 'limit_break' => 4, 'is_friend' => false],
+                ['slot_index' => 3, 'card_id' => 4, 'gametora_id' => 3004, 'card_name' => 'SSR Duramente', 'limit_break' => 2, 'is_friend' => false],
+                ['slot_index' => 4, 'card_id' => 5, 'gametora_id' => 3005, 'card_name' => 'SSR Jungle Pocket', 'limit_break' => 4, 'is_friend' => false],
+                ['slot_index' => 5, 'card_id' => 6, 'gametora_id' => 3006, 'card_name' => 'SSR Agnes Tachyon (Friend)', 'limit_break' => 4, 'is_friend' => true],
+            ],
+        ];
+
+        $postRes = $this->postJson('/api/collection/deck-presets', $presetPayload);
+        $postRes->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('preset.name', 'Speed-Wit Shuntaisai Build')
+            ->assertJsonPath('preset.scenario', 'The Shuntaisai Festival')
+            ->assertJsonCount(6, 'preset.slots')
+            ->assertJsonPath('preset.slots.5.is_friend', true);
+
+        $savedId = $postRes->json('preset.id');
+        $this->assertNotEmpty($savedId);
+
+        // Retrieve list
+        $getRes = $this->getJson('/api/collection/deck-presets');
+        $getRes->assertStatus(200)
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.id', $savedId)
+            ->assertJsonPath('0.name', 'Speed-Wit Shuntaisai Build');
+
+        $this->tearDownTestDeckPresetPath($testPath);
+    }
+
+    public function test_can_update_existing_support_deck_preset(): void
+    {
+        $testPath = $this->setUpTestDeckPresetPath();
+
+        $slots = array_map(function ($i) {
+            return [
+                'slot_index' => $i,
+                'card_id' => $i + 1,
+                'gametora_id' => 3000 + $i,
+                'card_name' => "Card $i",
+                'limit_break' => 4,
+                'is_friend' => $i === 5,
+            ];
+        }, range(0, 5));
+
+        $createRes = $this->postJson('/api/collection/deck-presets', [
+            'name' => 'Original Preset',
+            'scenario' => 'Beyond Dreams',
+            'slots' => $slots,
+        ]);
+        $presetId = $createRes->json('preset.id');
+
+        // Update with same ID
+        $updateRes = $this->postJson('/api/collection/deck-presets', [
+            'id' => $presetId,
+            'name' => 'Updated Preset Name',
+            'scenario' => 'The Shuntaisai Festival',
+            'notes' => 'Updated notes',
+            'slots' => $slots,
+        ]);
+
+        $updateRes->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('preset.id', $presetId)
+            ->assertJsonPath('preset.name', 'Updated Preset Name')
+            ->assertJsonPath('preset.scenario', 'The Shuntaisai Festival');
+
+        // Verify only 1 preset remains with updated data
+        $getRes = $this->getJson('/api/collection/deck-presets');
+        $getRes->assertStatus(200)
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.name', 'Updated Preset Name');
+
+        $this->tearDownTestDeckPresetPath($testPath);
+    }
+
+    public function test_can_delete_support_deck_preset(): void
+    {
+        $testPath = $this->setUpTestDeckPresetPath();
+
+        $slots = array_map(function ($i) {
+            return [
+                'slot_index' => $i,
+                'card_id' => $i + 1,
+                'gametora_id' => 3000 + $i,
+                'card_name' => "Card $i",
+                'limit_break' => 4,
+                'is_friend' => $i === 5,
+            ];
+        }, range(0, 5));
+
+        $createRes = $this->postJson('/api/collection/deck-presets', [
+            'name' => 'To Be Deleted',
+            'slots' => $slots,
+        ]);
+        $presetId = $createRes->json('preset.id');
+
+        // Delete
+        $delRes = $this->deleteJson("/api/collection/deck-presets/{$presetId}");
+        $delRes->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        // List should now be empty
+        $getRes = $this->getJson('/api/collection/deck-presets');
+        $getRes->assertStatus(200)
+            ->assertExactJson([]);
+
+        // Deleting non-existent ID returns 404
+        $del404 = $this->deleteJson("/api/collection/deck-presets/{$presetId}");
+        $del404->assertStatus(404)
+            ->assertJsonPath('success', false);
+
+        $this->tearDownTestDeckPresetPath($testPath);
+    }
+
+    public function test_validates_required_fields_when_saving_preset(): void
+    {
+        $testPath = $this->setUpTestDeckPresetPath();
+
+        // Missing name and slots
+        $res = $this->postJson('/api/collection/deck-presets', []);
+        $res->assertStatus(422)
+            ->assertJsonValidationErrors(['name', 'slots']);
+
+        // Invalid slots count (less than 6)
+        $resInvalidSlots = $this->postJson('/api/collection/deck-presets', [
+            'name' => 'Test',
+            'slots' => [
+                ['slot_index' => 0, 'limit_break' => 4],
+            ],
+        ]);
+        $resInvalidSlots->assertStatus(422)
+            ->assertJsonValidationErrors(['slots']);
+
+        $this->tearDownTestDeckPresetPath($testPath);
     }
 }

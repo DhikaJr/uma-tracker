@@ -28,9 +28,10 @@ const CharacterDetailModal = lazy(() => import('./CharacterDetailModal'));
 const SupportCardDetailModal = lazy(() => import('./SupportCardDetailModal'));
 const SupportCardCompareModal = lazy(() => import('./SupportCardCompareModal'));
 const SkillDetailModal = lazy(() => import('./SkillDetailModal'));
+const SupportDeckBuilder = lazy(() => import('./SupportDeckBuilder'));
 
 export default function CollectionView({ onNotify }) {
-    const [activeSection, setActiveSection] = useState('characters'); // 'characters' | 'cards' | 'skills'
+    const [activeSection, setActiveSection] = useState('characters'); // 'characters' | 'cards' | 'skills' | 'deck'
     const [previewCard, setPreviewCard] = useState(null);
     const [previewCharacter, setPreviewCharacter] = useState(null);
     const [selectedCharForDetail, setSelectedCharForDetail] = useState(null);
@@ -613,6 +614,22 @@ export default function CollectionView({ onNotify }) {
                     <span>🔎 Pencari Sumber Skill</span>
                     <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300">
                         Reverse Finder
+                    </span>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => setActiveSection('deck')}
+                    className={`flex-1 py-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        activeSection === 'deck'
+                            ? 'bg-white dark:bg-slate-900 text-teal-600 dark:text-teal-400 shadow-sm border border-slate-200 dark:border-slate-700'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                >
+                    <SlidersHorizontal className="w-4 h-4" />
+                    <span>🃏 Simulasi Deck (6 Kartu)</span>
+                    <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300">
+                        Deck Builder
                     </span>
                 </button>
             </div>
@@ -1474,6 +1491,20 @@ export default function CollectionView({ onNotify }) {
                     compareCards={compareCards}
                     onNotify={onNotify}
                 />
+            )}
+
+            {/* ============================================================ */}
+            {/* SECTION 4: 6-CARD SUPPORT DECK BUILDER                       */}
+            {/* ============================================================ */}
+            {activeSection === 'deck' && (
+                <Suspense fallback={<div className="p-12 text-center text-xs font-bold text-slate-400">Memuat Simulasi Deck 6 Support Card...</div>}>
+                    <SupportDeckBuilder
+                        supportCards={cards}
+                        onOpenSupportCard={handleOpenSupportCardFromFinder}
+                        onOpenSkillDetail={(skill) => setSelectedSkillForDetail(skill)}
+                        onNotify={onNotify}
+                    />
+                </Suspense>
             )}
 
             {/* Floating Comparison Bar (when cards are selected for comparison) */}
