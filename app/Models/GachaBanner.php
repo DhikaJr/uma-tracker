@@ -100,7 +100,32 @@ class GachaBanner extends Model
      */
     public function scopeByCategory(Builder $query, string $category): Builder
     {
+        if ($category === 'scenario_release') {
+            return $query->where(function (Builder $q): void {
+                $q->where('category', 'scenario_release')
+                    ->orWhere('start_date', 'like', '%10-26%');
+            });
+        }
+
+        if ($category === 'standard') {
+            return $query->where('category', 'standard')
+                ->where('start_date', 'not like', '%10-26%');
+        }
+
         return $query->where('category', $category);
+    }
+
+    /**
+     * Category attribute accessor ensuring 2026-10-26 release banners are categorized as scenario_release.
+     */
+    public function getCategoryAttribute(?string $value): string
+    {
+        $rawDate = (string) ($this->attributes['start_date'] ?? '');
+        if (str_contains($rawDate, '10-26')) {
+            return 'scenario_release';
+        }
+
+        return $value ?? 'standard';
     }
 
     /**

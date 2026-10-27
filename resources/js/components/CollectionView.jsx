@@ -366,6 +366,12 @@ export default function CollectionView({ onNotify }) {
 
         const handleFindSkillSources = () => {
             setActiveSection('skills');
+            setSelectedCharForDetail(null);
+            setSelectedCardForDetail(null);
+            setPreviewCard(null);
+            setPreviewCharacter(null);
+            setIsCompareModalOpen(false);
+            setSelectedSkillForDetail(null);
         };
         window.addEventListener('uma:find-skill-sources', handleFindSkillSources);
         return () => window.removeEventListener('uma:find-skill-sources', handleFindSkillSources);
@@ -1715,6 +1721,10 @@ export default function CollectionView({ onNotify }) {
                     <SkillDetailModal
                         skill={selectedSkillForDetail}
                         onClose={() => setSelectedSkillForDetail(null)}
+                        onFindSkillSources={() => {
+                            setSelectedSkillForDetail(null);
+                            setIsCompareModalOpen(false);
+                        }}
                     />
                 )}
             </Suspense>

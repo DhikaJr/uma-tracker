@@ -1334,6 +1334,7 @@ class UmaTrackerApiTest extends TestCase
         $res->assertStatus(200);
         $scenarios = $res->json('scenarios');
 
+        $idxShuntaisai = array_search('The Shuntaisai Festival', $scenarios, true);
         $idxTracen = array_search('Tracen-ken', $scenarios, true);
         $idxDreams = array_search('Beyond Dreams', $scenarios, true);
         $idxOnsen = array_search('Yukoma Onsen', $scenarios, true);
@@ -1342,6 +1343,7 @@ class UmaTrackerApiTest extends TestCase
         $idxMecha = array_search('Mecha Uma Musume', $scenarios, true);
         $idxFood = array_search('Great Food Festival', $scenarios, true);
 
+        $this->assertNotFalse($idxShuntaisai);
         $this->assertNotFalse($idxTracen);
         $this->assertNotFalse($idxDreams);
         $this->assertNotFalse($idxOnsen);
@@ -1350,13 +1352,43 @@ class UmaTrackerApiTest extends TestCase
         $this->assertNotFalse($idxMecha);
         $this->assertNotFalse($idxFood);
 
-        // In dropdown order (top to bottom): Tracen-ken < Beyond Dreams < Yukoma Onsen < Design Your Island < The Twinkle Legends < Mecha < Great Food Festival
+        // In dropdown order (top to bottom): The Shuntaisai Festival (top / 0) < Tracen-ken < Beyond Dreams < Yukoma Onsen < Design Your Island < The Twinkle Legends < Mecha < Great Food Festival
+        $this->assertSame(0, $idxShuntaisai);
+        $this->assertTrue($idxShuntaisai < $idxTracen);
         $this->assertTrue($idxTracen < $idxDreams);
         $this->assertTrue($idxDreams < $idxOnsen);
         $this->assertTrue($idxOnsen < $idxIsland);
         $this->assertTrue($idxIsland < $idxTwinkle);
         $this->assertTrue($idxTwinkle < $idxMecha);
         $this->assertTrue($idxMecha < $idxFood);
+    }
+
+    public function test_gacha_banners_for_october_26_are_categorized_as_scenario_release(): void
+    {
+        $banner = GachaBanner::create([
+            'id' => 99991,
+            'gametora_id' => 30478,
+            'name' => 'Pickup Pretty Derby Gacha: Daiwa Scarlet [陣風の花紺青]',
+            'banner_type' => 'character',
+            'category' => 'standard',
+            'base_rate' => 3.00,
+            'featured_items' => ['Daiwa Scarlet [陣風の花紺青]'],
+            'start_date' => '2026-10-26',
+            'end_date' => '2026-11-19',
+            'is_active' => true,
+        ]);
+
+        $this->assertSame('scenario_release', $banner->category);
+
+        $res = $this->getJson('/api/gacha/banners?category=scenario_release');
+        $res->assertStatus(200);
+        $ids = collect($res->json())->pluck('id')->all();
+        $this->assertContains(99991, $ids);
+
+        $resStd = $this->getJson('/api/gacha/banners?category=standard');
+        $resStd->assertStatus(200);
+        $stdIds = collect($resStd->json())->pluck('id')->all();
+        $this->assertNotContains(99991, $stdIds);
     }
 
     public function test_career_stats_includes_character_performance_breakdown_separating_variants(): void

@@ -31,6 +31,16 @@ export default function NoDebuffSkillsModal({ onClose }) {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [onClose, selectedSkill]);
 
+    // Close modal when reverse skill search is triggered from inside SkillDetailModal
+    useEffect(() => {
+        const handleFindSkillSources = () => {
+            setSelectedSkill(null);
+            onClose?.();
+        };
+        window.addEventListener('uma:find-skill-sources', handleFindSkillSources);
+        return () => window.removeEventListener('uma:find-skill-sources', handleFindSkillSources);
+    }, [onClose]);
+
     const skills = noDebuffData.skills || [];
 
     const goldCount = useMemo(() => skills.filter(s => s.rarity_type === 'gold').length, [skills]);
@@ -329,6 +339,10 @@ export default function NoDebuffSkillsModal({ onClose }) {
                 <SkillDetailModal
                     skill={selectedSkill}
                     onClose={() => setSelectedSkill(null)}
+                    onFindSkillSources={() => {
+                        setSelectedSkill(null);
+                        onClose?.();
+                    }}
                 />
             )}
         </div>

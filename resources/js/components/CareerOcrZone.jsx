@@ -71,6 +71,10 @@ const DEFAULT_SCENARIO_RULES = [
     {
         name: 'Design Your Island',
         keywords: ['design your island', 'island', 'アイランド']
+    },
+    {
+        name: 'The Shuntaisai Festival',
+        keywords: ['the shuntaisai festival', 'shuntaisai', 'shuntaisai festival', '旬菜祭', 'しゅんさいさい', '走れ！旬菜祭']
     }
 ];
 

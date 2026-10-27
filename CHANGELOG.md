@@ -2,6 +2,26 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 2.9.2] - 27 Oktober 2026
+
+### 🌟 Integrasi Skenario The Shuntaisai Festival, Kalibrasi Kategori Gacha & Penutupan Bertingkat Modal
+- **Penutupan Bertingkat Modal saat Menekan Shortcut *"Cari Kartu & Karakter Pemberi Skill Ini"* (`SkillDetailModal.jsx`, `CharacterDetailModal.jsx`, `SupportCardDetailModal.jsx`, `NoDebuffSkillsModal.jsx`, `CollectionView.jsx`)**:
+  - Menyempurnakan alur navigasi dari modal detail formula skill: menekan tombol *"🔎 Cari Kartu & Karakter Pemberi Skill Ini"* kini otomatis menutup modal anak (`SkillDetailModal`) sekaligus modal induk di belakangnya ([`CharacterDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CharacterDetailModal.jsx), [`SupportCardDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/SupportCardDetailModal.jsx), atau [`NoDebuffSkillsModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/NoDebuffSkillsModal.jsx)) secara serentak via penanganan event global `uma:find-skill-sources` dan callback `onFindSkillSources`.
+  - Mereset seluruh state modal aktif (`selectedCharForDetail`, `selectedCardForDetail`, `previewCard`, `previewCharacter`, `isCompareModalOpen`) pada [`CollectionView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CollectionView.jsx) sehingga antarmuka *Reverse Skill Finder* langsung tampil bersih tanpa modal yang menggantung atau menghalangi layar.
+- **Kategorisasi Gacha Banner 2026-10-26 ke *"Anniversary & Skenario Baru 2026"* (`GachaBanner.php`, `GachaController.php`, `GameToraSyncService.php`, `GachaView.jsx`)**:
+  - Mengelompokkan banner gacha periode 26 Oktober 2026 (*Pickup Pretty Derby Gacha: Daiwa Scarlet [陣風の花紺青]* dan *Support Card Gacha: SSR [Time of Departure] Mayano Top Gun & SSR [いとどめでたき、まつりかな] Azuma*) ke dalam grup kategori `scenario_release` (*Anniversary & Skenario Baru 2026*), bukan lagi ke dalam *Standard Gacha*.
+  - Mengimplementasikan accessor `getCategoryAttribute` dan `scopeByCategory` pada model [`GachaBanner.php`](file:///c:/Projects/uma-tracker/app/Models/GachaBanner.php) untuk mengembalikan `scenario_release` secara deterministik untuk banner bertanggal `2026-10-26`.
+  - Memperbarui query filter dan relasi `banner` pada [`GachaController.php`](file:///c:/Projects/uma-tracker/app/Http/Controllers/Api/GachaController.php) agar menyertakan `start_date` pada data pull dan riwayat SSR.
+  - Memperbarui sinkronisasi GameTora pada [`GameToraSyncService.php`](file:///c:/Projects/uma-tracker/app/Services/GameToraSyncService.php) untuk mengenali banner rilis skenario *The Shuntaisai Festival*.
+  - Menambahkan helper `isScenarioReleaseBanner` dan styling badge ungu *Scenario Release* pada opsi pemilihan banner dan riwayat pull di [`GachaView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/GachaView.jsx).
+- **Dukungan Skenario Latihan *"The Shuntaisai Festival"* & Pilihan Bawaan Teratas Menu Karier (`UmaCatalog.php`, `FansView.jsx`, `EditCareerRunModal.jsx`, `CareerOcrZone.jsx`)**:
+  - Menambahkan skenario baru **"The Shuntaisai Festival"** (旬菜祭 / Shuntaisai) pada indeks teratas (urutan ke-0) daftar skenario resmi di [`UmaCatalog.php`](file:///c:/Projects/uma-tracker/app/Support/UmaCatalog.php) mengikuti linimasa rilis terbaru server JP, serta menambahkan label tema `'shuntaisai'` pada `VERSION_LABELS`.
+  - Mengatur nilai bawaan (*default selection*) dropdown skenario pelatihan pada form pencatatan sesi karier ([`FansView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/FansView.jsx)) dan modal sunting ([`EditCareerRunModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/EditCareerRunModal.jsx)) ke opsi paling atas (*The Shuntaisai Festival*), menggantikan default sebelumnya (*The Twinkle Legends*).
+  - Menambahkan signature deteksi OCR multi-bahasa (Inggris, Jepang, dan Indonesia: `The Shuntaisai Festival`, `shuntaisai`, `旬菜祭`, `しゅんさいさい`, `走れ！旬菜祭`) pada [`CareerOcrZone.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CareerOcrZone.jsx).
+- **Integritas Sistem & Pengujian Otomatis**:
+  - Menambahkan pengujian pada [`UmaTrackerApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/UmaTrackerApiTest.php) untuk memverifikasi urutan kronologis skenario *The Shuntaisai Festival* di urutan teratas dan klasifikasi kategori gacha banner 2026-10-26.
+  - Seluruh 253 pengujian otomatis PHPUnit lulus 100% dan berkas database SQLite fisik terlindungi tanpa mutasi destruktif.
+
 ## [Versi 2.9.0] - 19 Oktober 2026
 
 ### 🚀 Optimasi Kinerja Bundel, Manajemen Retensi Backup & Fitur Lanjutan Koleksi

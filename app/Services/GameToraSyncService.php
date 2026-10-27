@@ -584,9 +584,9 @@ class GameToraSyncService
                         $cat = 'anniversary';
                         $prefix = 'Premium Pretty Derby Gacha';
                         $baseRate = 4.50;
-                    } elseif ($startDate === '2026-06-29') {
+                    } elseif ($startDate === '2026-06-29' || $startDate === '2026-10-26') {
                         $cat = 'scenario_release';
-                        $prefix = 'Scenario Release (Tracen-ken)';
+                        $prefix = $startDate === '2026-10-26' ? 'Scenario Release (The Shuntaisai Festival)' : 'Scenario Release (Tracen-ken)';
                     } elseif ($id === 30468 || $id === 30470 || count($items) === 1) {
                         $prefix = 'Pickup Pretty Derby Gacha';
                     }
@@ -657,9 +657,9 @@ class GameToraSyncService
                     if ($startDate === '2026-02-24') {
                         $cat = 'anniversary';
                         $prefix = '5th Anniversary Support (Beyond Dreams)';
-                    } elseif ($startDate === '2026-06-29') {
+                    } elseif ($startDate === '2026-06-29' || $startDate === '2026-10-26') {
                         $cat = 'scenario_release';
-                        $prefix = 'Scenario Release Support (Tracen-ken)';
+                        $prefix = $startDate === '2026-10-26' ? 'Scenario Release Support (The Shuntaisai Festival)' : 'Scenario Release Support (Tracen-ken)';
                     } elseif ($startDate === '2026-08-24') {
                         $cat = 'anniversary';
                         $prefix = '5.5th Half Anniversary Support: SSR [As if Guided] Efforia & SSR [時に交わる海と空] Mr. C.B.';

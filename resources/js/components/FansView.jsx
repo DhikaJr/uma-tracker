@@ -129,7 +129,7 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
     // Form State
     const [form, setForm] = useState({
         uma_name: '',
-        scenario: 'The Twinkle Legends',
+        scenario: 'The Shuntaisai Festival',
         training_type: 'manual', // 'manual' or 'independent' (Latihan Mandiri / 自主練)
         fans_gained: '',
         evaluation_score: '',
@@ -170,8 +170,13 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
             const res = await fetch('/api/career/metadata');
             const data = await res.json();
             setMetadata(data);
-            if (data.scenarios?.length > 0 && !form.scenario) {
-                setForm(prev => ({ ...prev, scenario: data.scenarios[0] }));
+            if (data.scenarios?.length > 0) {
+                setForm(prev => ({
+                    ...prev,
+                    scenario: prev.scenario && prev.scenario !== 'The Twinkle Legends' && data.scenarios.includes(prev.scenario)
+                        ? prev.scenario
+                        : data.scenarios[0]
+                }));
             }
         } catch (err) {
             console.error('Failed to load metadata:', err);

@@ -217,6 +217,16 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
         };
     }, [isOpen, onClose]);
 
+    // Close modal when reverse skill search is triggered from inside SkillDetailModal
+    useEffect(() => {
+        const handleFindSkillSources = () => {
+            setSelectedSkillModal(null);
+            onClose?.();
+        };
+        window.addEventListener('uma:find-skill-sources', handleFindSkillSources);
+        return () => window.removeEventListener('uma:find-skill-sources', handleFindSkillSources);
+    }, [onClose]);
+
     if (!isOpen || !character) return null;
 
     const name = character.name || 'Detail Karakter';
@@ -1126,6 +1136,10 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                 <SkillDetailModal
                     skill={selectedSkillModal}
                     onClose={() => setSelectedSkillModal(null)}
+                    onFindSkillSources={() => {
+                        setSelectedSkillModal(null);
+                        onClose?.();
+                    }}
                 />
             )}
         </div>

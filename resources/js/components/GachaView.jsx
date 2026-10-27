@@ -531,9 +531,21 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
         }
     };
 
+    // Helper: Determine if a banner is a scenario release banner (including 2026-10-26 release)
+    const isScenarioReleaseBanner = (banner) => {
+        if (!banner) return false;
+        if (banner.category === 'scenario_release') return true;
+        const sDate = String(banner.start_date || '');
+        return sDate.includes('10-26') || sDate.includes('2026-10-26');
+    };
+
     // Helper: Category badge styling for 2026 JP banners
-    const getCategoryBadge = (category) => {
-        switch (category) {
+    const getCategoryBadge = (category, banner = null) => {
+        let cat = category;
+        if (banner && isScenarioReleaseBanner(banner)) {
+            cat = 'scenario_release';
+        }
+        switch (cat) {
             case 'anniversary':
                 return { label: 'Anniversary 4.5%', color: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800' };
             case 'premium':
@@ -907,10 +919,10 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
 
     const renderBannerOptions = (typeFilter = null) => {
         const filtered = typeFilter ? banners.filter(b => b.banner_type === typeFilter) : banners;
-        const anni = filtered.filter(b => b.category === 'anniversary' || b.category === 'scenario_release');
+        const anni = filtered.filter(b => b.category === 'anniversary' || isScenarioReleaseBanner(b));
         const twinkle = filtered.filter(b => b.category === 'twinkle');
         const selectUp = typeFilter === 'character' ? [] : filtered.filter(b => b.category === 'select_rate_up' && b.banner_type !== 'character');
-        const standard = filtered.filter(b => b.category === 'standard');
+        const standard = filtered.filter(b => b.category === 'standard' && !isScenarioReleaseBanner(b));
 
         return (
             <>
@@ -1237,7 +1249,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                     </span>
                                     <div className="flex flex-col items-end gap-1 shrink-0">
                                         <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-amber-100 text-amber-900 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700/50">
-                                            {bb.category.replace('_', ' ')}
+                                            {(isScenarioReleaseBanner(bb) ? 'scenario release' : bb.category).replace('_', ' ')}
                                         </span>
                                         {bb.is_boosted ? (
                                             <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-500 text-white shadow-2xs">
@@ -2402,7 +2414,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                             <option value="all">Semua Banner 2026</option>
                             {banners.map(b => (
                                 <option key={b.id} value={b.id}>
-                                    [{getCategoryBadge(b.category).label}] {b.name}
+                                    [{getCategoryBadge(b.category, b).label}] {b.name}
                                 </option>
                             ))}
                         </select>
@@ -2600,8 +2612,8 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                                 {p.banner ? (
                                                     <div className="flex flex-col gap-0.5">
                                                         <div className="flex items-center gap-1.5 flex-wrap">
-                                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${getCategoryBadge(p.banner.category).color}`}>
-                                                                {getCategoryBadge(p.banner.category).label}
+                                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${getCategoryBadge(p.banner?.category, p.banner).color}`}>
+                                                                {getCategoryBadge(p.banner?.category, p.banner).label}
                                                             </span>
                                                             {p.banner.base_rate > 3.0 ? (
                                                                 <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-500 text-white shadow-2xs shrink-0" title="Banner Rate SSR Boosted 4.5%">

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { 
     ArrowLeft, 
     Trophy, 
@@ -115,6 +115,16 @@ export default function CompetitionEventDetailView({ event, onBack, activeDate }
     const [recoveryCategoryTab, setRecoveryCategoryTab] = useState('recovery_only');
     const [recoveryStyleTab, setRecoveryStyleTab] = useState('all');
     const [recoveryRarityTab, setRecoveryRarityTab] = useState('all');
+
+    // Close nested modals when reverse skill search is triggered
+    useEffect(() => {
+        const handleFindSkillSources = () => {
+            setSelectedSkillModal(null);
+            setShowNoDebuffModal(false);
+        };
+        window.addEventListener('uma:find-skill-sources', handleFindSkillSources);
+        return () => window.removeEventListener('uma:find-skill-sources', handleFindSkillSources);
+    }, []);
 
     if (!event) return null;
 
@@ -1063,6 +1073,7 @@ export default function CompetitionEventDetailView({ event, onBack, activeDate }
                     <SkillDetailModal
                         skill={selectedSkillModal}
                         onClose={() => setSelectedSkillModal(null)}
+                        onFindSkillSources={() => setSelectedSkillModal(null)}
                     />
                 )}
             </Suspense>

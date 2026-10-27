@@ -233,6 +233,16 @@ export default function SupportCardDetailModal({ card, isOpen, onClose }) {
         };
     }, [isOpen, onClose, selectedSkillPopup]);
 
+    // Close modal when reverse skill search is triggered from inside SkillDetailModal
+    useEffect(() => {
+        const handleFindSkillSources = () => {
+            setSelectedSkillPopup(null);
+            onClose?.();
+        };
+        window.addEventListener('uma:find-skill-sources', handleFindSkillSources);
+        return () => window.removeEventListener('uma:find-skill-sources', handleFindSkillSources);
+    }, [onClose]);
+
     // Synchronize card details and fetch events if needed
     useEffect(() => {
         if (!isOpen || !card) return;
@@ -1008,6 +1018,10 @@ export default function SupportCardDetailModal({ card, isOpen, onClose }) {
                 <SkillDetailModal 
                     skill={selectedSkillPopup} 
                     onClose={() => setSelectedSkillPopup(null)} 
+                    onFindSkillSources={() => {
+                        setSelectedSkillPopup(null);
+                        onClose?.();
+                    }}
                 />
             )}
         </div>

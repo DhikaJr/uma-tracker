@@ -48,6 +48,7 @@ class UmaCatalog
 
     /** @var array<string, string> Theme variant badges mapping from GameTora version codes */
     public const VERSION_LABELS = [
+        'shuntaisai' => 'Shuntaisai',
         'five_point_five_anni' => '5.5th Anni',
         'tracen_ken' => 'Tracen-ken',
         'beyond_dreams' => 'Beyond Dreams',
@@ -1775,6 +1776,7 @@ class UmaCatalog
     public static function getScenarios(): array
     {
         return [
+            'The Shuntaisai Festival',
             'Tracen-ken',
             'Beyond Dreams',
             'Yukoma Onsen',

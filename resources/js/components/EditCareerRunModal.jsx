@@ -70,7 +70,7 @@ export default function EditCareerRunModal({
         const currentRank = run.final_rank || 'G';
         setForm({
             uma_name: run.uma_name || '',
-            scenario: run.scenario || (metadata.scenarios?.[0] || 'The Twinkle Legends'),
+            scenario: run.scenario || (metadata.scenarios?.[0] || 'The Shuntaisai Festival'),
             training_type: run.training_type || 'manual',
             fans_gained: formatNumber(run.fans_gained),
             evaluation_score: formatNumber(run.evaluation_score),

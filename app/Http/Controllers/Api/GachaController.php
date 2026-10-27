@@ -32,7 +32,7 @@ class GachaController extends Controller
         }
 
         if ($request->filled('category') && $request->category !== 'all') {
-            $query->where('category', $request->category);
+            $query->byCategory($request->category);
         }
 
         if ($request->filled('search')) {
@@ -668,7 +668,7 @@ class GachaController extends Controller
         ];
 
         // Recent SSR Pulls
-        $recentSsr = GachaPull::with('banner:id,name,category,base_rate')
+        $recentSsr = GachaPull::with('banner:id,name,category,base_rate,start_date')
             ->where('rarity', 'SSR')
             ->orderBy('pulled_at', 'desc')
             ->orderBy('id', 'desc')
@@ -716,7 +716,7 @@ class GachaController extends Controller
 
         // Calculate Pity Intervals (distance in pulls to hit each SSR)
         $allPullsForIntervals = (clone $query)
-            ->with('banner:id,name,base_rate,category,banner_type')
+            ->with('banner:id,name,base_rate,category,banner_type,start_date')
             ->orderBy('pulled_at', 'asc')
             ->orderBy('id', 'asc')
             ->get(['id', 'gacha_banner_id', 'item_name', 'rarity', 'is_rate_up', 'pulled_at']);
