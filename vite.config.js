@@ -92,6 +92,9 @@ export default defineConfig({
                     if (normalizedId.includes('resources/js/data/recoverySkillsCatalog.json')) {
                         return 'data-recovery-skills';
                     }
+                    if (normalizedId.includes('resources/js/data/ratingSkillsCatalog.json')) {
+                        return 'data-rating-skills';
+                    }
                     if (normalizedId.includes('resources/js/data/racetracksCatalog.json')) {
                         return 'data-racetracks';
                     }

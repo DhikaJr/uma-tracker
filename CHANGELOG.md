@@ -2,6 +2,33 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.1.0] - 28 Oktober 2026
+
+### 🧮 Kalkulator Proyeksi Rating / Skor Evaluasi (Server JP) & Simulasi Aptitude Latihan
+- **Kalkulator Proyeksi Rating Karakter Server JP (`RatingCalculatorView.jsx`, `ratingCalculatorHelper.js`, `FansView.jsx`)**:
+  - Mengadaptasi penuh mekanisme, rumus, dan kalkulasi resmi server JP dari referensi benchmark komunitas terverifikasi (`beta.daftuyda.moe/calculator`, GameTora, dan formula Umakonga).
+  - **Formula Skor Stat (Stats Scoring Range 0–3000)**: Menghitung poin evaluasi presisi untuk masing-masing 5 atribut (*Speed*, *Stamina*, *Power*, *Guts*, *Wisdom*) menggunakan tabel akumulasi 50-pt blocks ($0-1200$), 10-pt blocks ($1201-2000$), dan 25-pt blocks ($2001-3000+$).
+  - **Formula Skor Unique Skill (Level ★1 s.d. ★5 & Lv1 s.d. Lv6)**: Menghitung bonus poin unique skill ($★1–★2 = 120 \times \text{Lv}$; $★3–★5 = 170 \times \text{Lv}$, contoh $★3 + \text{Lv3} = 510\text{ pts}$).
+  - **Formula Skor Skill & Pengali Aptitude Resmi (Race Configuration)**:
+    - Menerapkan pengali aptitude resmi game ($S/A = 1,1\times$, $B/C = 0,9\times$, $D/E/F = 0,8\times$, $G = 0,7\times$) berdasarkan konfigurasi 10 kategori aptitude (*Turf*, *Dirt*, *Sprint*, *Mile*, *Medium*, *Long*, *Front*, *Pace*, *Late*, *End*).
+    - Menghitung pengali majemuk (*compound aptitudes*, mis. *Medium/Front* atau *Sprint/Mile*) dengan pengelompokan grup jarak (*distance*) vs gaya lari (*style*) dan perkalian presisi tunggal `Math.fround`.
+    - Skill bertipe *Inherited Unique* (IUS) memiliki skor dasar flat $180\text{ pts}$, dan skill bertipe *Purple / Negative* mempertahankan pengurangan rating negatif.
+  - **Dataset Katalog Skor Skill Server JP Ramping (`ratingSkillsCatalog.json`)**:
+    - Memuat 1.926+ skill server JP lengkap dengan nama EN, nama JP, skor dasar, kategori tipe (*Gold*, *Evolution*, *White*, *Inherited*, *Purple*), dan peran aptitude.
+    - Didaftarkan sebagai chunk mandiri terpisah `data-rating-skills` pada [`vite.config.js`](file:///c:/Projects/uma-tracker/vite.config.js) berukuran ramping ($\approx 352\text{ kB}$ uncompressed, $71\text{ kB}$ gzipped) untuk memastikan seluruh chunk tetap $< 500\text{ kB}$.
+- **Antarmuka Interaktif Sesuai Standar Komunitas (`RatingCalculatorView.jsx`)**:
+  - **Race Configuration**: Dilengkapi pemilih cepat opsional **"🌸 Isi Otomatis dari Karakter Koleksi"** untuk memuat kesepuluh aptitude dan tingkat bintang karakter koleksi secara instan.
+  - **Stats & Rating Controls**: 5 input stat dengan step cepat ($-50$, $+50$, preset $0$, $1200$, $1500$), pemilih tingkat bintang $★1–★5$, dan level unique skill.
+  - **Panel Proyeksi Real-time**: Menampilkan angka besar skor rating terproyeksi, badge tier visual lengkap 298 rank ($G$ s.d. $LS24$), info selisih kekurangan poin menuju rank berikutnya (*Next Rank*), dan bilah kemajuan (*progress bar*) persentase dinamis.
+  - **Daftar Baris Input Skill Dinamis**: Fitur pencarian otomatis (*autocomplete*) dwibahasa (EN / JP), penambahan baris baru otomatis saat baris terakhir terisi, penghapusan baris cepat, tombol *Clear All Skills*, serta penyimpanan status otomatis di `localStorage` (`uma_rating_calculator_state_v1`).
+- **Integrasi Penuh pada Modul Karier (`FansView.jsx`)**:
+  - Menambahkan navigasi sub-tab di bagian atas modul Fans & Career: **"📋 Pencatatan & Riwayat Karier"** dan **"🧮 Kalkulator Proyeksi Rating (JP)"**.
+  - Menambahkan tombol pintas **"🧮 Hitung Proyeksi Rating"** di samping label *Final Evaluation Rank & Rating Score* pada formulir pencatatan karier.
+  - Menambahkan tombol aksi **"📥 Terapkan ke Form Pencatatan Karier"** di dalam kalkulator untuk memindahkan nilai rating terproyeksi dan menentukan rank secara otomatis ke formulir karier.
+- **Pengujian & Keamanan Basis Data**:
+  - Menambahkan pengujian otomatis pada [`UmaTrackerApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/UmaTrackerApiTest.php) dan verifikasi formula helper untuk memastikan akurasi perhitungan ($0\text{ stats} + 0\text{ skills} + ★3 + \text{Lv3} \to \text{UNIQUE} = 510, \text{PROJECTED} = 510, \text{Rank} = G+, \text{Next} = F \text{ at } 600 \text{ (+90)}$).
+  - Berkas fisik `database/database.sqlite` terproteksi 100% tanpa modifikasi (hash SHA-256 tetap identik).
+
 ## [Versi 3.0.1] - 28 Oktober 2026
 
 ### 🏆 Kalibrasi Penuh Tabel Rank Evaluasi (G s.d. LS24), Koreksi Ambang US–LG & Pembersihan Build

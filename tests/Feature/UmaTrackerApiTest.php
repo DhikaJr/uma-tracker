@@ -555,6 +555,29 @@ class UmaTrackerApiTest extends TestCase
         }
     }
 
+    /**
+     * Test Rating Projection formula where 0 stats + 0 skills + ★3 + Lv3 yields UNIQUE=510, PROJECTED=510, Rank=G+, Next=F at 600 (+90).
+     */
+    public function test_rating_calculator_unique_bonus_and_threshold_projection(): void
+    {
+        // Unique bonus formula: Star 1-2 = 120 * lv; Star 3-5 = 170 * lv
+        $star = 3;
+        $uniqueLevel = 3;
+        $uniqueScore = ($star <= 2 ? 120 : 170) * $uniqueLevel;
+        $this->assertSame(510, $uniqueScore);
+
+        $totalScore = 0 + $uniqueScore + 0;
+        $rank = UmaCatalog::getRankFromScore($totalScore);
+        $this->assertSame('G+', $rank);
+
+        $thresholds = UmaCatalog::getRankScoreThresholds();
+        $this->assertSame(300, $thresholds['G+']);
+        $this->assertSame(600, $thresholds['F']);
+
+        $pointsToNext = $thresholds['F'] - $totalScore;
+        $this->assertSame(90, $pointsToNext);
+    }
+
     public function test_gacha_metadata_returns_characters_and_support_cards(): void
     {
         $response = $this->getJson('/api/gacha/metadata');

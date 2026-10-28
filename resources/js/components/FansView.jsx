@@ -17,7 +17,8 @@ import {
     RefreshCw,
     Calendar,
     RotateCcw,
-    AlertTriangle
+    AlertTriangle,
+    Calculator
 } from 'lucide-react';
 import RankBadge from './RankBadge';
 import CareerOcrZone from './CareerOcrZone';
@@ -25,6 +26,7 @@ const DeleteConfirmModal = lazy(() => import('./DeleteConfirmModal'));
 const EditCareerRunModal = lazy(() => import('./EditCareerRunModal'));
 const ScenarioDetailModal = lazy(() => import('./ScenarioDetailModal'));
 const CharacterScenarioDetailModal = lazy(() => import('./CharacterScenarioDetailModal'));
+const RatingCalculatorView = lazy(() => import('./RatingCalculatorView'));
 import { formatIndonesianDate } from '../utils/dateHelper';
 
 // Categorized Rank Tiers for quick selection
@@ -90,6 +92,7 @@ const QUICK_NOTES = [
 
 export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareerStatsUpdate }) {
     // State
+    const [activeSubTab, setActiveSubTab] = useState('career'); // 'career' or 'calculator'
     const [runs, setRuns] = useState([]);
     const [editingRun, setEditingRun] = useState(null);
     const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0 });
@@ -443,6 +446,24 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
         }));
     };
 
+    // Apply score from Rating Calculator directly into career form
+    const handleApplyCalculatorScore = (scoreNum, statsObj) => {
+        setActiveSubTab('career');
+        clearOcrWarning('evaluation_score');
+        clearOcrWarning('final_rank');
+        const formatted = formatNumber(scoreNum);
+        const autoRank = getRankFromScore(scoreNum);
+        setForm(prev => ({
+            ...prev,
+            evaluation_score: formatted,
+            final_rank: autoRank || prev.final_rank,
+        }));
+        onNotify?.(
+            `Skor Proyeksi Rating ${formatted} pts (${autoRank || 'Rank'}) berhasil diterapkan ke form pencatatan karier!`,
+            'success'
+        );
+    };
+
     // Handle Auto-Fill from OCR Screenshot
     const handleOcrExtracted = (parsed) => {
         // Collect low-confidence warnings (< 75%)
@@ -514,8 +535,49 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
 
     return (
         <div className="space-y-8 animate-fadeIn">
-            {/* Turf Green Hero Header */}
-            <div className="bg-gradient-to-r from-emerald-800 via-green-700 to-teal-800 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+            {/* Sub-Tab Navigation: Career vs Rating Calculator */}
+            <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                <button
+                    type="button"
+                    onClick={() => setActiveSubTab('career')}
+                    className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all ${
+                        activeSubTab === 'career'
+                            ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-500/40'
+                            : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                >
+                    <Trophy className="w-4 h-4" />
+                    📋 Pencatatan & Riwayat Karier
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveSubTab('calculator')}
+                    className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all ${
+                        activeSubTab === 'calculator'
+                            ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-500/40'
+                            : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                >
+                    <Calculator className="w-4 h-4 text-emerald-400" />
+                    🧮 Kalkulator Proyeksi Rating (JP)
+                </button>
+            </div>
+
+            {activeSubTab === 'calculator' ? (
+                <Suspense
+                    fallback={
+                        <div className="p-12 text-center text-slate-400 bg-slate-900/60 rounded-2xl border border-slate-800">
+                            <RefreshCw className="w-8 h-8 animate-spin mx-auto text-emerald-500 mb-3" />
+                            <p className="text-sm font-semibold">Memuat Kalkulator Proyeksi Rating (Server JP)...</p>
+                        </div>
+                    }
+                >
+                    <RatingCalculatorView onApplyToCareerForm={handleApplyCalculatorScore} />
+                </Suspense>
+            ) : (
+                <>
+                    {/* Turf Green Hero Header */}
+                    <div className="bg-gradient-to-r from-emerald-800 via-green-700 to-teal-800 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div>
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/40 border border-emerald-400/40 text-xs font-bold text-amber-300 mb-2">
@@ -961,6 +1023,15 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                                     Ketik skor evaluasi akhir untuk menentukan rank secara otomatis (Wajib diisi, rank bersifat read-only)
                                 </p>
                             </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setActiveSubTab('calculator')}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 transition-all shadow-sm shrink-0"
+                            >
+                                <Calculator className="w-3.5 h-3.5 text-emerald-500" />
+                                🧮 Hitung Proyeksi Rating
+                            </button>
                         </div>
 
                         {/* Evaluation Score Input Field with Auto-Detection */}
@@ -1707,6 +1778,8 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                         </div>
                     </div>
                 </div>
+            )}
+            </>
             )}
 
             {/* Delete Confirmation Modal */}
