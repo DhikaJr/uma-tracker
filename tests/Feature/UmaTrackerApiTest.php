@@ -9,6 +9,7 @@ use App\Models\GachaBanner;
 use App\Models\GachaPity;
 use App\Models\GachaPull;
 use App\Models\UmaCatalogItem;
+use App\Support\UmaCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -342,10 +343,10 @@ class UmaTrackerApiTest extends TestCase
         $this->assertSame(63400, $thresholds['US']['score']);
 
         $this->assertTrue($thresholds->has('LG'));
-        $this->assertSame(72400, $thresholds['LG']['score']);
+        $this->assertSame(76000, $thresholds['LG']['score']);
 
         $this->assertTrue($thresholds->has('LG24'));
-        $this->assertSame(86800, $thresholds['LG24']['score']);
+        $this->assertSame(90900, $thresholds['LG24']['score']);
 
         $this->assertTrue($thresholds->has('LF'));
         $this->assertSame(91400, $thresholds['LF']['score']);
@@ -355,6 +356,27 @@ class UmaTrackerApiTest extends TestCase
 
         $this->assertTrue($thresholds->has('LF24'));
         $this->assertSame(104800, $thresholds['LF24']['score']);
+
+        $this->assertTrue($thresholds->has('LE'));
+        $this->assertSame(105400, $thresholds['LE']['score']);
+
+        $this->assertTrue($thresholds->has('LD'));
+        $this->assertSame(118800, $thresholds['LD']['score']);
+
+        $this->assertTrue($thresholds->has('LC'));
+        $this->assertSame(132500, $thresholds['LC']['score']);
+
+        $this->assertTrue($thresholds->has('LB'));
+        $this->assertSame(146600, $thresholds['LB']['score']);
+
+        $this->assertTrue($thresholds->has('LA'));
+        $this->assertSame(161100, $thresholds['LA']['score']);
+
+        $this->assertTrue($thresholds->has('LS'));
+        $this->assertSame(175900, $thresholds['LS']['score']);
+
+        $this->assertTrue($thresholds->has('LS24'));
+        $this->assertSame(190400, $thresholds['LS24']['score']);
     }
 
     public function test_can_record_career_run_with_evaluation_score_and_auto_select_rank(): void
@@ -445,7 +467,7 @@ class UmaTrackerApiTest extends TestCase
             ->assertJsonPath('data.evaluation_score', 104800);
     }
 
-    public function test_career_metadata_includes_g_to_lf_ranks_and_new_scenarios(): void
+    public function test_career_metadata_includes_g_to_ls_ranks_and_new_scenarios(): void
     {
         $response = $this->getJson('/api/career/metadata');
         $response->assertStatus(200);
@@ -465,6 +487,13 @@ class UmaTrackerApiTest extends TestCase
         $this->assertContains('LF', $ranks);
         $this->assertContains('LF20', $ranks);
         $this->assertContains('LF24', $ranks);
+        $this->assertContains('LE', $ranks);
+        $this->assertContains('LD', $ranks);
+        $this->assertContains('LC', $ranks);
+        $this->assertContains('LB', $ranks);
+        $this->assertContains('LA', $ranks);
+        $this->assertContains('LS', $ranks);
+        $this->assertContains('LS24', $ranks);
 
         $this->assertContains('The Twinkle Legends', $scenarios);
         $this->assertContains('Design Your Island', $scenarios);
@@ -480,6 +509,50 @@ class UmaTrackerApiTest extends TestCase
         $this->assertSame('Oguri Cap', $umaOcrMap['oguri cap'] ?? null);
         $this->assertSame('Oguri Cap', $umaOcrMap['オグリキャップ'] ?? null);
         $this->assertSame('Oguri Cap', $umaOcrMap['starlight beat'] ?? null);
+    }
+
+    /**
+     * Test accurate evaluation score to rank conversions across US, LG, LF, LE, and LS24.
+     */
+    public function test_evaluation_score_to_rank_conversions_from_g_to_ls24(): void
+    {
+        $cases = [
+            0 => 'G',
+            300 => 'G+',
+            19200 => 'SS+',
+            19600 => 'UG',
+            63400 => 'US',
+            71600 => 'US7',
+            72400 => 'US7',    // 72400 is US7 in new calibrated table (not LG)
+            72900 => 'US8',
+            74400 => 'US9',
+            75999 => 'US9',    // 75999 is US9 (last score before LG at 76000)
+            76000 => 'LG',     // Exact start of LG
+            76600 => 'LG1',
+            90900 => 'LG24',   // Exact start of LG24
+            91399 => 'LG24',
+            91400 => 'LF',     // Exact start of LF
+            102700 => 'LF20',
+            104800 => 'LF24',
+            105399 => 'LF24',
+            105400 => 'LE',    // Exact start of LE
+            118800 => 'LD',
+            132500 => 'LC',
+            146600 => 'LB',
+            161100 => 'LA',
+            175900 => 'LS',
+            190400 => 'LS24',  // Top threshold
+            250000 => 'LS24',  // Above top threshold
+        ];
+
+        foreach ($cases as $score => $expectedRank) {
+            $rank = UmaCatalog::getRankFromScore($score);
+            $this->assertSame(
+                $expectedRank,
+                $rank,
+                "Failed asserting score {$score} maps to rank {$expectedRank}, got {$rank}"
+            );
+        }
     }
 
     public function test_gacha_metadata_returns_characters_and_support_cards(): void

@@ -13,7 +13,25 @@ export default function RankBadge({ rank, size = 'md' }) {
     let bgClasses = 'bg-slate-700 text-white border-slate-500';
     let icon = null;
 
-    if (rankStr.startsWith('LF')) {
+    if (rankStr.startsWith('LS')) {
+        bgClasses = 'bg-gradient-to-r from-amber-300 via-rose-400 to-indigo-600 text-white border-amber-200 shadow-lg shadow-amber-400/50 ring-2 ring-amber-300 font-black tracking-wider animate-pulse';
+        icon = <Crown className="w-3.5 h-3.5 text-amber-200 fill-amber-300 inline mr-0.5" />;
+    } else if (rankStr.startsWith('LA')) {
+        bgClasses = 'bg-gradient-to-r from-rose-500 via-red-600 to-pink-600 text-white border-rose-300 shadow-md shadow-red-500/40 ring-1 ring-rose-300 font-black tracking-wider';
+        icon = <Crown className="w-3.5 h-3.5 text-rose-200 fill-rose-300 inline mr-0.5" />;
+    } else if (rankStr.startsWith('LB')) {
+        bgClasses = 'bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-700 text-white border-violet-300 shadow-md shadow-purple-500/40 ring-1 ring-violet-300 font-black tracking-wider';
+        icon = <Crown className="w-3.5 h-3.5 text-violet-200 fill-violet-300 inline mr-0.5" />;
+    } else if (rankStr.startsWith('LC')) {
+        bgClasses = 'bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 text-white border-amber-300 shadow-md shadow-amber-500/40 ring-1 ring-amber-300 font-black tracking-wider';
+        icon = <Crown className="w-3.5 h-3.5 text-amber-100 fill-amber-200 inline mr-0.5" />;
+    } else if (rankStr.startsWith('LD')) {
+        bgClasses = 'bg-gradient-to-r from-fuchsia-500 via-pink-600 to-rose-600 text-white border-fuchsia-300 shadow-md shadow-pink-500/40 ring-1 ring-fuchsia-300 font-black tracking-wider';
+        icon = <Crown className="w-3.5 h-3.5 text-pink-200 fill-pink-300 inline mr-0.5" />;
+    } else if (rankStr.startsWith('LE')) {
+        bgClasses = 'bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-600 text-white border-emerald-300 shadow-md shadow-emerald-500/40 ring-1 ring-emerald-300 font-black tracking-wider';
+        icon = <Crown className="w-3.5 h-3.5 text-emerald-200 fill-emerald-300 inline mr-0.5" />;
+    } else if (rankStr.startsWith('LF')) {
         bgClasses = 'bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-white border-cyan-300 shadow-md shadow-blue-500/40 ring-1 ring-cyan-300 animate-rainbow font-black tracking-wider';
         icon = <Crown className="w-3.5 h-3.5 text-cyan-200 fill-cyan-300 inline mr-0.5" />;
     } else if (rankStr.startsWith('LG')) {

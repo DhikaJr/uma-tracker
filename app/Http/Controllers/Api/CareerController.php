@@ -77,6 +77,14 @@ class CareerController extends Controller
             ->orderBy('id', 'desc')
             ->paginate($perPage);
 
+        $runs->getCollection()->transform(function (CareerRun $run) {
+            if ($run->evaluation_score !== null && $run->evaluation_score > 0) {
+                $run->final_rank = UmaCatalog::getRankFromScore((int) $run->evaluation_score);
+            }
+
+            return $run;
+        });
+
         return response()->json($runs);
     }
 

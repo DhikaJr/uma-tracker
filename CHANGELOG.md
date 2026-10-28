@@ -2,6 +2,24 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.0.1] - 28 Oktober 2026
+
+### 🏆 Kalibrasi Penuh Tabel Rank Evaluasi (G s.d. LS24), Koreksi Ambang US–LG & Pembersihan Build
+- **Sinkronisasi Penuh Tabel Rank Evaluasi Karakter (G s.d. LS24) Berdasarkan Server JP (`UmaCatalog.php`, `CareerRun.php`, `FansView.jsx`, `RankBadge.jsx`, `CareerOcrZone.jsx`)**:
+  - Menyinkronkan threshold minimum resmi game dari referensi komunitas terverifikasi `beta.daftuyda.moe` mencakup 298 rank dari `G` hingga tier puncak tertinggi `LS24`.
+  - Mengoreksi rentang skor `US` s.d. `US9` (`63.400` – `75.999`) dan menggeser batas ambang awal `LG` ke `76.000` (menggantikan batas lama `72.400` yang keliru), sehingga skor seperti `72.400` kini terklasifikasi akurat sebagai `US7`, `75.999` sebagai `US9`, dan `76.000` sebagai `LG`.
+  - Memperluas pemetaan rank keluarga Legend: menambahkan seluruh 25 sub-tier untuk `LE` (`105.400` s.d. `118.200`), `LD` (`118.800` s.d. `132.000`), `LC` (`132.500` s.d. `146.100`), `LB` (`146.600` s.d. `160.500`), `LA` (`161.100` s.d. `175.300`), dan `LS` (`175.900` s.d. `190.400+`).
+  - Mengimplementasikan kalkulasi rank dinamis berbasis skor evaluasi pada endpoint riwayat karier ([`CareerController.php`](file:///c:/Projects/uma-tracker/app/Http/Controllers/Api/CareerController.php)) agar pembacaan rank evaluasi pada seluruh catatan karier yang telah tersimpan secara otomatis tersinkronisasi dengan tabel standar terbaru tanpa perlu memodifikasi berkas fisik database SQLite.
+  - Memperbarui antarmuka visual [`RankBadge.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/RankBadge.jsx) dengan lencana bergradien premium, ikon mahkota, dan efek visual khas untuk seluruh varian tier Legend (`LG`, `LF`, `LE`, `LD`, `LC`, `LB`, `LA`, dan efek kosmik bercahaya `LS`).
+  - Memperbarui tombol preset coba skor cepat pada [`FansView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/FansView.jsx): memperbarui `76.000 (LG)` serta menambahkan `105.400 (LE)` dan `175.900 (LS)`.
+  - Memperbarui parser OCR pada [`CareerOcrZone.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CareerOcrZone.jsx) dengan ekspresi reguler `L[GFEDCBAS](?:[1-9]|1\d|2[0-4])?` untuk mengenali rank tier Legend hingga LS24 dari tangkapan layar.
+- **Pembersihan Direktori Build & Penegakan `emptyOutDir` pada Vite (`vite.config.js`)**:
+  - Mengaktifkan `build.emptyOutDir: true` secara eksplisit pada konfigurasi bundler [`vite.config.js`](file:///c:/Projects/uma-tracker/vite.config.js).
+  - Membersihkan tumpukan chunk usang yang tertinggal di `public/build/`, sehingga registrasi precache PWA Service Worker menjadi lebih ramping (79 entri aktif).
+- **Pengujian & Keamanan Basis Data**:
+  - Menambahkan pengujian komprehensif pada [`UmaTrackerApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/UmaTrackerApiTest.php) untuk validasi konversi skor `G` hingga `LS24` dan batas-batas ambang kritis (`72400` -> `US7`, `75999` -> `US9`, `76000` -> `LG`, `90900` -> `LG24`, `91400` -> `LF`, `105400` -> `LE`, `190400` -> `LS24`).
+  - Seluruh pengujian PHPUnit lulus 100% dan berkas fisik `database/database.sqlite` terproteksi dengan integritas hash yang tetap terjaga.
+
 ## [Versi 3.0.0] - 27 Oktober 2026
 
 ### 🃏 Simulasi Deck 6 Support Card (6-Card Support Deck Builder) & Manajemen Preset Formasi

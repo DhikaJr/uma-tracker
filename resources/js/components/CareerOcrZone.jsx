@@ -199,8 +199,14 @@ export default function CareerOcrZone({
             return matched;
         }
         // Standard fallback thresholds
+        if (score >= 175900) return 'LS';
+        if (score >= 161100) return 'LA';
+        if (score >= 146600) return 'LB';
+        if (score >= 132500) return 'LC';
+        if (score >= 118800) return 'LD';
+        if (score >= 105400) return 'LE';
         if (score >= 91400) return 'LF';
-        if (score >= 72400) return 'LG';
+        if (score >= 76000) return 'LG';
         if (score >= 63400) return 'US';
         if (score >= 55200) return 'UA';
         if (score >= 47600) return 'UB';
@@ -327,9 +333,9 @@ export default function CareerOcrZone({
                 detectedRank = rankLabelMatch[1].toUpperCase();
             }
         }
-        // High-tier compound ranks that do not conflict with single letter words (LF, LG, US, UA, UB, UC, UD, UE, UF, UG, SS+, SS, S+)
+        // High-tier compound ranks that do not conflict with single letter words (LS..LG, US, UA, UB, UC, UD, UE, UF, UG, SS+, SS, S+)
         if (!detectedRank) {
-            const compoundMatch = text.match(/\b(LF\d*|LG\d*|US\d*|UA\d*|UB\d*|UC\d*|UD\d*|UE\d*|UF\d*|UG\d*|SS\+|SS|S\+)\b/i);
+            const compoundMatch = text.match(/\b(L[GFEDCBAS](?:[1-9]|1\d|2[0-4])?|US\d*|UA\d*|UB\d*|UC\d*|UD\d*|UE\d*|UF\d*|UG\d*|SS\+|SS|S\+)\b/i);
             if (compoundMatch) {
                 detectedRank = compoundMatch[1].toUpperCase();
             }
@@ -642,7 +648,7 @@ export default function CareerOcrZone({
                     <ol className="list-decimal pl-4 space-y-1 text-[11px] text-amber-800 dark:text-amber-300/90 leading-relaxed">
                         <li>Gunakan shortcut <strong>Win + Shift + S</strong> di PC atau tangkap layar akhir evaluasi karier di ponsel.</li>
                         <li>Klik di mana saja pada halaman ini, lalu tekan <strong>Ctrl + V</strong> (Paste) langsung dari clipboard.</li>
-                        <li>Tesseract.js akan mengekstrak Nama Karakter, Final Rank (UG~US~LG), Skor Evaluasi, dan Fans Gained secara instan.</li>
+                        <li>Tesseract.js akan mengekstrak Nama Karakter, Final Rank (UG~US~LG~LS24), Skor Evaluasi, dan Fans Gained secara instan.</li>
                     </ol>
                 </div>
             )}

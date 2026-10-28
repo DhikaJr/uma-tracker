@@ -29,6 +29,9 @@ import { formatIndonesianDate } from '../utils/dateHelper';
 
 // Categorized Rank Tiers for quick selection
 const rankTierGroups = {
+    'LEGEND (L)': [
+        'LS', 'LA', 'LB', 'LC', 'LD', 'LE', 'LF', 'LG',
+    ],
     'U-TIER': [
         'UG', 'UG1', 'UG3', 'UG5', 'UG7', 'UG9',
         'UF', 'UF1', 'UF3', 'UF5', 'UF7', 'UF9',
@@ -38,14 +41,6 @@ const rankTierGroups = {
         'UB', 'UB1', 'UB3', 'UB5', 'UB7', 'UB9',
         'UA', 'UA1', 'UA3', 'UA5', 'UA7', 'UA9',
         'US', 'US1', 'US3', 'US5', 'US7', 'US9',
-    ],
-    'LEGEND (LG)': [
-        'LG', 'LG1', 'LG2', 'LG3', 'LG4', 'LG5', 'LG6', 'LG7', 'LG8', 'LG9',
-        'LG10', 'LG12', 'LG15', 'LG18', 'LG20', 'LG22', 'LG24',
-    ],
-    'LEGEND (LF)': [
-        'LF', 'LF1', 'LF2', 'LF3', 'LF4', 'LF5', 'LF6', 'LF7', 'LF8', 'LF9',
-        'LF10', 'LF12', 'LF15', 'LF18', 'LF20', 'LF22', 'LF24',
     ],
     'STAR (A-SS)': [
         'A', 'A+', 'S', 'S+', 'SS', 'SS+',
@@ -380,9 +375,8 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
         for (const [tier, list] of Object.entries(rankTierGroups)) {
             if (list.includes(rank)) return tier;
         }
+        if (/^L[SABCDEFG]/.test(rank)) return 'LEGEND (L)';
         if (/^(UG|UF|UE|UD|UC|UB|UA|US)/.test(rank)) return 'U-TIER';
-        if (rank.startsWith('LF')) return 'LEGEND (LF)';
-        if (rank.startsWith('LG')) return 'LEGEND (LG)';
         if (/^(A|S)/.test(rank)) return 'STAR (A-SS)';
         if (/^(G|F|E|D|C|B)/.test(rank)) return 'BEGINNER (G-B)';
         return 'U-TIER';
@@ -1054,9 +1048,11 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                                     { score: 47600, label: '47.600 (UB)' },
                                     { score: 55200, label: '55.200 (UA)' },
                                     { score: 63400, label: '63.400 (US)' },
-                                    { score: 72400, label: '72.400 (LG)' },
+                                    { score: 76000, label: '76.000 (LG)' },
                                     { score: 91400, label: '91.400 (LF)' },
                                     { score: 102700, label: '102.700 (LF20)' },
+                                    { score: 105400, label: '105.400 (LE)' },
+                                    { score: 175900, label: '175.900 (LS)' },
                                 ].map((sample) => (
                                     <button
                                         key={sample.score}
