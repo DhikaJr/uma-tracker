@@ -1342,16 +1342,45 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
             {/* Career Runs History Table */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                 {/* Table Filters Header */}
-                <div className="p-5 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                        <Layers className="w-5 h-5 text-slate-500" />
-                        <h2 className="text-base font-black text-slate-900 dark:text-slate-100">Riwayat Pelatihan Karir</h2>
-                        <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono text-xs font-bold">
-                            {pagination.total} sesi
-                        </span>
+                <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 space-y-3">
+                    {/* Top Row: Title, Counter & Search Bar */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <Layers className="w-5 h-5 text-slate-500" />
+                            <h2 className="text-base font-black text-slate-900 dark:text-slate-100">Riwayat Pelatihan Karir</h2>
+                            <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono text-xs font-bold">
+                                {pagination.total} sesi
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            {/* Search */}
+                            <form onSubmit={handleSearch} className="relative w-full sm:w-56">
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Cari Uma / notes..."
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                                />
+                                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                            </form>
+
+                            {/* Reset filter button */}
+                            <button
+                                type="button"
+                                onClick={handleResetFilters}
+                                className="px-2.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                                title="Reset semua filter ke default"
+                            >
+                                <RotateCcw className="w-3 h-3" />
+                                <span>Reset</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2.5">
+                    {/* Bottom Row: Filter Dropdowns & Date Range */}
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 pt-1">
                         {/* Date Range Filter */}
                         <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-600 dark:text-slate-300">
                             <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -1378,7 +1407,7 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                         <select
                             value={scenarioFilter}
                             onChange={(e) => { setScenarioFilter(e.target.value); setPage(1); }}
-                            className="bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                            className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                         >
                             <option value="all">Semua Skenario</option>
                             {(metadata.scenarios || []).map((s) => (
@@ -1390,7 +1419,7 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                         <select
                             value={rankMinFilter}
                             onChange={(e) => { setRankMinFilter(e.target.value); setPage(1); }}
-                            className="bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                            className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                         >
                             <option value="all">Min Rank (Semua)</option>
                             {(metadata.ranks || []).map((r) => (
@@ -1402,7 +1431,7 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                         <select
                             value={rankMaxFilter}
                             onChange={(e) => { setRankMaxFilter(e.target.value); setPage(1); }}
-                            className="bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                            className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                         >
                             <option value="all">Max Rank (Semua)</option>
                             {(metadata.ranks || []).map((r) => (
@@ -1414,35 +1443,12 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                         <select
                             value={trainingTypeFilter}
                             onChange={(e) => { setTrainingTypeFilter(e.target.value); setPage(1); }}
-                            className="bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                            className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                         >
                             <option value="all">Semua Mode</option>
                             <option value="manual">🎮 Manual</option>
                             <option value="independent">⚡ Mandiri (自主練)</option>
                         </select>
-
-                        {/* Search */}
-                        <form onSubmit={handleSearch} className="relative">
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Cari Uma / notes..."
-                                className="bg-slate-50 border border-slate-300 rounded-xl pl-8 pr-3 py-1.5 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none w-36 sm:w-40"
-                            />
-                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
-                        </form>
-
-                        {/* Reset filter button */}
-                        <button
-                            type="button"
-                            onClick={handleResetFilters}
-                            className="px-2.5 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-600 hover:text-slate-900 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
-                            title="Reset semua filter ke default"
-                        >
-                            <RotateCcw className="w-3 h-3" />
-                            <span>Reset</span>
-                        </button>
                     </div>
                 </div>
 

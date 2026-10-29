@@ -183,8 +183,9 @@ export default function RatingCalculatorView({ onApplyToCareerForm }) {
         fetch('/api/collection/characters')
             .then(res => res.json())
             .then(data => {
-                if (mounted && Array.isArray(data)) {
-                    setCharactersList(data);
+                if (mounted) {
+                    const list = Array.isArray(data) ? data : (data?.characters || []);
+                    setCharactersList(list);
                 }
             })
             .catch(err => {
@@ -851,7 +852,7 @@ export default function RatingCalculatorView({ onApplyToCareerForm }) {
             </div>
 
             {/* BOTTOM SECTION: Dynamic Skill Input Rows (Server JP) */}
-            <div className="bg-slate-900/80 rounded-2xl border border-slate-800 p-5 shadow-lg">
+            <div className="bg-slate-900/80 rounded-2xl border border-slate-800 p-5 pb-44 shadow-lg relative z-20">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-4 border-b border-slate-800">
                     <div>
                         <h3 className="font-bold text-sm text-slate-200 flex items-center gap-2">
@@ -961,9 +962,9 @@ export default function RatingCalculatorView({ onApplyToCareerForm }) {
                                                     <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
                                                         <span className="text-amber-400 font-bold">★{char.current_stars || char.base_stars || 3}</span>
                                                         <span>•</span>
-                                                        <span>Turf: {apt.turf || 'A'}</span>
+                                                        <span>Turf: {apt.turf || apt.track?.turf || 'A'}</span>
                                                         <span>•</span>
-                                                        <span>Dirt: {apt.dirt || 'G'}</span>
+                                                        <span>Dirt: {apt.dirt || apt.track?.dirt || 'G'}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -977,7 +978,14 @@ export default function RatingCalculatorView({ onApplyToCareerForm }) {
                                 })
                             ) : (
                                 <div className="text-center py-10 text-slate-500 text-xs">
-                                    Tidak ada karakter yang cocok dengan kata kunci "{charSearch}".
+                                    {loadingChars ? (
+                                        <div className="flex items-center justify-center gap-2">
+                                            <RefreshCw className="w-4 h-4 animate-spin text-emerald-400" />
+                                            <span>Memuat daftar karakter...</span>
+                                        </div>
+                                    ) : (
+                                        `Tidak ada karakter yang cocok dengan kata kunci "${charSearch}".`
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -1072,7 +1080,7 @@ function SkillInputRow({ row, index, allSkills, raceConfig, onSelectSkill, onRem
 
                 {/* Dropdown Suggestions */}
                 {isOpen && suggestions.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full mt-1.5 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-h-60 overflow-y-auto z-40 divide-y divide-slate-800/60">
+                    <div className="absolute left-0 right-0 top-full mt-1.5 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-h-64 overflow-y-auto z-50 divide-y divide-slate-800/60 ring-1 ring-black/50">
                         {suggestions.map(s => {
                             const sc = calculateSkillRating(s, raceConfig);
                             const itemBadge = getSkillTypeBadge(s.type, s.is_evo);

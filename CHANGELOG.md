@@ -2,6 +2,26 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.1.2] - 29 Oktober 2026
+
+### 🎨 Pemolesan Antarmuka Responsif 1366p, Lokalisasi Modal & Sinkronisasi Metrik Katalog
+- **Tata Letak Header Filter Sejajar pada Resolusi 1366x768p (`FansView.jsx`, `GachaView.jsx`)**:
+  - Mengubah struktur bilah filter pada tabel **Riwayat Pelatihan Karir** dan **Riwayat Tarikan Gacha** menjadi tata letak 2 baris terstruktur: baris atas untuk Judul, Penghitung sesi/tarikan, Bilah Pencarian, dan Tombol Reset; baris bawah untuk seluruh Dropdown Filter (*Scenario, Rank, Mode, Banner, Pool, Rarity, Rate-Up*) dan Date Range Picker.
+  - Mencegah pembungkusan kontrol (*wrapping*) yang tidak rata atau terpotong pada laptop beresolusi 1366x768p dan layar menengah lainnya.
+  - Menerjemahkan judul tabel gacha dari bahasa Inggris `"Gacha Pulls History"` menjadi `"Riwayat Tarikan Gacha"` serta label total `"X tarikan"`.
+- **Lokalisasi Modal Konfirmasi Reset Pity & Hapus Tarikan (`GachaView.jsx`)**:
+  - Menerjemahkan dialog konfirmasi saat menekan tombol **Reset / Spark**: *"Apakah Anda yakin ingin mereset Pity / Klaim Spark untuk banner [Nama Banner]? Tindakan ini akan mengembalikan hitungan pity menjadi 0."*
+  - Menerjemahkan dialog konfirmasi hapus tarikan: *"Hapus catatan tarikan gacha ini?"* serta notifikasi galat ke bahasa Indonesia.
+- **Perbaikan Pengisian Otomatis Karakter pada Kalkulator Rating (`RatingCalculatorView.jsx`)**:
+  - Memperbaiki parsing respons API `/api/collection/characters` yang berupa objek `{ characters: [...] }` sehingga daftar modal **"🌸 Pilih Karakter untuk Isi Otomatis Aptitude"** terisi lengkap dan responsif dengan fitur pencarian.
+  - Memperbaiki pemetaan otomatis kesepuluh aptitude (*Turf..End*) dan *Star Level* saat karakter dipilih.
+- **Pencegahan Dropdown Autocomplete Skill Terpotong Footer (`RatingCalculatorView.jsx`, `AppMain.jsx`)**:
+  - Menambahkan *bottom padding* (`pb-44`) dan lapisan `relative z-20` pada kontainer Daftar Input Skill Dinamis, serta lapisan `relative z-10` pada kontainer utama `<main>` dan `relative z-0` pada `<footer>`.
+  - Memperbaiki elevasi `z-50` dan bayangan dropdown pada baris skill, sehingga menu pilihan autocomplete skill Server JP tampil penuh di atas seluruh elemen tanpa terpotong batas footer.
+- **Sinkronisasi Dinamis Jumlah Katalog GameTora pada Footer (`AppMain.jsx`, `GachaView.jsx`)**:
+  - Mengintegrasikan pengambilan data metadata katalog secara dinamis dari `/api/gacha/metadata` dan mendengarkan event real-time `uma:catalog-updated`.
+  - Teks deskripsi footer pada jumlah *Support Cards* dan *Varian Karakter Uma Musume beserta kostum alternatifnya* kini otomatis mengikuti angka aktual riil yang tertera pada bagian header **GameTora JP** di modul Gacha Tracker.
+
 ## [Versi 3.1.1] - 29 Oktober 2026
 
 ### 🛠️ Penyelarasan Badge Rank Evaluasi Dashboard & Pembaruan Komponen RankBadge

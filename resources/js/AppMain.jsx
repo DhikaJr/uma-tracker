@@ -73,6 +73,54 @@ export default function AppMain() {
         loadSettings();
     }, []);
 
+    // Dynamic GameTora catalog item counts (aligned with GachaView header)
+    const [catalogCounts, setCatalogCounts] = useState(() => {
+        const saved = localStorage.getItem('uma_gametora_counts');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (parsed.characters && parsed.support_cards) return parsed;
+            } catch {}
+        }
+        return { characters: 271, support_cards: 563 };
+    });
+
+    useEffect(() => {
+        const fetchCatalogCounts = async () => {
+            try {
+                const res = await fetch('/api/gacha/metadata');
+                if (res.ok) {
+                    const data = await res.json();
+                    const counts = {
+                        characters: data.characters?.length || 0,
+                        support_cards: data.support_cards?.length || 0,
+                    };
+                    if (counts.characters > 0 || counts.support_cards > 0) {
+                        setCatalogCounts(counts);
+                        localStorage.setItem('uma_gametora_counts', JSON.stringify(counts));
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load catalog counts for footer:', err);
+            }
+        };
+        fetchCatalogCounts();
+
+        const handleCatalogUpdated = (e) => {
+            if (e.detail?.characters !== undefined && e.detail?.support_cards !== undefined) {
+                const counts = {
+                    characters: e.detail.characters,
+                    support_cards: e.detail.support_cards,
+                };
+                setCatalogCounts(counts);
+                localStorage.setItem('uma_gametora_counts', JSON.stringify(counts));
+            }
+        };
+
+        window.addEventListener('uma:catalog-updated', handleCatalogUpdated);
+        return () => window.removeEventListener('uma:catalog-updated', handleCatalogUpdated);
+    }, []);
+
     // Global listener for reverse skill lookup shortcut from any module
     useEffect(() => {
         const handleFindSkillSources = (e) => {
@@ -194,7 +242,7 @@ export default function AppMain() {
             />
 
             {/* Main Content Area */}
-            <main className="flex-1 w-full max-w-[1366px] 2xl:max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-5 xl:px-6 py-6 sm:py-8 pb-24 sm:pb-8 overflow-x-hidden">
+            <main className="flex-1 w-full max-w-[1366px] 2xl:max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-5 xl:px-6 py-6 sm:py-8 pb-24 sm:pb-8 overflow-x-hidden relative z-10">
                 <Suspense fallback={<ViewLoadingFallback />}>
                     {activeTab === 'dashboard' && (
                         <DashboardView
@@ -298,7 +346,7 @@ export default function AppMain() {
             </Suspense>
 
             {/* Footer with Attribution & Database Sourcing Disclaimer */}
-            <footer className="bg-slate-900 border-t border-slate-800 text-slate-400 py-8 text-xs">
+            <footer className="bg-slate-900 border-t border-slate-800 text-slate-400 py-8 text-xs relative z-0">
                 <div className="w-full max-w-[1366px] 2xl:max-w-screen-2xl mx-auto px-4 sm:px-5 lg:px-6 xl:px-6 space-y-4">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pb-4 border-b border-slate-800">
                         <div className="flex items-center gap-2">
@@ -317,7 +365,7 @@ export default function AppMain() {
                             <span className="font-bold text-slate-300">Disclaimer & Data Sourcing:</span> This application is an unofficial, non-commercial fan tool designed solely to help trainers log gacha pulls and monitor monthly circle fan quotas.
                         </p>
                         <p>
-                            Daftar lengkap <strong className="text-slate-300">Support Cards (563 kartu SSR, SR, R)</strong> serta seluruh <strong className="text-slate-300">varian karakter Uma Musume beserta kostum alternatifnya (271 pilihan 3★, 2★, 1★)</strong> dihimpun dan disinkronisasi dari basis data komunitas <a href="https://gametora.com/umamusume" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 underline font-semibold">GameTora</a>, serta referensi wiki Jepang seperti <a href="https://kamigame.jp/umamusume/" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 underline font-semibold">Kamigame</a> dan <a href="https://gamewith.jp/uma-musume/" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 underline font-semibold">GameWith</a> berdasarkan rilisan resmi server Jepang (JP) dan Global.
+                            Daftar lengkap <strong className="text-slate-300">Support Cards ({catalogCounts.support_cards} kartu SSR, SR, R)</strong> serta seluruh <strong className="text-slate-300">varian karakter Uma Musume beserta kostum alternatifnya ({catalogCounts.characters} pilihan 3★, 2★, 1★)</strong> dihimpun dan disinkronisasi dari basis data komunitas <a href="https://gametora.com/umamusume" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 underline font-semibold">GameTora</a>, serta referensi wiki Jepang seperti <a href="https://kamigame.jp/umamusume/" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 underline font-semibold">Kamigame</a> dan <a href="https://gamewith.jp/uma-musume/" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 underline font-semibold">GameWith</a> berdasarkan rilisan resmi server Jepang (JP) dan Global.
                         </p>
                         <p className="text-slate-500 text-[10px]">
                             Uma Musume: Pretty Derby (ウマ娘 プリティーダービー) dan seluruh aset, nama karakter, dan hak cipta terkait merupakan milik © Cygames, Inc.
