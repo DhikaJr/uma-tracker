@@ -92,6 +92,33 @@ class UmaTrackerApiTest extends TestCase
             ]);
     }
 
+    public function test_dashboard_summary_recent_runs_calibrates_rank_from_evaluation_score(): void
+    {
+        CareerRun::query()->delete();
+
+        CareerRun::create([
+            'uma_name' => 'Epiphaneia',
+            'scenario' => 'The Shuntaisai Festival',
+            'training_type' => 'manual',
+            'fans_gained' => 450000,
+            'evaluation_score' => 75181,
+            'final_rank' => 'LG4',
+            'run_date' => '2026-10-28',
+        ]);
+
+        $response = $this->getJson('/api/dashboard/summary');
+        $response->assertStatus(200);
+
+        $recentRuns = $response->json('recent_runs');
+        $this->assertCount(1, $recentRuns);
+        // 75181 should be calibrated to US9 (74400-75999) instead of the stale 'LG4'
+        $this->assertSame('US9', $recentRuns[0]['final_rank']);
+
+        $bestRun = $response->json('career.best_run');
+        $this->assertNotNull($bestRun);
+        $this->assertSame('US9', $bestRun['final_rank']);
+    }
+
     public function test_can_log_single_gacha_pull_and_increment_pity(): void
     {
         $payload = [

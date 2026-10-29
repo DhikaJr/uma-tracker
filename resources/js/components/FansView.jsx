@@ -1564,7 +1564,7 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                                             </td>
                                             <td className="px-4 py-3 whitespace-nowrap">
                                                 <div className="flex items-center gap-2">
-                                                    <RankBadge rank={run.final_rank} size="sm" />
+                                                    <RankBadge rank={run.final_rank} score={run.evaluation_score} size="sm" />
                                                     {run.evaluation_score ? (
                                                         <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700" title="Rating Points">
                                                             {run.evaluation_score.toLocaleString('id-ID')} pts

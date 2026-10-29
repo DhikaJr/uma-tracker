@@ -347,7 +347,7 @@ export default function EditCareerRunModal({
                         <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
                                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Hasil Rank:</span>
-                                <RankBadge rank={form.final_rank || 'G'} size="md" />
+                                <RankBadge rank={form.final_rank || 'G'} score={form.evaluation_score} size="md" />
                                 {form.evaluation_score && parseNumber(form.evaluation_score) > 0 ? (
                                     <span className="text-xs font-mono font-semibold text-emerald-700 dark:text-emerald-400">
                                         (Auto-Rank dari {form.evaluation_score} pts)

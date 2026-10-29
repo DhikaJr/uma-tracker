@@ -2,6 +2,20 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.1.1] - 29 Oktober 2026
+
+### 🛠️ Penyelarasan Badge Rank Evaluasi Dashboard & Pembaruan Komponen RankBadge
+- **Sinkronisasi Badge Rank pada Dashboard (`DashboardController.php`, `DashboardView.jsx`)**:
+  - Memperbaiki ketidaksesuaian tampilan badge rank pada daftar **"Run Karier Terbaru"** di menu Dashboard yang sebelumnya masih menampilkan label rank lama yang tersimpan di basis data (misal: `LG4` untuk Epiphaneia 75.181 pts, `US4` untuk Oguri Cap 67.109 pts, `US5` untuk Taiki Shuttle 67.997 pts).
+  - Menyematkan transformasi dinamis pada endpoint `/api/dashboard/summary` menggunakan `UmaCatalog::getRankFromScore()` untuk `$recentRuns` dan `$bestRun`, sehingga badge rank pada Dashboard selalu sinkron dan konsisten dengan tampilan calibrated rank pada menu Karier (`US9`, `US3`, `US4`).
+- **Penyempurnaan Komponen Visual `RankBadge` (`RankBadge.jsx`, `ratingCalculatorHelper.js`)**:
+  - Menambahkan dukungan properti `score` pada `<RankBadge />` yang secara otomatis mengalibrasi tier rank menggunakan `getRankFromScore(score)` dari tabel benchmark resmi `RANK_THRESHOLDS` (G s.d. LS24).
+  - Menambahkan varian ukuran baru `xs` (`px-1.5 py-0.5 text-[11px] rounded`) pada `RankBadge.jsx` untuk tabel padat pada modal statistik skenario dan karakter.
+  - Memperbarui seluruh komponen pemanggil (`DashboardView.jsx`, `FansView.jsx`, `EditCareerRunModal.jsx`, `ScenarioDetailModal.jsx`, `CharacterScenarioDetailModal.jsx`) untuk meneruskan properti `score`.
+- **Pengujian & Keamanan Basis Data**:
+  - Menambahkan pengujian otomatis `test_dashboard_summary_recent_runs_calibrates_rank_from_evaluation_score` pada [`UmaTrackerApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/UmaTrackerApiTest.php).
+  - Berkas fisik `database/database.sqlite` terproteksi 100% tanpa modifikasi dengan hash SHA-256 yang tetap terjaga identik (`0F032A3E7957391DEAA61C9B92E2B5A3B7460E5AE47C493E7E56671981CF4AEE`).
+
 ## [Versi 3.1.0] - 28 Oktober 2026
 
 ### 🧮 Kalkulator Proyeksi Rating / Skor Evaluasi (Server JP) & Simulasi Aptitude Latihan

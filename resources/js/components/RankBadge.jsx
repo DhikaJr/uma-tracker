@@ -1,13 +1,21 @@
 import React from 'react';
 import { Crown, Star, Sparkles } from 'lucide-react';
+import { getRankFromScore } from '../utils/ratingCalculatorHelper';
 
 /**
- * Visual badge for Uma Musume evaluation ranks from E up to LG24.
+ * Visual badge for Uma Musume evaluation ranks from G up to LS24.
+ * Optionally accepts `score` to dynamically calibrate and guarantee exact rank accuracy.
  */
-export default function RankBadge({ rank, size = 'md' }) {
-    if (!rank) return null;
+export default function RankBadge({ rank, score, size = 'md' }) {
+    let effectiveRank = rank;
+    const numScore = Number(score);
+    if (Number.isFinite(numScore) && numScore > 0) {
+        effectiveRank = getRankFromScore(numScore);
+    }
 
-    const rankStr = String(rank).toUpperCase();
+    if (!effectiveRank) return null;
+
+    const rankStr = String(effectiveRank).toUpperCase();
 
     // Determine tier styling
     let bgClasses = 'bg-slate-700 text-white border-slate-500';
@@ -83,6 +91,7 @@ export default function RankBadge({ rank, size = 'md' }) {
     }
 
     const sizeClasses = {
+        xs: 'px-1.5 py-0.5 text-[11px] rounded',
         sm: 'px-2 py-0.5 text-xs rounded-md',
         md: 'px-2.5 py-1 text-sm rounded-lg',
         lg: 'px-3.5 py-1.5 text-base rounded-xl',

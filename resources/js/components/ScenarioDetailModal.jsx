@@ -345,7 +345,7 @@ export default function ScenarioDetailModal({
                                                             {/* Best Rank Badge */}
                                                             {char.best_rank && (
                                                                 <div className="shrink-0 flex flex-col items-end">
-                                                                    <RankBadge rank={char.best_rank} size="xs" />
+                                                                    <RankBadge rank={char.best_rank} score={char.best_score} size="xs" />
                                                                     <span className="text-[9px] text-slate-400 mt-0.5 font-bold">Best Rank</span>
                                                                 </div>
                                                             )}
@@ -438,7 +438,7 @@ export default function ScenarioDetailModal({
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <RankBadge rank={r.final_rank} size="xs" />
+                                                        <RankBadge rank={r.final_rank} score={r.evaluation_score} size="xs" />
                                                     </div>
                                                 </div>
                                             ))}

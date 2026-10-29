@@ -176,6 +176,9 @@ class CareerController extends Controller
         // Single run record
         $recordRun = CareerRun::orderBy('fans_gained', 'desc')
             ->first();
+        if ($recordRun && $recordRun->evaluation_score !== null && $recordRun->evaluation_score > 0) {
+            $recordRun->final_rank = UmaCatalog::getRankFromScore((int) $recordRun->evaluation_score);
+        }
 
         // Scenario performance breakdown
         $scenarioStats = CareerRun::select(

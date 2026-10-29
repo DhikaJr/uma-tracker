@@ -984,7 +984,7 @@ export default function DashboardView({
                                     className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 hover:border-emerald-200 transition-colors flex items-center justify-between"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <RankBadge rank={run.final_rank} size="sm" />
+                                        <RankBadge rank={run.final_rank} score={run.evaluation_score} size="sm" />
                                         <div>
                                             <div className="font-black text-sm text-slate-900 flex items-center gap-1.5">
                                                 <span>{run.uma_name}</span>

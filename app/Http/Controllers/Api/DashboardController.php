@@ -8,6 +8,7 @@ use App\Models\GachaBanner;
 use App\Models\GachaPity;
 use App\Models\GachaPull;
 use App\Models\UmaCatalogItem;
+use App\Support\UmaCatalog;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -74,6 +75,9 @@ class DashboardController extends Controller
         $avgFans = $totalRuns > 0 ? (int) round($totalFans / $totalRuns) : 0;
 
         $bestRun = CareerRun::orderBy('fans_gained', 'desc')->first();
+        if ($bestRun && $bestRun->evaluation_score !== null && $bestRun->evaluation_score > 0) {
+            $bestRun->final_rank = UmaCatalog::getRankFromScore((int) $bestRun->evaluation_score);
+        }
 
         // Recent 5 Pulls
         $recentPulls = GachaPull::orderBy('pulled_at', 'desc')
@@ -81,11 +85,18 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
-        // Recent 5 Career Runs
+        // Recent 5 Career Runs (dynamically calibrated rank based on evaluation score)
         $recentRuns = CareerRun::orderBy('run_date', 'desc')
             ->orderBy('id', 'desc')
             ->take(5)
-            ->get();
+            ->get()
+            ->transform(function (CareerRun $run) {
+                if ($run->evaluation_score !== null && $run->evaluation_score > 0) {
+                    $run->final_rank = UmaCatalog::getRankFromScore((int) $run->evaluation_score);
+                }
+
+                return $run;
+            });
 
         // Fan trend data for mini dashboard chart (last 7 recorded dates)
         $fanTrends = CareerRun::select(

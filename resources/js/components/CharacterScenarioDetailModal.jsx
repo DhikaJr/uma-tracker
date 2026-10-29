@@ -141,7 +141,7 @@ export default function CharacterScenarioDetailModal({
                     <div className="flex items-center gap-2 shrink-0">
                         {detail?.best_rank && (
                             <div className="hidden sm:flex flex-col items-end mr-1">
-                                <RankBadge rank={detail.best_rank} size="sm" />
+                                <RankBadge rank={detail.best_rank} score={detail.best_score} size="sm" />
                                 <span className="text-[9px] text-slate-400 font-bold mt-0.5">Best Overall</span>
                             </div>
                         )}
@@ -340,7 +340,7 @@ export default function CharacterScenarioDetailModal({
 
                                                         {sc.best_rank && (
                                                             <div className="shrink-0 flex flex-col items-end">
-                                                                <RankBadge rank={sc.best_rank} size="xs" />
+                                                                <RankBadge rank={sc.best_rank} score={sc.best_score} size="xs" />
                                                                 <span className="text-[9px] text-slate-400 mt-0.5 font-bold">Best Rank</span>
                                                             </div>
                                                         )}
@@ -409,7 +409,7 @@ export default function CharacterScenarioDetailModal({
                                                                 {r.scenario}
                                                             </td>
                                                             <td className="px-3.5 py-2">
-                                                                <RankBadge rank={r.final_rank || 'G'} size="xs" />
+                                                                <RankBadge rank={r.final_rank || 'G'} score={r.evaluation_score} size="xs" />
                                                             </td>
                                                             <td className="px-3.5 py-2 text-right font-mono font-bold text-slate-700 dark:text-slate-300">
                                                                 {r.evaluation_score ? r.evaluation_score.toLocaleString('id-ID') : '-'}

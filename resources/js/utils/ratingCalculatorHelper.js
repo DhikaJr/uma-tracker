@@ -581,3 +581,23 @@ export function calculateProjectedRating({
         progressPercent: Math.round(progressPercent * 10) / 10,
     };
 }
+
+/**
+ * Look up the evaluation rank for a given score (JP Server standard).
+ * @param {number|string} score
+ * @returns {string}
+ */
+export function getRankFromScore(score) {
+    const num = Number(score);
+    if (!Number.isFinite(num) || num <= 0) return 'G';
+    let matchedRank = 'G';
+    for (let i = 0; i < RANK_THRESHOLDS.length; i++) {
+        if (num >= RANK_THRESHOLDS[i].min) {
+            matchedRank = RANK_THRESHOLDS[i].rank;
+        } else {
+            break;
+        }
+    }
+    return matchedRank;
+}
+
