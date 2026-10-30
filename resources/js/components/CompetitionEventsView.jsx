@@ -24,8 +24,6 @@ import {
     SlidersHorizontal,
     Info,
     Clock,
-    Calendar,
-    RotateCcw,
     PlayCircle,
     History
 } from 'lucide-react';
@@ -171,10 +169,8 @@ export default function CompetitionEventsView({ onNotify }) {
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [showNoDebuffModal, setShowNoDebuffModal] = useState(false);
 
-    // Today's real date and simulation state
-    const todayRealStr = new Date().toISOString().slice(0, 10);
-    const [activeDate, setActiveDate] = useState(todayRealStr);
-    const isSimulated = activeDate !== todayRealStr;
+    // Today's real date
+    const activeDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
     const fetchEvents = async () => {
         setLoading(true);
@@ -322,98 +318,23 @@ export default function CompetitionEventsView({ onNotify }) {
                 </div>
             </div>
 
-            {/* Date Reference & Simulation Bar */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                    <div className={`p-2.5 rounded-2xl ${isSimulated ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-slate-950 shadow-md shadow-amber-500/20' : 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20'} shrink-0`}>
-                        <CalendarDays className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                {isSimulated ? 'Tanggal Acuan (Simulasi Pengujian)' : 'Waktu Hari Ini'}
-                            </span>
-                            {isSimulated ? (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300">
-                                    Mode Uji Tanggal Aktif
-                                </span>
-                            ) : (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300">
-                                    Hari Ini (Real)
-                                </span>
-                            )}
-                        </div>
-                        <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2 mt-0.5">
-                            <span>{formatIndonesianDate(activeDate, 'long')}</span>
-                            <span className="font-mono text-xs font-semibold text-slate-400">({activeDate})</span>
-                        </div>
-                    </div>
+            {/* Date Reference Bar */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-xs flex items-center gap-3.5">
+                <div className="p-2.5 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20 shrink-0">
+                    <CalendarDays className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-
-                {/* Date picker input & Quick Simulation Presets */}
-                <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-                    <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-200">
-                        <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <input
-                            type="date"
-                            value={activeDate}
-                            onChange={(e) => {
-                                if (e.target.value) setActiveDate(e.target.value);
-                            }}
-                            className="bg-transparent text-slate-800 dark:text-slate-100 font-mono text-xs focus:outline-none cursor-pointer"
-                            title="Pilih tanggal acuan untuk simulasi event"
-                        />
+                <div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            Waktu Hari Ini
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300">
+                            Hari Ini (Real)
+                        </span>
                     </div>
-
-                    {/* Quick Simulation Presets */}
-                    <div className="flex flex-wrap items-center gap-1.5">
-                        {isSimulated && (
-                            <button
-                                type="button"
-                                onClick={() => setActiveDate(todayRealStr)}
-                                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
-                                title="Kembalikan ke tanggal hari ini asli"
-                            >
-                                <RotateCcw className="w-3 h-3" />
-                                <span>Reset Hari Ini</span>
-                            </button>
-                        )}
-                        <button
-                            type="button"
-                            onClick={() => setActiveDate('2026-10-20')}
-                            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                                activeDate === '2026-10-20'
-                                    ? 'bg-amber-500 text-slate-950 font-black shadow-xs ring-2 ring-amber-400'
-                                    : 'bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60'
-                            }`}
-                            title="Uji simulasi tanggal 20 Oktober 2026 (CM Classic Mulai)"
-                        >
-                            <span>Uji 20 Okt 2026 (CM Classic)</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setActiveDate('2026-11-25')}
-                            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                                activeDate === '2026-11-25'
-                                    ? 'bg-indigo-600 text-white font-black shadow-xs ring-2 ring-indigo-400'
-                                    : 'bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/60'
-                            }`}
-                            title="Uji simulasi periode LoH Akhir November 2026"
-                        >
-                            <span>Uji Akhir Nov 2026 (LoH)</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setActiveDate('2026-12-25')}
-                            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                                activeDate === '2026-12-25'
-                                    ? 'bg-amber-500 text-slate-950 font-black shadow-xs ring-2 ring-amber-400'
-                                    : 'bg-slate-100 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-                            }`}
-                            title="Uji simulasi periode CM Long Akhir Desember 2026"
-                        >
-                            <span>Akhir Des 2026</span>
-                        </button>
+                    <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2 mt-0.5">
+                        <span>{formatIndonesianDate(activeDate, 'long')}</span>
+                        <span className="font-mono text-xs font-semibold text-slate-400">({activeDate})</span>
                     </div>
                 </div>
             </div>

@@ -2,6 +2,26 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.1.4] - 30 Oktober 2026
+
+### 🏆 Pembaruan Benchmark Turnamen GameWith Skenario Baru, Notifikasi Arsip Event & Penyederhanaan Header Waktu
+- **Pembersihan Kalender Percobaan & Fokus Waktu Riil (`CompetitionEventsView.jsx`)**:
+  - Menghapus kontrol kalender uji tanggal, input pemilih tanggal simulasi, dan tombol-tombol pintasan uji coba (*Uji 20 Okt 2026*, *Uji Akhir Nov 2026*, *Akhir Des 2026*) dari bilah referensi waktu event kompetisi.
+  - Mempertahankan tampilan informasi waktu hari ini yang bersih dan elegan pada sisi kiri: ikon kalender hijau teal, label *"WAKTU HARI INI"*, badge hijau *"Hari Ini (Real)"*, serta format tanggal lengkap Bahasa Indonesia beserta representasi ISO `YYYY-MM-DD`.
+- **Kartu Notifikasi Arsip Turnamen Telah Selesai (`CompetitionEventDetailView.jsx`)**:
+  - Menyematkan kartu notifikasi informatif khusus saat pengguna membuka rincian event yang telah berstatus selesai (`isPast` / `status === 'past'`), diposisikan tepat di bawah tombol kembali ke daftar event dan breadcrumb serta di atas kartu banner utama turnamen.
+  - Menampilkan ikon centang sukses hijau, lencana *"Arsip Turnamen"*, judul *"Event Ini Sudah Selesai"*, dan teks keterangan: *"Event ini sudah selesai, Anda tetap dapat melihat rincian event sebagai arsip."*
+- **Sinkronisasi Penuh Rekomendasi Target Stats GameWith Pasca-Rilis Skenario Baru (`competitionEventGuides.json`, `CompetitionEventTest.php`)**:
+  - Mengambil dan mengintegrasikan pembaruan data target stats dari GameWith JP pasca-peluncuran skenario pelatihan terbaru *The Shuntaisai Festival* (朋、史解き ‐午式駿大祭‐):
+    - **League of Heroes November 2026 (Kyoto 3000m - LoH Long)**:
+      - *Intermediate (初~中級者)*: Power ditingkatkan menjadi `1400` (Speed 2000, Stamina 1600, Power 1400, Guts 1000, Wisdom 1400).
+      - *Advanced (上級者)*: Speed ditingkatkan menjadi `2200`, Power `1700`, Wisdom `1700` (Speed 2200, Stamina 1800, Power 1700, Guts 1200, Wisdom 1700), status provisional dilepas (`is_provisional: false`, label `"Advanced"`).
+    - **Champions Meeting LONG Desember 2026 (Nakayama 2500m - Arima Kinen CM)**:
+      - *Intermediate (初~中級者)*: Power ditingkatkan menjadi `1400` (Speed 2000, Stamina 1600 + Gold Recovery 1, Power 1400, Guts 1000, Wisdom 1400).
+      - *Advanced (上級者)*: Speed ditingkatkan menjadi `2200`, Power `1700`, Wisdom `1700` (Speed 2200, Stamina 1800 + Gold Recovery 1, Power 1700, Guts 1200, Wisdom 1700), status provisional dilepas (`is_provisional: false`, label `"Advanced"`).
+  - Memperbarui catatan skenario (*scenario note*) menjadi: *"Acuan lingkungan skenario baru The Shuntaisai Festival (旬菜祭) JP per akhir Oktober 2026."*
+  - Menyelaraskan pengujian otomatis backend pada `CompetitionEventTest.php` untuk memvalidasi nilai target stat yang baru dan konfirmasi non-provisional (24 test feature lulus 100%).
+
 ## [Versi 3.1.3] - 30 Oktober 2026
 
 ### 🛡️ Validasi Ketat Banner Gacha, Penyederhanaan Header & Interval Refresh Circle 1 Jam

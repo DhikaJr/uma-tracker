@@ -943,13 +943,20 @@ class CompetitionEventTest extends TestCase
         $recNov = $lohNov->recommended_build_guide;
         $this->assertTrue($recNov['has_guide_reference']);
         $this->assertSame('https://gamewith.jp/uma-musume/article/show/574934', $recNov['source_url']);
-        $this->assertTrue($recNov['stat_tiers'][1]['is_provisional']);
+        $this->assertFalse($recNov['stat_tiers'][1]['is_provisional']);
+        $this->assertSame('2200', $recNov['stat_tiers'][1]['speed']);
+        $this->assertSame('1700', $recNov['stat_tiers'][1]['power']);
+        $this->assertSame('1700', $recNov['stat_tiers'][1]['wisdom']);
 
         // CM Dec 2026 (Nakayama 2500m)
         $cmDec = CompetitionEvent::where('event_key', 'cm-2026-12')->firstOrFail();
         $recDec = $cmDec->recommended_build_guide;
         $this->assertTrue($recDec['has_guide_reference']);
         $this->assertSame('https://gamewith.jp/uma-musume/article/show/578925', $recDec['source_url']);
+        $this->assertFalse($recDec['stat_tiers'][1]['is_provisional']);
+        $this->assertSame('2200', $recDec['stat_tiers'][1]['speed']);
+        $this->assertSame('1700', $recDec['stat_tiers'][1]['power']);
+        $this->assertSame('1700', $recDec['stat_tiers'][1]['wisdom']);
         $this->assertStringContainsString('Gold Recovery 1', $recDec['stat_tiers'][0]['stamina']);
         $this->assertStringContainsString('Gold Recovery 1', $recDec['stat_tiers'][1]['stamina']);
         $this->assertNotNull($recDec['recovery_guide']);

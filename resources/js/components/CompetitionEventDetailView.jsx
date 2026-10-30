@@ -132,7 +132,8 @@ export default function CompetitionEventDetailView({ event, onBack, activeDate }
     const isLoH = event.event_type === 'league_of_heroes';
     const hasNoDebuff = event.special_rule === 'no_debuff';
 
-    const eventStatus = activeDate ? getEventStatus(event, activeDate) : null;
+    const refDate = activeDate || new Date().toISOString().slice(0, 10);
+    const eventStatus = getEventStatus(event, refDate);
     const isOngoing = eventStatus?.status === 'ongoing';
     const isUpcoming = eventStatus?.status === 'upcoming';
     const isPast = eventStatus?.status === 'past';
@@ -326,6 +327,28 @@ export default function CompetitionEventDetailView({ event, onBack, activeDate }
                     </span>
                 </div>
             </div>
+
+            {/* Completed Event Archive Notice */}
+            {isPast && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 shadow-xs flex items-start sm:items-center gap-3.5 animate-fadeIn">
+                    <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-emerald-600 dark:text-emerald-400 shrink-0">
+                        <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                                Event Ini Sudah Selesai
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                Arsip Turnamen
+                            </span>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                            Event ini sudah selesai, Anda tetap dapat melihat rincian event sebagai arsip.
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Main Event Header Card */}
             <div className={`p-6 sm:p-8 rounded-3xl text-white shadow-xl border overflow-hidden relative ${

@@ -55,10 +55,10 @@
     "event_key": "loh-2026-11",
     "source_name": "GameWith",
     "source_url": "https://gamewith.jp/uma-musume/article/show/574934",
-    "verified_at": "2026-10-14",
+    "verified_at": "2026-10-30",
     "is_community_recommendation": true,
     "benchmark_disclaimer": "Angka di bawah adalah contoh patokan rekomendasi komunitas dari GameWith, bukan persyaratan resmi Cygames maupun jaminan kemenangan.",
-    "scenario_note": "*Catatan GameWith: Target Advanced untuk LoH November masih bersifat sementara sebelum skenario 育成 (training) baru yang direncanakan rilis pada akhir Oktober 2026.",
+    "scenario_note": "Acuan lingkungan skenario baru The Shuntaisai Festival (旬菜祭) JP per akhir Oktober 2026.",
     "stat_tiers": [
       {
         "tier_key": "intermediate",
@@ -66,32 +66,32 @@
         "is_provisional": false,
         "speed": "2000",
         "stamina": "1600",
-        "power": "1300",
+        "power": "1400",
         "guts": "1000",
         "wisdom": "1400",
         "stats": {
           "speed": "2000",
           "stamina": "1600",
-          "power": "1300",
+          "power": "1400",
           "guts": "1000",
           "wisdom": "1400"
         }
       },
       {
         "tier_key": "advanced",
-        "tier_label": "Advanced*",
-        "is_provisional": true,
-        "speed": "2100",
+        "tier_label": "Advanced",
+        "is_provisional": false,
+        "speed": "2200",
         "stamina": "1800",
-        "power": "1600",
+        "power": "1700",
         "guts": "1200",
-        "wisdom": "1600",
+        "wisdom": "1700",
         "stats": {
-          "speed": "2100",
+          "speed": "2200",
           "stamina": "1800",
-          "power": "1600",
+          "power": "1700",
           "guts": "1200",
-          "wisdom": "1600"
+          "wisdom": "1700"
         }
       }
     ],
@@ -107,10 +107,10 @@
     "event_key": "cm-2026-12",
     "source_name": "GameWith",
     "source_url": "https://gamewith.jp/uma-musume/article/show/578925",
-    "verified_at": "2026-10-14",
+    "verified_at": "2026-10-30",
     "is_community_recommendation": true,
     "benchmark_disclaimer": "Angka di bawah adalah contoh patokan rekomendasi komunitas dari GameWith, bukan persyaratan resmi Cygames maupun jaminan kemenangan.",
-    "scenario_note": "*Catatan GameWith: Target Advanced untuk CM Desember masih bersifat sementara sebelum skenario 育成 (training) baru yang direncanakan rilis pada akhir Oktober 2026.",
+    "scenario_note": "Acuan lingkungan skenario baru The Shuntaisai Festival (旬菜祭) JP per akhir Oktober 2026.",
     "stat_tiers": [
       {
         "tier_key": "intermediate",
@@ -118,40 +118,40 @@
         "is_provisional": false,
         "speed": "2000",
         "stamina": "1600 + Gold Recovery 1",
-        "power": "1300",
+        "power": "1400",
         "guts": "1000",
         "wisdom": "1400",
         "stats": {
           "speed": "2000",
           "stamina": "1600 + Gold Recovery 1",
-          "power": "1300",
+          "power": "1400",
           "guts": "1000",
           "wisdom": "1400"
         }
       },
       {
         "tier_key": "advanced",
-        "tier_label": "Advanced*",
-        "is_provisional": true,
-        "speed": "2100",
+        "tier_label": "Advanced",
+        "is_provisional": false,
+        "speed": "2200",
         "stamina": "1800 + Gold Recovery 1",
-        "power": "1600",
+        "power": "1700",
         "guts": "1200",
-        "wisdom": "1750",
+        "wisdom": "1700",
         "stats": {
-          "speed": "2100",
+          "speed": "2200",
           "stamina": "1800 + Gold Recovery 1",
-          "power": "1600",
+          "power": "1700",
           "guts": "1200",
-          "wisdom": "1750"
+          "wisdom": "1700"
         }
       }
     ],
     "recovery_guide": {
       "summary_label": "Contoh Acuan Tabel GameWith: Stamina 1600–1800 + 1 Gold Recovery (Dapat Disesuaikan)",
       "recommendations": [
-        "Tabel GameWith mencantumkan contoh patokan Stamina 1600 + Gold Recovery 1 (Pemula/Intermediate) dan 1800 + Gold Recovery 1 (Advanced*).",
-        "Gold Recovery tidak bersifat mutlak untuk setiap karakter; kebutuhan pemulihan dapat disesuaikan dengan alternatif pemulihan lain (seperti skill recovery bawaan/evolusi karakter, kombinasi White Recovery, maupun distribusi stats akhir)."
+        "Tabel GameWith mencantumkan contoh patokan Stamina 1600 + Gold Recovery 1 (Pemula/Intermediate) dan 1800 + Gold Recovery 1 (Advanced).",
+        "Gold Recovery tidak bersifat mutlak untuk setiap karakter, terutama bagi pemain tingkat lanjut; kebutuhan pemulihan dapat disesuaikan dengan alternatif pemulihan lain (seperti White Recovery berbobot tinggi, skill hijau penambah stamina, skill kecepatan berefek pemulihan, maupun distribusi stats akhir)."
       ]
     }
   }
