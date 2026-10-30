@@ -71,7 +71,7 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
   - Menambahkan varian ukuran baru `xs` (`px-1.5 py-0.5 text-[11px] rounded`) pada `RankBadge.jsx` untuk tabel padat pada modal statistik skenario dan karakter.
   - Memperbarui seluruh komponen pemanggil (`DashboardView.jsx`, `FansView.jsx`, `EditCareerRunModal.jsx`, `ScenarioDetailModal.jsx`, `CharacterScenarioDetailModal.jsx`) untuk meneruskan properti `score`.
 - **Pengujian & Keamanan Basis Data**:
-  - Menambahkan pengujian otomatis `test_dashboard_summary_recent_runs_calibrates_rank_from_evaluation_score` pada [`UmaTrackerApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/UmaTrackerApiTest.php).
+  - Menambahkan pengujian otomatis `test_dashboard_summary_recent_runs_calibrates_rank_from_evaluation_score` pada `UmaTrackerApiTest.php`.
   - Berkas fisik `database/database.sqlite` terproteksi 100% tanpa modifikasi dengan hash SHA-256 yang tetap terjaga identik (`0F032A3E7957391DEAA61C9B92E2B5A3B7460E5AE47C493E7E56671981CF4AEE`).
 
 ## [Versi 3.1.0] - 28 Oktober 2026
@@ -87,7 +87,7 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
     - Skill bertipe *Inherited Unique* (IUS) memiliki skor dasar flat $180\text{ pts}$, dan skill bertipe *Purple / Negative* mempertahankan pengurangan rating negatif.
   - **Dataset Katalog Skor Skill Server JP Ramping (`ratingSkillsCatalog.json`)**:
     - Memuat 1.926+ skill server JP lengkap dengan nama EN, nama JP, skor dasar, kategori tipe (*Gold*, *Evolution*, *White*, *Inherited*, *Purple*), dan peran aptitude.
-    - Didaftarkan sebagai chunk mandiri terpisah `data-rating-skills` pada [`vite.config.js`](file:///c:/Projects/uma-tracker/vite.config.js) berukuran ramping ($\approx 352\text{ kB}$ uncompressed, $71\text{ kB}$ gzipped) untuk memastikan seluruh chunk tetap $< 500\text{ kB}$.
+    - Didaftarkan sebagai chunk mandiri terpisah `data-rating-skills` pada `vite.config.js` berukuran ramping ($\approx 352\text{ kB}$ uncompressed, $71\text{ kB}$ gzipped) untuk memastikan seluruh chunk tetap $< 500\text{ kB}$.
 - **Antarmuka Interaktif Sesuai Standar Komunitas (`RatingCalculatorView.jsx`)**:
   - **Race Configuration**: Dilengkapi pemilih cepat opsional **"🌸 Isi Otomatis dari Karakter Koleksi"** untuk memuat kesepuluh aptitude dan tingkat bintang karakter koleksi secara instan.
   - **Stats & Rating Controls**: 5 input stat dengan step cepat ($-50$, $+50$, preset $0$, $1200$, $1500$), pemilih tingkat bintang $★1–★5$, dan level unique skill.
@@ -98,7 +98,7 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
   - Menambahkan tombol pintas **"🧮 Hitung Proyeksi Rating"** di samping label *Final Evaluation Rank & Rating Score* pada formulir pencatatan karier.
   - Menambahkan tombol aksi **"📥 Terapkan ke Form Pencatatan Karier"** di dalam kalkulator untuk memindahkan nilai rating terproyeksi dan menentukan rank secara otomatis ke formulir karier.
 - **Pengujian & Keamanan Basis Data**:
-  - Menambahkan pengujian otomatis pada [`UmaTrackerApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/UmaTrackerApiTest.php) dan verifikasi formula helper untuk memastikan akurasi perhitungan ($0\text{ stats} + 0\text{ skills} + ★3 + \text{Lv3} \to \text{UNIQUE} = 510, \text{PROJECTED} = 510, \text{Rank} = G+, \text{Next} = F \text{ at } 600 \text{ (+90)}$).
+  - Menambahkan pengujian otomatis pada `UmaTrackerApiTest.php` dan verifikasi formula helper untuk memastikan akurasi perhitungan ($0\text{ stats} + 0\text{ skills} + ★3 + \text{Lv3} \to \text{UNIQUE} = 510, \text{PROJECTED} = 510, \text{Rank} = G+, \text{Next} = F \text{ at } 600 \text{ (+90)}$).
   - Berkas fisik `database/database.sqlite` terproteksi 100% tanpa modifikasi (hash SHA-256 tetap identik).
 
 ## [Versi 3.0.1] - 28 Oktober 2026
@@ -108,15 +108,15 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
   - Menyinkronkan threshold minimum resmi game dari referensi komunitas terverifikasi `beta.daftuyda.moe` mencakup 298 rank dari `G` hingga tier puncak tertinggi `LS24`.
   - Mengoreksi rentang skor `US` s.d. `US9` (`63.400` – `75.999`) dan menggeser batas ambang awal `LG` ke `76.000` (menggantikan batas lama `72.400` yang keliru), sehingga skor seperti `72.400` kini terklasifikasi akurat sebagai `US7`, `75.999` sebagai `US9`, dan `76.000` sebagai `LG`.
   - Memperluas pemetaan rank keluarga Legend: menambahkan seluruh 25 sub-tier untuk `LE` (`105.400` s.d. `118.200`), `LD` (`118.800` s.d. `132.000`), `LC` (`132.500` s.d. `146.100`), `LB` (`146.600` s.d. `160.500`), `LA` (`161.100` s.d. `175.300`), dan `LS` (`175.900` s.d. `190.400+`).
-  - Mengimplementasikan kalkulasi rank dinamis berbasis skor evaluasi pada endpoint riwayat karier ([`CareerController.php`](file:///c:/Projects/uma-tracker/app/Http/Controllers/Api/CareerController.php)) agar pembacaan rank evaluasi pada seluruh catatan karier yang telah tersimpan secara otomatis tersinkronisasi dengan tabel standar terbaru tanpa perlu memodifikasi berkas fisik database SQLite.
-  - Memperbarui antarmuka visual [`RankBadge.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/RankBadge.jsx) dengan lencana bergradien premium, ikon mahkota, dan efek visual khas untuk seluruh varian tier Legend (`LG`, `LF`, `LE`, `LD`, `LC`, `LB`, `LA`, dan efek kosmik bercahaya `LS`).
-  - Memperbarui tombol preset coba skor cepat pada [`FansView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/FansView.jsx): memperbarui `76.000 (LG)` serta menambahkan `105.400 (LE)` dan `175.900 (LS)`.
-  - Memperbarui parser OCR pada [`CareerOcrZone.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CareerOcrZone.jsx) dengan ekspresi reguler `L[GFEDCBAS](?:[1-9]|1\d|2[0-4])?` untuk mengenali rank tier Legend hingga LS24 dari tangkapan layar.
+  - Mengimplementasikan kalkulasi rank dinamis berbasis skor evaluasi pada endpoint riwayat karier (`CareerController.php`) agar pembacaan rank evaluasi pada seluruh catatan karier yang telah tersimpan secara otomatis tersinkronisasi dengan tabel standar terbaru tanpa perlu memodifikasi berkas fisik database SQLite.
+  - Memperbarui antarmuka visual `RankBadge.jsx` dengan lencana bergradien premium, ikon mahkota, dan efek visual khas untuk seluruh varian tier Legend (`LG`, `LF`, `LE`, `LD`, `LC`, `LB`, `LA`, dan efek kosmik bercahaya `LS`).
+  - Memperbarui tombol preset coba skor cepat pada `FansView.jsx`: memperbarui `76.000 (LG)` serta menambahkan `105.400 (LE)` dan `175.900 (LS)`.
+  - Memperbarui parser OCR pada `CareerOcrZone.jsx` dengan ekspresi reguler `L[GFEDCBAS](?:[1-9]|1\d|2[0-4])?` untuk mengenali rank tier Legend hingga LS24 dari tangkapan layar.
 - **Pembersihan Direktori Build & Penegakan `emptyOutDir` pada Vite (`vite.config.js`)**:
-  - Mengaktifkan `build.emptyOutDir: true` secara eksplisit pada konfigurasi bundler [`vite.config.js`](file:///c:/Projects/uma-tracker/vite.config.js).
+  - Mengaktifkan `build.emptyOutDir: true` secara eksplisit pada konfigurasi bundler `vite.config.js`.
   - Membersihkan tumpukan chunk usang yang tertinggal di `public/build/`, sehingga registrasi precache PWA Service Worker menjadi lebih ramping (79 entri aktif).
 - **Pengujian & Keamanan Basis Data**:
-  - Menambahkan pengujian komprehensif pada [`UmaTrackerApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/UmaTrackerApiTest.php) untuk validasi konversi skor `G` hingga `LS24` dan batas-batas ambang kritis (`72400` -> `US7`, `75999` -> `US9`, `76000` -> `LG`, `90900` -> `LG24`, `91400` -> `LF`, `105400` -> `LE`, `190400` -> `LS24`).
+  - Menambahkan pengujian komprehensif pada `UmaTrackerApiTest.php` untuk validasi konversi skor `G` hingga `LS24` dan batas-batas ambang kritis (`72400` -> `US7`, `75999` -> `US9`, `76000` -> `LG`, `90900` -> `LG24`, `91400` -> `LF`, `105400` -> `LE`, `190400` -> `LS24`).
   - Seluruh pengujian PHPUnit lulus 100% dan berkas fisik `database/database.sqlite` terproteksi dengan integritas hash yang tetap terjaga.
 
 ## [Versi 3.0.0] - 27 Oktober 2026
@@ -145,7 +145,7 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
   - Menghimpun seluruh skill yang dapat diperoleh dari 6 kartu di dalam formasi, terbagi rapi ke dalam kategori *Gold / Rare*, *Hint Skills*, dan *Event Skills*.
   - Melakukan deduplikasi skill dengan menampilkan lencana indikator kartu penyedia (`🔥 X Kartu di Deck` bila skill disediakan oleh lebih dari 1 kartu di formasi).
   - Menyediakan filter taktis (Semua, Gold/Rare, Hint, Event) serta kotak pencarian instan untuk kemudahan menyusun rencana skill karakter.
-  - Setiap skill dapat diklik langsung untuk memunculkan modal detail formula matematis ([`SkillDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/SkillDetailModal.jsx)) tanpa kehilangan status formasi dek.
+  - Setiap skill dapat diklik langsung untuk memunculkan modal detail formula matematis (`SkillDetailModal.jsx`) tanpa kehilangan status formasi dek.
 - **Backend API Penyimpanan & Manajemen Preset Formasi Dek (`CollectionController.php`, `routes/api.php`)**:
   - Mendaftarkan endpoint RESTful terpadu:
     - `GET /api/collection/deck-presets`: Mengambil seluruh preset formasi dek tersimpan.
@@ -153,28 +153,28 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
     - `DELETE /api/collection/deck-presets/{id}`: Menghapus preset formasi dek.
   - Menggunakan penyimpanan file JSON terisolasi di `storage/app/support_deck_presets.json` dengan dukungan pengalihan path dinamis (`CollectionController::$deckPresetsFilePath`) untuk menjamin keselamatan dan isolasi database SQLite fisik selama eksekusi pengujian otomatis.
 - **Verifikasi Pengujian & Integritas Kode**:
-  - Menambahkan pengujian CRUD lengkap pada [`CollectionApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CollectionApiTest.php) untuk memvalidasi pembuatan, pembacaan, pembaruan, penghapusan, dan validasi field preset dek.
-  - Memperbarui pengujian [`ChangelogApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/ChangelogApiTest.php) ke versi `3.0.0`.
+  - Menambahkan pengujian CRUD lengkap pada `CollectionApiTest.php` untuk memvalidasi pembuatan, pembacaan, pembaruan, penghapusan, dan validasi field preset dek.
+  - Memperbarui pengujian `ChangelogApiTest.php` ke versi `3.0.0`.
   - Seluruh pengujian otomatis PHPUnit lulus 100% dan integritas berkas fisik basis data SQLite tetap terlindungi.
 
 ## [Versi 2.9.2] - 27 Oktober 2026
 
 ### 🌟 Integrasi Skenario The Shuntaisai Festival, Kalibrasi Kategori Gacha & Penutupan Bertingkat Modal
 - **Penutupan Bertingkat Modal saat Menekan Shortcut *"Cari Kartu & Karakter Pemberi Skill Ini"* (`SkillDetailModal.jsx`, `CharacterDetailModal.jsx`, `SupportCardDetailModal.jsx`, `NoDebuffSkillsModal.jsx`, `CollectionView.jsx`)**:
-  - Menyempurnakan alur navigasi dari modal detail formula skill: menekan tombol *"🔎 Cari Kartu & Karakter Pemberi Skill Ini"* kini otomatis menutup modal anak (`SkillDetailModal`) sekaligus modal induk di belakangnya ([`CharacterDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CharacterDetailModal.jsx), [`SupportCardDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/SupportCardDetailModal.jsx), atau [`NoDebuffSkillsModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/NoDebuffSkillsModal.jsx)) secara serentak via penanganan event global `uma:find-skill-sources` dan callback `onFindSkillSources`.
-  - Mereset seluruh state modal aktif (`selectedCharForDetail`, `selectedCardForDetail`, `previewCard`, `previewCharacter`, `isCompareModalOpen`) pada [`CollectionView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CollectionView.jsx) sehingga antarmuka *Reverse Skill Finder* langsung tampil bersih tanpa modal yang menggantung atau menghalangi layar.
+  - Menyempurnakan alur navigasi dari modal detail formula skill: menekan tombol *"🔎 Cari Kartu & Karakter Pemberi Skill Ini"* kini otomatis menutup modal anak (`SkillDetailModal`) sekaligus modal induk di belakangnya (`CharacterDetailModal.jsx`, `SupportCardDetailModal.jsx`, atau `NoDebuffSkillsModal.jsx`) secara serentak via penanganan event global `uma:find-skill-sources` dan callback `onFindSkillSources`.
+  - Mereset seluruh state modal aktif (`selectedCharForDetail`, `selectedCardForDetail`, `previewCard`, `previewCharacter`, `isCompareModalOpen`) pada `CollectionView.jsx` sehingga antarmuka *Reverse Skill Finder* langsung tampil bersih tanpa modal yang menggantung atau menghalangi layar.
 - **Kategorisasi Gacha Banner 2026-10-26 ke *"Anniversary & Skenario Baru 2026"* (`GachaBanner.php`, `GachaController.php`, `GameToraSyncService.php`, `GachaView.jsx`)**:
   - Mengelompokkan banner gacha periode 26 Oktober 2026 (*Pickup Pretty Derby Gacha: Daiwa Scarlet [陣風の花紺青]* dan *Support Card Gacha: SSR [Time of Departure] Mayano Top Gun & SSR [いとどめでたき、まつりかな] Azuma*) ke dalam grup kategori `scenario_release` (*Anniversary & Skenario Baru 2026*), bukan lagi ke dalam *Standard Gacha*.
-  - Mengimplementasikan accessor `getCategoryAttribute` dan `scopeByCategory` pada model [`GachaBanner.php`](file:///c:/Projects/uma-tracker/app/Models/GachaBanner.php) untuk mengembalikan `scenario_release` secara deterministik untuk banner bertanggal `2026-10-26`.
-  - Memperbarui query filter dan relasi `banner` pada [`GachaController.php`](file:///c:/Projects/uma-tracker/app/Http/Controllers/Api/GachaController.php) agar menyertakan `start_date` pada data pull dan riwayat SSR.
-  - Memperbarui sinkronisasi GameTora pada [`GameToraSyncService.php`](file:///c:/Projects/uma-tracker/app/Services/GameToraSyncService.php) untuk mengenali banner rilis skenario *The Shuntaisai Festival*.
-  - Menambahkan helper `isScenarioReleaseBanner` dan styling badge ungu *Scenario Release* pada opsi pemilihan banner dan riwayat pull di [`GachaView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/GachaView.jsx).
+  - Mengimplementasikan accessor `getCategoryAttribute` dan `scopeByCategory` pada model `GachaBanner.php` untuk mengembalikan `scenario_release` secara deterministik untuk banner bertanggal `2026-10-26`.
+  - Memperbarui query filter dan relasi `banner` pada `GachaController.php` agar menyertakan `start_date` pada data pull dan riwayat SSR.
+  - Memperbarui sinkronisasi GameTora pada `GameToraSyncService.php` untuk mengenali banner rilis skenario *The Shuntaisai Festival*.
+  - Menambahkan helper `isScenarioReleaseBanner` dan styling badge ungu *Scenario Release* pada opsi pemilihan banner dan riwayat pull di `GachaView.jsx`.
 - **Dukungan Skenario Latihan *"The Shuntaisai Festival"* & Pilihan Bawaan Teratas Menu Karier (`UmaCatalog.php`, `FansView.jsx`, `EditCareerRunModal.jsx`, `CareerOcrZone.jsx`)**:
-  - Menambahkan skenario baru **"The Shuntaisai Festival"** (旬菜祭 / Shuntaisai) pada indeks teratas (urutan ke-0) daftar skenario resmi di [`UmaCatalog.php`](file:///c:/Projects/uma-tracker/app/Support/UmaCatalog.php) mengikuti linimasa rilis terbaru server JP, serta menambahkan label tema `'shuntaisai'` pada `VERSION_LABELS`.
-  - Mengatur nilai bawaan (*default selection*) dropdown skenario pelatihan pada form pencatatan sesi karier ([`FansView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/FansView.jsx)) dan modal sunting ([`EditCareerRunModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/EditCareerRunModal.jsx)) ke opsi paling atas (*The Shuntaisai Festival*), menggantikan default sebelumnya (*The Twinkle Legends*).
-  - Menambahkan signature deteksi OCR multi-bahasa (Inggris, Jepang, dan Indonesia: `The Shuntaisai Festival`, `shuntaisai`, `旬菜祭`, `しゅんさいさい`, `走れ！旬菜祭`) pada [`CareerOcrZone.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CareerOcrZone.jsx).
+  - Menambahkan skenario baru **"The Shuntaisai Festival"** (旬菜祭 / Shuntaisai) pada indeks teratas (urutan ke-0) daftar skenario resmi di `UmaCatalog.php` mengikuti linimasa rilis terbaru server JP, serta menambahkan label tema `'shuntaisai'` pada `VERSION_LABELS`.
+  - Mengatur nilai bawaan (*default selection*) dropdown skenario pelatihan pada form pencatatan sesi karier (`FansView.jsx`) dan modal sunting (`EditCareerRunModal.jsx`) ke opsi paling atas (*The Shuntaisai Festival*), menggantikan default sebelumnya (*The Twinkle Legends*).
+  - Menambahkan signature deteksi OCR multi-bahasa (Inggris, Jepang, dan Indonesia: `The Shuntaisai Festival`, `shuntaisai`, `旬菜祭`, `しゅんさいさい`, `走れ！旬菜祭`) pada `CareerOcrZone.jsx`.
 - **Integritas Sistem & Pengujian Otomatis**:
-  - Menambahkan pengujian pada [`UmaTrackerApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/UmaTrackerApiTest.php) untuk memverifikasi urutan kronologis skenario *The Shuntaisai Festival* di urutan teratas dan klasifikasi kategori gacha banner 2026-10-26.
+  - Menambahkan pengujian pada `UmaTrackerApiTest.php` untuk memverifikasi urutan kronologis skenario *The Shuntaisai Festival* di urutan teratas dan klasifikasi kategori gacha banner 2026-10-26.
   - Seluruh 253 pengujian otomatis PHPUnit lulus 100% dan berkas database SQLite fisik terlindungi tanpa mutasi destruktif.
 
 ## [Versi 2.9.0] - 19 Oktober 2026
@@ -182,16 +182,16 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
 ### 🚀 Optimasi Kinerja Bundel, Manajemen Retensi Backup & Fitur Lanjutan Koleksi
 - **Penyempurnaan Interaktivitas Reverse Skill Finder, Filter Taktis Multi-Dimensi & Relasi Skill Terkait (v2.9.1 Pemolesan Interaktivitas)**:
   - **Interaktivitas Baris Support Card, Karakter & Seleksi Komparasi Langsung (`ReverseSkillFinder.jsx`, `CollectionView.jsx`)**:
-    - Menjadikan setiap baris Support Card penyedia skill interaktif (dapat diklik langsung untuk membuka [`SupportCardDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/SupportCardDetailModal.jsx)) dengan efek hover border emerald dan indikator klik.
+    - Menjadikan setiap baris Support Card penyedia skill interaktif (dapat diklik langsung untuk membuka `SupportCardDetailModal.jsx`) dengan efek hover border emerald dan indikator klik.
     - Menambahkan tombol aksi kecil **`⚖️ Banding`** (atau **`✓ Dipilih`** saat aktif) di sisi kanan setiap baris Support Card dengan proteksi `e.stopPropagation()`, memfasilitasi penambahan kartu langsung dari hasil pencarian ke dalam daftar komparasi side-by-side.
     - Menampilkan bilah mengambang komparasi (*Floating Comparison Bar*) secara adaptif baik saat membuka tab Kartu Support maupun tab Pencari Sumber Skill (`activeSection === 'skills'`).
-    - Menjadikan setiap baris Karakter Uma Musume penyedia skill interaktif (dapat diklik untuk membuka [`CharacterDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CharacterDetailModal.jsx) dan memeriksa pohon status skill lengkap).
+    - Menjadikan setiap baris Karakter Uma Musume penyedia skill interaktif (dapat diklik untuk membuka `CharacterDetailModal.jsx` dan memeriksa pohon status skill lengkap).
   - **Pintasan Global Pencari Sumber Skill dari Modal Formula (`SkillDetailModal.jsx`, `AppMain.jsx`, `CollectionView.jsx`)**:
-    - Menambahkan tombol aksi mencolok **`🔎 Cari Kartu & Karakter Pemberi Skill Ini`** pada bagian footer [`SkillDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/SkillDetailModal.jsx).
+    - Menambahkan tombol aksi mencolok **`🔎 Cari Kartu & Karakter Pemberi Skill Ini`** pada bagian footer `SkillDetailModal.jsx`.
     - Memancarkan custom event global `uma:find-skill-sources` yang secara otomatis mengalihkan navigasi aktif dari modul mana pun (misal perencana turnamen CM/LoH) ke modul Koleksi, membuka sub-tab *Pencari Sumber Skill*, mengisi input pencarian dengan nama skill, dan langsung mengeksekusi pencarian kartu/karakter penyedianya secara instan.
   - **Filter Taktis Multi-Dimensi pada Katalog Seluruh Skill (`AllSkillsCatalogModal.jsx`, `CollectionController.php`)**:
     - Memperkaya katalog skill (`GET /api/collection/skills`) dengan metadata tag taktis terstruktur (`distance_types`, `running_styles`, `ground_types`, `effect_categories`) yang diekstrak secara deterministik dari kondisi aktivasi dan efek GameTora.
-    - Menambahkan bilah filter taktis multi-dimensi yang ringkas dan responsif pada [`AllSkillsCatalogModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/AllSkillsCatalogModal.jsx): **Jarak** (*Semua Jarak, Short, Mile, Medium, Long*), **Gaya Lari** (*Semua Gaya, Front [Nige], Pace [Senko], Late [Sashi], End [Oikomi]*), dan **Kategori Efek** (*Semua Efek, ⚡ Speed, 🚀 Acceleration, 💙 Recovery, 🟢 Green / Passive, 🔻 Debuff*).
+    - Menambahkan bilah filter taktis multi-dimensi yang ringkas dan responsif pada `AllSkillsCatalogModal.jsx`: **Jarak** (*Semua Jarak, Short, Mile, Medium, Long*), **Gaya Lari** (*Semua Gaya, Front [Nige], Pace [Senko], Late [Sashi], End [Oikomi]*), dan **Kategori Efek** (*Semua Efek, ⚡ Speed, 🚀 Acceleration, 💙 Recovery, 🟢 Green / Passive, 🔻 Debuff*).
     - Menampilkan lencana informasi taktis (Jarak, Gaya Lari, dan Kategori Efek) pada setiap kartu skill di dalam modal katalog untuk kemudahan pemindaian kecocokan taktik.
   - **Deteksi Cerdas & Tautan Pasangan Skill Terkait (`CollectionController.php`, `ReverseSkillFinder.jsx`)**:
     - Mengidentifikasi relasi skill sekeluarga: pasangan *Gold / Rare* $\leftrightarrow$ *White / Normal* (seperti *Speed Star* $\leftrightarrow$ *Prepared to Pass*, *Swinging Maestro* $\leftrightarrow$ *Corner Recovery ○*), *Evolved Skill* $\leftrightarrow$ *Base Gold Skill* via `base_skill_id`, serta varian simbolik (`○` $\leftrightarrow$ `◎`).
@@ -200,17 +200,17 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
     - Mengintegrasikan pembersihan cache otomatis (`ALL_SKILLS_CACHE_KEY` dan `INDEXED_SKILLS_CACHE_KEY`) pasca proses sinkronisasi katalog GameTora agar daftar seluruh skill dan indeks relasi selalu mutakhir.
 - **Optimasi Dynamic Import `tesseract.js` & Modular Code-Splitting Modal (`CareerOcrZone.jsx`, `GachaView.jsx`, `FansView.jsx`, `CollectionView.jsx`)**:
   - Mengubah pemuatan pustaka OCR `tesseract.js` (~1 MB) menjadi impor dinamis *on-demand* (`await import('tesseract.js')`), sehingga pustaka OCR hanya diunduh saat pengguna pertama kali memproses tangkapan layar.
-  - Memecah seluruh modal sekunder pada [`GachaView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/GachaView.jsx) (*Quick10PullModal*, *DeleteConfirmModal*, *GachaProbabilitySimulator*, *EditGachaPullModal*, *BulkEditGachaPullModal*), [`FansView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/FansView.jsx) (*DeleteConfirmModal*, *EditCareerRunModal*, *ScenarioDetailModal*, *CharacterScenarioDetailModal*), dan [`CollectionView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CollectionView.jsx) (*CharacterDetailModal*, *SupportCardDetailModal*, *SupportCardCompareModal*, *SkillDetailModal*) menjadi `React.lazy()` yang terbungkus `<Suspense fallback={null}>`.
+  - Memecah seluruh modal sekunder pada `GachaView.jsx` (*Quick10PullModal*, *DeleteConfirmModal*, *GachaProbabilitySimulator*, *EditGachaPullModal*, *BulkEditGachaPullModal*), `FansView.jsx` (*DeleteConfirmModal*, *EditCareerRunModal*, *ScenarioDetailModal*, *CharacterScenarioDetailModal*), dan `CollectionView.jsx` (*CharacterDetailModal*, *SupportCardDetailModal*, *SupportCardCompareModal*, *SkillDetailModal*) menjadi `React.lazy()` yang terbungkus `<Suspense fallback={null}>`.
   - Mengeliminasi beban muat modal yang tidak aktif pada saat render awal halaman dan menjaga seluruh ukuran chunk modular tetap berada di bawah batas 500 kB.
 - **Manajemen Retensi Arsip Backup Lokal Server & Opsi CLI `--keep` (`BackupService.php`, `BackupRestoreModal.jsx`)**:
   - Mengimplementasikan metode `BackupService::pruneOldBackups` dan `getLocalBackupFilesSummary` untuk memantau jumlah serta ukuran berkas cadangan `.json` di `storage/app/backups/`.
   - Menambahkan opsi `--keep=N` pada perintah Artisan `php artisan uma:backup --keep=N` untuk pembersihan otomatis berkas cadangan lama pasca ekspor berhasil.
   - Menyediakan endpoint REST `POST /api/backup/prune` dengan validasi parameter `keep` (default 1) untuk membersihkan arsip lama dan hanya mempertahankan cadangan paling mutakhir.
-  - Menambahkan kartu ringkasan status cadangan lokal server serta tombol aksi *"🧹 Bersihkan Arsip Lama (Simpan 1)"* pada tab Cadangkan Data di [`BackupRestoreModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/BackupRestoreModal.jsx).
+  - Menambahkan kartu ringkasan status cadangan lokal server serta tombol aksi *"🧹 Bersihkan Arsip Lama (Simpan 1)"* pada tab Cadangkan Data di `BackupRestoreModal.jsx`.
 - **Pencari Sumber Skill Global / Reverse Skill Finder / 逆引きスキル検索 (`ReverseSkillFinder.jsx`, `SkillDetailModal.jsx`, `GET /api/collection/skill-sources`)**:
   - Menambahkan Tab ke-3 pada modul Koleksi: *"🔎 Pencari Sumber Skill"* yang mengindeks seluruh skill dari database lokal GameTora.
   - Membangun endpoint `GET /api/collection/skill-sources` yang mendukung pencarian bilingual EN/JP (`q`), filter kelangkaan (`rarity`: Gold, White, Unique, Evolved), filter jenis sumber (`source_type`: Support Card atau Karakter), filter kepemilikan (`owned_only=1`), dan paginasi.
-  - Antarmuka pencarian dengan debouncing 300ms, 3 preset pencarian cepat utama (*Groundwork / 地固め*, *Swinging Maestro / 円弧のマエストロ*, *Professor of Curvature / 弧線のプロフェッサー*) yang ditata sejajar horizontal dengan tombol peramban skill, indikator status kepemilikan kartu (LB) & karakter (★), rincian cara perolehan (*Hint Skill Lv* vs *Event Skill*), serta tombol *"Detail Formula"* yang terhubung langsung ke modal [`SkillDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/SkillDetailModal.jsx).
+  - Antarmuka pencarian dengan debouncing 300ms, 3 preset pencarian cepat utama (*Groundwork / 地固め*, *Swinging Maestro / 円弧のマエストロ*, *Professor of Curvature / 弧線のプロフェッサー*) yang ditata sejajar horizontal dengan tombol peramban skill, indikator status kepemilikan kartu (LB) & karakter (★), rincian cara perolehan (*Hint Skill Lv* vs *Event Skill*), serta tombol *"Detail Formula"* yang terhubung langsung ke modal `SkillDetailModal.jsx`.
   - Penyelarasan tata letak header kartu hasil pencarian: menampilkan nama skill (EN & JP) tepat di antara badge kelangkaan dan jumlah sumber perolehan dalam satu baris terpadu yang proporsional.
   - Perbaikan unboxing objek payload skill: mengatasi kendala pembacaan objek pembungkus pada hasil pencarian sehingga kelangkaan skill (seperti *Speed Star* yang merupakan skill Gold / Rare) terbaca secara akurat dan modal `SkillDetailModal` menampilkan seluruh formula, kondisi aktivasi, scaling, dan durasi secara lengkap tanpa kekosongan data.
   - Tampilan daftar Support Card & Karakter pemberi satu baris penuh (`grid-cols-1`): mengubah layout kartu penyedia dari dua kolom sempit menjadi baris horizontal penuh yang luas, mengeliminasi teks judul kartu yang terpotong elipsis serta menyajikan thumbnail, status LB/bintang, dan badge metode perolehan secara rapi dan proporsional.
@@ -228,32 +228,32 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
 - **Parser & Formatter Efek Unik Kartu Support Otentik GameTora (`SupportCardUniqueEffectFormatter.php`, `supportUniqueEffectFormatter.js`, `SupportCardDetailModal.jsx`, `SupportCardCompareModal.jsx`)**:
   - Mengeliminasi label placeholder mentah seperti `"Type 101: +80%"` atau `"Type 103: +4%"` pada seluruh kartu support SSR, menggantikannya dengan parser komprehensif untuk seluruh jenis Efek Unik GameTora (Tipe 101–122, 9991, serta efek dasar < 100).
   - Menyajikan narasi deskripsi bilingual yang presisi (Bahasa Indonesia & Bahasa Inggris resmi GameTora) lengkap dengan badge kondisi aktivasi (seperti *Gauge Ikatan ≥ 80*, *≥ 4 Jenis Kartu di Dek*, *Batas Energi > 100*), serta rincian lencana bonus stat individual (seperti *Bonus Power (+1)*, *Efektivitas Latihan (+5%)*).
-  - Mengintegrasikan formatter dinamis dua lapis: pada *backend* via `CollectionController::enrichSupportCardDetails` tanpa modifikasi destruktif pada berkas basis data SQLite fisik, serta modul utilitas *frontend* mandiri di [`supportUniqueEffectFormatter.js`](file:///c:/Projects/uma-tracker/resources/js/utils/supportUniqueEffectFormatter.js).
-  - Menyelaraskan tampilan Efek Unik pada modal detail kartu ([`SupportCardDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/SupportCardDetailModal.jsx)) dan arena komparasi berdampingan ([`SupportCardCompareModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/SupportCardCompareModal.jsx)).
+  - Mengintegrasikan formatter dinamis dua lapis: pada *backend* via `CollectionController::enrichSupportCardDetails` tanpa modifikasi destruktif pada berkas basis data SQLite fisik, serta modul utilitas *frontend* mandiri di `supportUniqueEffectFormatter.js`.
+  - Menyelaraskan tampilan Efek Unik pada modal detail kartu (`SupportCardDetailModal.jsx`) dan arena komparasi berdampingan (`SupportCardCompareModal.jsx`).
 - **Integritas Basis Data & Pengujian Otomatis**:
   - Menjaga keaslian berkas fisik `database/database.sqlite` tetap aman dan utuh dengan hash SHA-256 identik (`989D0E39E62D6CE0239DDE356EC86576C49A0CFD8F15B603F0FD94E9E7F1D246`).
-  - Menambahkan pengujian pada [`BackupApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/BackupApiTest.php), [`CollectionApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CollectionApiTest.php), dan [`SupportCardUniqueEffectFormatterTest.php`](file:///c:/Projects/uma-tracker/tests/Unit/SupportCardUniqueEffectFormatterTest.php). Seluruh rangkaian 252 pengujian otomatis PHPUnit lulus 100% pada SQLite `:memory:`.
+  - Menambahkan pengujian pada `BackupApiTest.php`, `CollectionApiTest.php`, dan `SupportCardUniqueEffectFormatterTest.php`. Seluruh rangkaian 252 pengujian otomatis PHPUnit lulus 100% pada SQLite `:memory:`.
 
 ## [Versi 2.8.0] - 15 Oktober 2026
 
 ### 🏆 Modul Perencana Turnamen (CM / LoH): Referensi Target Stats, Panduan Recovery & Katalog Komprehensif
 - **Referensi Rekomendasi Target Stats & Panduan Recovery Komunitas JP (GameWith)**:
-  - Mengintegrasikan referensi benchmark target stats (Speed, Stamina, Power, Guts, Wisdom) dan kebutuhan recovery dari komunitas terverifikasi (GameWith) ke dalam [`competitionEventGuides.json`](file:///c:/Projects/uma-tracker/resources/js/data/competitionEventGuides.json) untuk turnamen resmi Cygames 2026–2027 (CM Okt 2026, LoH Nov 2026, CM Des 2026).
-  - Mengimplementasikan [`CompetitionStatRecoveryRecommender.php`](file:///c:/Projects/uma-tracker/app/Support/CompetitionStatRecoveryRecommender.php) dengan proteksi anti-spekulasi: turnamen dengan detail lintasan/jarak yang belum diumumkan resmi oleh Cygames (seperti CM Jan 2027) atau turnamen tanpa panduan komunitas secara ketat menampilkan disclaimer transparan dan tidak mengarang data.
+  - Mengintegrasikan referensi benchmark target stats (Speed, Stamina, Power, Guts, Wisdom) dan kebutuhan recovery dari komunitas terverifikasi (GameWith) ke dalam `competitionEventGuides.json` untuk turnamen resmi Cygames 2026–2027 (CM Okt 2026, LoH Nov 2026, CM Des 2026).
+  - Mengimplementasikan `CompetitionStatRecoveryRecommender.php` dengan proteksi anti-spekulasi: turnamen dengan detail lintasan/jarak yang belum diumumkan resmi oleh Cygames (seperti CM Jan 2027) atau turnamen tanpa panduan komunitas secara ketat menampilkan disclaimer transparan dan tidak mengarang data.
 - **Katalog Referensi Skill Recovery Lengkap dari Data GameTora Lokal**:
-  - Membangun [`recoverySkillsCatalog.json`](file:///c:/Projects/uma-tracker/resources/js/data/recoverySkillsCatalog.json) (257 skill) murni dari data GameTora lokal terverifikasi, mengeksklusikan skill non-recovery (seperti skill kecepatan tikungan *Arc Professor* / `弧線のプロフェッサー`) serta memisahkan *Breath of Fresh Air* (`好転一息`) dan *Cooldown* (`クールダウン`).
+  - Membangun `recoverySkillsCatalog.json` (257 skill) murni dari data GameTora lokal terverifikasi, mengeksklusikan skill non-recovery (seperti skill kecepatan tikungan *Arc Professor* / `弧線のプロフェッサー`) serta memisahkan *Breath of Fresh Air* (`好転一息`) dan *Cooldown* (`クールダウン`).
   - Menghubungkan 50 skill unik bawaan dan warisan ke karakter asalnya dengan label atribusi (misal `Super Creek (Original)'s unique`, `Mejiro Bright (Costume Warisan)'s unique`).
 - **Pemisahan Klasifikasi Recovery Utama vs Skill Multi-Efek dengan Recovery**:
   - Mengklasifikasikan skill secara presisi berdasarkan seluruh efek aktif di semua kelompok kondisi:
     - `recovery_only` (Recovery Utama): skill dengan efek stamina recovery murni (Type 9).
     - `mixed_effect_recovery` (Skill Multi-Efek dengan Recovery): skill yang memiliki stamina recovery (Type 9) sekaligus efek non-recovery pendamping (kecepatan, akselerasi, dll., misal `introduction：My body` Agnes Tachyon).
-  - Tampilan UI default pada [`CompetitionEventDetailView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CompetitionEventDetailView.jsx) memprioritaskan `Recovery Utama`, dilengkapi filter pemilih tab kategori dan badge visual `Multi-Efek` berwarna cyan pada kartu skill serta [`SkillDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/SkillDetailModal.jsx).
+  - Tampilan UI default pada `CompetitionEventDetailView.jsx` memprioritaskan `Recovery Utama`, dilengkapi filter pemilih tab kategori dan badge visual `Multi-Efek` berwarna cyan pada kartu skill serta `SkillDetailModal.jsx`.
 - **Penyelarasan Rentang Jarak Sesuai Turnamen yang Dipilih (CM / LoH)**:
   - Menyelesaikan kendala ekuivalensi nomenklatur kategori jarak (`middle` di database dan seeder vs `medium` di katalog) pada backend dan frontend.
   - Memetakan kondisi jarak (`distance_type==1..4`, multi-jarak seperti `distance_type==3@distance_type==4`, serta pembatasan `course_distance>=3000`, `2200m`, dll.) di seluruh condition groups & preconditions.
   - Turnamen yang dipilih kini secara dinamis menampilkan skill recovery yang aktif pada rentang jaraknya (Medium, Long, Mile, Sprint) bersama skill untuk semua jarak, dan mengeksklusikan skill jarak lain yang tidak kompatibel.
 - **Penyempurnaan Penerjemah Syarat Kondisi Skill (Bahasa Indonesia)**:
-  - Menambahkan dukungan penerjemahan lengkap untuk klausul GameTora pada [`SkillConditionTranslator.php`](file:///c:/Projects/uma-tracker/app/Support/SkillConditionTranslator.php) dan [`skillConditionTranslator.js`](file:///c:/Projects/uma-tracker/resources/js/utils/skillConditionTranslator.js), termasuk `distance_diff_rate` (jarak relatif pelari dari rombongan belakang), `accumulatetime`, `remain_distance`, dan operator perbandingan.
+  - Menambahkan dukungan penerjemahan lengkap untuk klausul GameTora pada `SkillConditionTranslator.php` dan `skillConditionTranslator.js`, termasuk `distance_diff_rate` (jarak relatif pelari dari rombongan belakang), `accumulatetime`, `remain_distance`, dan operator perbandingan.
 - **Refaktorisasi Layout Tiga Kolom Flexbox & Optimasi Responsivitas Navbar (`Navbar.jsx` & `app.css`)**:
   - Mengganti pemosisian tengah absolut dengan struktur Flexbox tiga kolom murni (`Brand Kiri`, `Menu Navigasi Tengah`, `Kontrol Utilitas Kanan`) beserta utility `.no-scrollbar`, mengeliminasi tabrakan/overlap elemen saat browser di-zoom out (80%/90%) maupun pada layar lebar (1920x1080).
   - Menstandarkan 9 label navigasi ringkas (*Dasbor, Analitik, Gacha, Karier, Afinitas, Koleksi, Circle, Perencana, Event*) di seluruh breakpoint desktop lengkap dengan tooltip (`title`) nama modul penuh dan `whitespace-nowrap shrink-0`.
@@ -266,84 +266,84 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
 - **Optimasi Code-Splitting & Lazy Loading Bundel Frontend (`AppMain.jsx`)**:
   - Menerapkan `React.lazy()` dan `<Suspense>` pada seluruh komponen tampilan modul dan modal utilitas untuk memecah bundel monolitik utama menjadi chunk modular per halaman (*on-demand loading*) sehingga mempercepat pemuatan awal aplikasi.
 - **Hardening Konfigurasi Sesi & Cache Lokal (Pencegahan Mutasi SQLite)**:
-  - Mengubah driver default sesi dan cache lokal pada `.env`, `.env.example`, [`config/session.php`](file:///c:/Projects/uma-tracker/config/session.php), dan [`config/cache.php`](file:///c:/Projects/uma-tracker/config/cache.php) dari `database` menjadi `file`.
+  - Mengubah driver default sesi dan cache lokal pada `.env`, `.env.example`, `config/session.php`, dan `config/cache.php` dari `database` menjadi `file`.
   - Mengeliminasi potensi mutasi otomatis pada berkas `database/database.sqlite` akibat penulisan request normal Laravel.
 - **Verifikasi Integritas & Pengujian Otomatis Komprehensif**:
-  - Menambahkan pengujian pada [`CompetitionEventTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CompetitionEventTest.php), [`SkillConditionTranslatorTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/SkillConditionTranslatorTest.php), dan [`PlannerApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/PlannerApiTest.php) (239 tests, 8.815 assertions lulus 100% pada SQLite `:memory:`).
+  - Menambahkan pengujian pada `CompetitionEventTest.php`, `SkillConditionTranslatorTest.php`, dan `PlannerApiTest.php` (239 tests, 8.815 assertions lulus 100% pada SQLite `:memory:`).
   - Memverifikasi hash SHA-256 berkas fisik `database/database.sqlite` tetap identik 100% sebelum dan sesudah pekerjaan (`989D0E39E62D6CE0239DDE356EC86576C49A0CFD8F15B603F0FD94E9E7F1D246`).
 
 ## [Versi 2.7.4] - 13 Oktober 2026
 
 ### 📰 Integrasi Portal Resmi Cygames JP untuk Select Pickup & Provenance Dinamis
 - **Pipeline Sinkronisasi Dinamis Berita Resmi Cygames JP**:
-  - Mengimplementasikan [`CygamesNewsService.php`](file:///c:/Projects/uma-tracker/app/Services/CygamesNewsService.php) untuk memonitor dan menyinkronkan pengumuman resmi *Select Pickup Support Card Gacha* langsung dari portal resmi Cygames JP tanpa bergantung pada pembaruan manual bulanan atau sumber pihak ketiga tidak resmi.
+  - Mengimplementasikan `CygamesNewsService.php` untuk memonitor dan menyinkronkan pengumuman resmi *Select Pickup Support Card Gacha* langsung dari portal resmi Cygames JP tanpa bergantung pada pembaruan manual bulanan atau sumber pihak ketiga tidak resmi.
   - Mendeteksi dan memproses artikel berita baik bertipe pelaksanaan (`開催`) maupun pemberitahuan awal (`予告`) dengan pengurutan kronologis terbalik (pengumuman terbaru diprioritaskan).
-  - Melakukan ekstraksi terstruktur pada bagian `■ピックアップサポートカード候補` untuk memetakan tepat 10 kartu SSR ke dalam katalog lokal [`UmaCatalogItem`](file:///c:/Projects/uma-tracker/app/Models/UmaCatalogItem.php) dengan normalisasi tanda baca Jepang secara akurat.
+  - Melakukan ekstraksi terstruktur pada bagian `■ピックアップサポートカード候補` untuk memetakan tepat 10 kartu SSR ke dalam katalog lokal `UmaCatalogItem` dengan normalisasi tanda baca Jepang secara akurat.
 - **Validasi Integritas Data & Presedensi Berita Kanonikal**:
   - Menegakkan *safety guard* ketat: apabila parsing tidak lengkap, terdapat kandidat tak dikenal, atau struktur halaman berubah, sistem menolak menimpa data banner yang sudah valid sebelumnya dan mempertahankan data kanonikal/fallback.
   - Menerapkan aturan presedensi: pengumuman pelaksanaan (`開催`) dengan ID artikel lebih baru tidak akan pernah tertimpa oleh artikel preview (`予告`) yang lebih lama.
-  - Mencatat provenance kanonikal untuk setiap banner via `select_pickup_provenance_{gametora_id}` dan menyediakan helper `getProvenanceUrl()` pada [`GachaBanner.php`](file:///c:/Projects/uma-tracker/app/Models/GachaBanner.php).
+  - Mencatat provenance kanonikal untuk setiap banner via `select_pickup_provenance_{gametora_id}` dan menyediakan helper `getProvenanceUrl()` pada `GachaBanner.php`.
 - **Deduplikasi Per-Artikel & Mekanisme Retry Aman**:
   - Menerapkan mekanisme deduplikasi per-artikel (`isArticleProcessed`) dan per-banner (`select_pickup_provenance_id_{gametora_id}`), mengeliminasi ketergantungan pada filter skalar global.
   - Menjamin artikel yang sempat gagal (akibat timeout atau HTTP error) akan otomatis dicoba kembali (*retry*) pada siklus sinkronisasi berikutnya, tanpa terlewat meskipun artikel lain dengan ID lebih tinggi pada banner berbeda telah berhasil diproses.
 - **Penyelarasan GameTora Sync & Pembaruan UI Dashboard**:
-  - Mengintegrasikan pengayaan berita Cygames ke dalam [`GameToraSyncService.php`](file:///c:/Projects/uma-tracker/app/Services/GameToraSyncService.php) sehingga banner Select Pickup selalu diperkaya otomatis saat GameTora disinkronkan, termasuk pada kondisi manifest cache GameTora tidak berubah.
-  - Memperbarui antarmuka pengguna pada [`DashboardView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/DashboardView.jsx) untuk menampilkan tautan langsung *Berita Cygames* menuju pengumuman kanonikal resmi serta menyesuaikan label header menjadi *Lineup Kandidat (Pilihan 2 dari 10 SSR)*.
-  - Memperbarui katalog bawaan pada [`UmaCatalog.php`](file:///c:/Projects/uma-tracker/app/Support/UmaCatalog.php) dengan menyertakan lineup 10 kartu SSR resmi untuk periode Oktober 2026 (Banner ID 30477).
+  - Mengintegrasikan pengayaan berita Cygames ke dalam `GameToraSyncService.php` sehingga banner Select Pickup selalu diperkaya otomatis saat GameTora disinkronkan, termasuk pada kondisi manifest cache GameTora tidak berubah.
+  - Memperbarui antarmuka pengguna pada `DashboardView.jsx` untuk menampilkan tautan langsung *Berita Cygames* menuju pengumuman kanonikal resmi serta menyesuaikan label header menjadi *Lineup Kandidat (Pilihan 2 dari 10 SSR)*.
+  - Memperbarui katalog bawaan pada `UmaCatalog.php` dengan menyertakan lineup 10 kartu SSR resmi untuk periode Oktober 2026 (Banner ID 30477).
 - **Pengujian Komprehensif & Verifikasi Basis Data**:
-  - Menambahkan pengujian otomatis komprehensif pada [`CygamesNewsSyncTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CygamesNewsSyncTest.php) dan [`GachaRateAuditTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/GachaRateAuditTest.php).
+  - Menambahkan pengujian otomatis komprehensif pada `CygamesNewsSyncTest.php` dan `GachaRateAuditTest.php`.
   - Menjamin pengujian berjalan 100% pada SQLite in-memory (`:memory:`) tanpa mengubah berkas fisik `database/database.sqlite` (hash SHA-256 terbukti identik sebelum dan sesudah pengujian).
 
 ## [Versi 2.7.3] - 13 Oktober 2026
 
 ### 🔒 Penguatan Integritas Data, Migrasi `event_key`, Keamanan Backup & Hardening Lintasan Kompetisi
 - **Migrasi Inkremental `event_key` & Seeder Idempotent**:
-  - Menambahkan kolom `event_key` dengan constraint `NOT NULL` dan indeks unik pada tabel `competition_events` melalui migrasi inkremental [`2026_10_13_000001_add_event_key_to_competition_events_table.php`](file:///c:/Projects/uma-tracker/database/migrations/2026_10_13_000001_add_event_key_to_competition_events_table.php).
+  - Menambahkan kolom `event_key` dengan constraint `NOT NULL` dan indeks unik pada tabel `competition_events` melalui migrasi inkremental `2026_10_13_000001_add_event_key_to_competition_events_table.php`.
   - Melakukan backfill terverifikasi dengan format kanonikal `cm-YYYY-MM` (*Champions Meeting*) dan `loh-YYYY-MM` (*League of Heroes*) dengan penolakan ketat (`RuntimeException`) terhadap event tak dikenal atau duplikat.
-  - Memperbarui [`CompetitionEventSeeder.php`](file:///c:/Projects/uma-tracker/database/seeders/CompetitionEventSeeder.php) agar menggunakan `updateOrCreate(['event_key' => ...], ...)` sehingga pembaruan rincian turnamen resmi di masa mendatang berjalan secara *in-place* tanpa menduplikasi data.
+  - Memperbarui `CompetitionEventSeeder.php` agar menggunakan `updateOrCreate(['event_key' => ...], ...)` sehingga pembaruan rincian turnamen resmi di masa mendatang berjalan secara *in-place* tanpa menduplikasi data.
 - **Proteksi Mutlak Data Turnamen Resmi & Atomisitas Pemulihan Backup**:
-  - Mengisolasi penuh tabel `competition_events` dari proses impor [`BackupService.php`](file:///c:/Projects/uma-tracker/app/Services/BackupService.php) sehingga data turnamen resmi Cygames kebal dari manipulasi atau penimpaan berkas backup pengguna (baik mode `overwrite` maupun `merge`).
+  - Mengisolasi penuh tabel `competition_events` dari proses impor `BackupService.php` sehingga data turnamen resmi Cygames kebal dari manipulasi atau penimpaan berkas backup pengguna (baik mode `overwrite` maupun `merge`).
   - Memindahkan pengecekan tabel kosong dan auto-seeding turnamen resmi ke dalam batasan transaksi atomik `DB::transaction()`. Jika seeder gagal, seluruh proses restore pengguna dibatalkan (*rollback 100%*).
-  - Memperbarui dokumentasi spesifikasi teknis pada [`docs/backup_specification.md`](file:///c:/Projects/uma-tracker/docs/backup_specification.md) (Seksi 6 & 7).
+  - Memperbarui dokumentasi spesifikasi teknis pada `docs/backup_specification.md` (Seksi 6 & 7).
 - **Validasi Terpadu Kolom JSON Terstruktur (`validateStructuredJson`)**:
   - Menerapkan validator terpadu pada `BackupService` untuk seluruh 7 kolom JSON terstruktur: `aptitudes`, `skills`, `objectives`, `details`, `raw_data` (`uma_catalog_items`), `featured_items` (`gacha_banners`), dan `payload` (`circle_snapshots`).
   - Menegakkan penolakan ketat terhadap tipe skalar PHP, skalar JSON (`'12345'`, `'true'`, `'false'`, `'null'`, `'"teks"'`), serta JSON malformed dengan melempar `InvalidArgumentException` yang menyebutkan kolom spesifik.
   - Mempertahankan backward compatibility untuk snapshot circle warisan (format v0.9 dengan `members_data`).
 - **Hardening Menyeluruh `CompetitionRacetrackHelper`**:
-  - Menerapkan method validasi dimensi lintasan `isValidTrackDimension()` pada `findCourse()` dan `buildGameToraUrl()` di [`CompetitionRacetrackHelper.php`](file:///c:/Projects/uma-tracker/app/Support/CompetitionRacetrackHelper.php).
+  - Menerapkan method validasi dimensi lintasan `isValidTrackDimension()` pada `findCourse()` dan `buildGameToraUrl()` di `CompetitionRacetrackHelper.php`.
   - Menolak nilai `null`, string kosong, whitespace (`"   "`, `" \t\n "`), dan tipe non-string (seperti `array`) pada parameter `venue` dan `surface` tanpa memicu warning/notice PHP.
   - Memvalidasi parameter `distance` secara ketat sebagai bilangan bulat positif (> 0), menolak nilai desimal (`2200.9`), angka nol, angka negatif, string kosong/whitespace, dan nilai non-numerik.
   - Mengeliminasi pemilihan lintasan spekulatif pada sirkuit multi-kandidat (misal Kyoto Turf 1600m / 1400m *inner* vs *outer*) sehingga selalu mengembalikan `null` apabila arah putaran ambigu atau tidak diumumkan resmi.
 - **Pengamanan Runtime Pengujian Database**:
-  - Menambahkan safety guard runtime pada [`tests/TestCase.php`](file:///c:/Projects/uma-tracker/tests/TestCase.php) yang menjamin seluruh suite pengujian otomatis berjalan di SQLite in-memory (`:memory:`) dan membatalkan eksekusi bila database produksi terdeteksi.
+  - Menambahkan safety guard runtime pada `tests/TestCase.php` yang menjamin seluruh suite pengujian otomatis berjalan di SQLite in-memory (`:memory:`) dan membatalkan eksekusi bila database produksi terdeteksi.
   - Memverifikasi hash SHA-256 berkas fisik `database/database.sqlite` sebelum dan sesudah seluruh siklus pengujian tetap identik 100% (`69AAE37F8251524BEA7359D22A283DCC5962F33ABE59A486D8C90C6B16B166BE`).
-  - Menambahkan rangkaian unit/feature test pada [`tests/Feature/BackupVerificationTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/BackupVerificationTest.php) dan [`tests/Feature/CompetitionEventTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CompetitionEventTest.php) (total 216 tests, 2.996 assertions lulus 100%).
+  - Menambahkan rangkaian unit/feature test pada `tests/Feature/BackupVerificationTest.php` dan `tests/Feature/CompetitionEventTest.php` (total 216 tests, 2.996 assertions lulus 100%).
 
 ## [Versi 2.7.2] - 13 Oktober 2026
 
 ### 🛡️ Audit Komprehensif Backend, Keamanan Backup & Penyelarasan Aturan Domain
 - **Penyelarasan Aturan Twinkle Collection pada Bulk Update**:
-  - Menyelaraskan endpoint `POST /api/gacha/pulls/bulk-update` pada [`GachaController.php`](file:///c:/Projects/uma-tracker/app/Http/Controllers/Api/GachaController.php) agar secara otomatis memaksa atribut `is_rate_up = false` ketika tarikan dialihkan ke banner kategori `twinkle` (*The Twinkle Collection Pretty Derby Gacha*).
+  - Menyelaraskan endpoint `POST /api/gacha/pulls/bulk-update` pada `GachaController.php` agar secara otomatis memaksa atribut `is_rate_up = false` ketika tarikan dialihkan ke banner kategori `twinkle` (*The Twinkle Collection Pretty Derby Gacha*).
 - **Penguatan Validasi & Integritas Kolom `objectives` pada Backup Service**:
-  - Memperketat metode `validate()` pada [`BackupService.php`](file:///c:/Projects/uma-tracker/app/Services/BackupService.php) untuk memverifikasi tipe data kolom JSON `objectives` pada entitas `uma_catalog_items` (wajib berupa `array`, `string JSON` yang valid, atau `null`).
+  - Memperketat metode `validate()` pada `BackupService.php` untuk memverifikasi tipe data kolom JSON `objectives` pada entitas `uma_catalog_items` (wajib berupa `array`, `string JSON` yang valid, atau `null`).
   - Menjamin pemulihan penuh tanpa distorsi (*lossless*) untuk seluruh sasaran objektif karier URA pada mode pemulihan `overwrite` maupun `merge`.
 - **Garansi Retensi & Auto-Seeding Jadwal Resmi (`competition_events`)**:
   - Menjamin tabel jadwal resmi turnamen Cygames (`competition_events`) tidak dihapus saat pengguna melakukan restore mode `overwrite`.
   - Mengintegrasikan mekanisme auto-seeding cerdas pasca-restore: apabila basis data dalam keadaan kosong (seperti pada setup instalasi baru), sistem secara otomatis menjalankan `CompetitionEventSeeder` sehingga 6 jadwal resmi Champions Meeting & League of Heroes periode 2026–2027 selalu tersedia.
   - Mendukung pemulihan opsional jika entri `competition_events` disertakan dalam berkas cadangan JSON.
 - **Pembaruan Spesifikasi Backup & Pengujian Otomatis**:
-  - Memperbarui dokumentasi teknis pada [`docs/backup_specification.md`](file:///c:/Projects/uma-tracker/docs/backup_specification.md) terkait proteksi `competition_events` dan validasi tipe data kolom JSON terstruktur.
-  - Menambahkan pengujian otomatis komprehensif pada [`BackupVerificationTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/BackupVerificationTest.php) dan [`GachaBulkUpdateTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/GachaBulkUpdateTest.php).
+  - Memperbarui dokumentasi teknis pada `docs/backup_specification.md` terkait proteksi `competition_events` dan validasi tipe data kolom JSON terstruktur.
+  - Menambahkan pengujian otomatis komprehensif pada `BackupVerificationTest.php` dan `GachaBulkUpdateTest.php`.
   - Menghasilkan berkas cadangan JSON termutakhir `uma-companion-backup-2026-10-13_011654.json` (58,77 MB) dengan 100% verifikasi integritas basis data.
 
 ## [Versi 2.7.1] - 11 Oktober 2026
 
 ### 💎 Penyempurnaan Jewel Planner & Auto-Fill Kalkulator Pengorbanan Jewel
 - **Auto-Fill Penuh Saldo Modal Awal (Tanpa Input Manual)**:
-  - Kolom **Jewel yang Tersedia** pada modul Kalkulator Pengorbanan Jewel ([`JewelSacrificeCalculator.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/JewelSacrificeCalculator.jsx)) kini terisi 100% otomatis (*auto-fill*) dan tersinkronisasi langsung secara real-time dari *Saldo Aset Saat Ini* (`Free Carats + Paid Carats`), mengeliminasi kebutuhan input angka manual dan opsi tombol pintasan yang redundan.
+  - Kolom **Jewel yang Tersedia** pada modul Kalkulator Pengorbanan Jewel (`JewelSacrificeCalculator.jsx`) kini terisi 100% otomatis (*auto-fill*) dan tersinkronisasi langsung secara real-time dari *Saldo Aset Saat Ini* (`Free Carats + Paid Carats`), mengeliminasi kebutuhan input angka manual dan opsi tombol pintasan yang redundan.
   - Menampilkan badge status hijau *Auto-fill dari Saldo Aset Saat Ini (Free + Paid Carats)* beserta kalkulasi ekuivalen kapasitas pull gacha.
 - **Kalibrasi Hadiah Misi Harian Server JP (50 Carats / Hari)**:
-  - Memperbarui rasio perolehan reward dari Daily Missions dari semula 30 Carats menjadi **50 Carats / hari** sesuai standar hadiah resmi terkini Uma Musume JP pada kalkulasi backend ([`PlannerController.php`](file:///c:/Projects/uma-tracker/app/Http/Controllers/Api/PlannerController.php)) dan tampilan frontend ([`JewelPlannerView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/JewelPlannerView.jsx)).
+  - Memperbarui rasio perolehan reward dari Daily Missions dari semula 30 Carats menjadi **50 Carats / hari** sesuai standar hadiah resmi terkini Uma Musume JP pada kalkulasi backend (`PlannerController.php`) dan tampilan frontend (`JewelPlannerView.jsx`).
 - **Perhitungan Komprehensif Daily Jewel Pack (Free Carats Harian)**:
   - Menyempurnakan formula kalkulasi langganan *Daily Jewel Pack (30 Hari)* di Accordion E agar tidak hanya menghitung 500 Paid Carats awal, melainkan mengikutsertakan bonus harian **50 Free Carats / hari** (1.500 Free Carats per 30 hari).
   - Total perolehan kini terhitung penuh **2.000 Carats per 30 hari** ($500\text{ Paid} + 1.500\text{ Free}$) dengan rincian saldo berbayar dan gratis yang transparan.
@@ -357,7 +357,7 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
 
 ### 💎 Kalkulator Pengorbanan Jewel (Farming vs Gacha Planner)
 - **Komponen Baru Kalkulator Pengorbanan Jewel**:
-  - Menambahkan modul kalkulator simulasi pengeluaran Jewel ([`JewelSacrificeCalculator.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/JewelSacrificeCalculator.jsx)) pada menu perencana ([`JewelPlannerView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/JewelPlannerView.jsx)) tepat di bawah kartu *Target Banner & Spark*.
+  - Menambahkan modul kalkulator simulasi pengeluaran Jewel (`JewelSacrificeCalculator.jsx`) pada menu perencana (`JewelPlannerView.jsx`) tepat di bawah kartu *Target Banner & Spark*.
   - Menghitung dampak pengeluaran Jewel/Carat untuk aktivitas farming kompetitif terhadap sisa alokasi tabungan gacha karakter & support card.
 - **Input Berbasis Text Box Interaktif (Tanpa Slider)**:
   - Seluruh parameter input dirancang dalam bentuk text box numerik yang responsif dan presisi:
@@ -384,7 +384,7 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
 
 ### 🏁 Layout Sirkuit & Fase Balapan Resmi (Official Racetrack Layout & Phases)
 - **Integrasi Diagram Sirkuit & Fase Balapan GameTora**:
-  - Menampilkan layout diagram sirkuit resmi dan pembagian fase perlombaan pada halaman rincian detail event ([`CompetitionEventDetailView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CompetitionEventDetailView.jsx)) untuk gelaran balap yang kondisinya telah terkonfirmasi resmi:
+  - Menampilkan layout diagram sirkuit resmi dan pembagian fase perlombaan pada halaman rincian detail event (`CompetitionEventDetailView.jsx`) untuk gelaran balap yang kondisinya telah terkonfirmasi resmi:
     - **Event #1 (CM Classic Oktober 2026)**: Kyoto 2200m Turf Outer (`https://gametora.com/umamusume/racetracks/kyoto#2200-turf-outer`, Course ID `10808`).
     - **Event #2 (LoH November 2026)**: Kyoto 3000m Turf Outer (`https://gametora.com/umamusume/racetracks/kyoto#3000-turf-outer`, Course ID `10810`).
     - **Event #3 (CM Long Desember 2026)**: Nakayama 2500m Turf Inner (`https://gametora.com/umamusume/racetracks/nakayama#2500-turf-inner`, Course ID `10506`).
@@ -400,9 +400,9 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
   - **Modal Pratinjau & Unduh Resolusi Tinggi**: Tombol buka modal zoom resolusi tinggi dan tautan langsung untuk mengunduh diagram penuh dari GameTora.
   - **Tautan Resmi GameTora**: Tautan langsung ke halaman sirkuit terkait dengan format standar `https://gametora.com/umamusume/racetracks/{region}#{jarak}-{turf/dirt}-{inner/outer}`.
 - **Dataset & Sinkronisasi Otomatis**:
-  - Membuat basis data sirkuit lokal di [`racetracksCatalog.json`](file:///c:/Projects/uma-tracker/resources/js/data/racetracksCatalog.json) mencakup 17 sirkuit pacuan kuda Jepang.
-  - Mengintegrasikan sinkronisasi berkala dataset `racetracks` dan `racetracks_extended` pada [`GameToraSyncService.php`](file:///c:/Projects/uma-tracker/app/Services/GameToraSyncService.php) dan [`CompetitionRacetrackHelper.php`](file:///c:/Projects/uma-tracker/app/Support/CompetitionRacetrackHelper.php).
-  - Melengkapi rangkaian uji otomatis di [`CompetitionEventTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CompetitionEventTest.php) (seluruh 210 tests lolos dengan 2.846 assertions).
+  - Membuat basis data sirkuit lokal di `racetracksCatalog.json` mencakup 17 sirkuit pacuan kuda Jepang.
+  - Mengintegrasikan sinkronisasi berkala dataset `racetracks` dan `racetracks_extended` pada `GameToraSyncService.php` dan `CompetitionRacetrackHelper.php`.
+  - Melengkapi rangkaian uji otomatis di `CompetitionEventTest.php` (seluruh 210 tests lolos dengan 2.846 assertions).
 
 ### 📚 Sinkronisasi Dokumentasi & Spesifikasi Proyek (`README.md`)
 - **Dokumentasi Fitur Layout Sirkuit & Fase Lomba**:
@@ -417,19 +417,19 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
 
 ### 🔍 Indikator Tingkat Keyakinan OCR & Validasi Input Visual
 - **Deteksi Confidence Score Per Kolom Form**:
-  - Mengkalkulasi tingkat keyakinan (*confidence percentage*) pengenalan teks dari Tesseract.js secara individual untuk setiap kolom hasil ekstraksi: `uma_name`, `final_rank`, `evaluation_score`, `fans_gained`, dan `scenario` pada [`CareerOcrZone.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CareerOcrZone.jsx).
+  - Mengkalkulasi tingkat keyakinan (*confidence percentage*) pengenalan teks dari Tesseract.js secara individual untuk setiap kolom hasil ekstraksi: `uma_name`, `final_rank`, `evaluation_score`, `fans_gained`, dan `scenario` pada `CareerOcrZone.jsx`.
   - Menampilkan lencana persentase akurasi di setiap tag hasil pemindaian OCR.
   - Menambahkan banner peringatan otomatis jika ada salah satu kolom yang terdeteksi dengan keyakinan di bawah 75%.
 - **Highlighting & Penanda Peringatan pada Form Input**:
-  - Pada formulir input fans ([`FansView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/FansView.jsx)), kolom yang memiliki keyakinan rendah (< 75%) otomatis diberi garis tepi (*border*) berwarna amber/kuning menyala serta lencana peringatan *"Cek Ulang (< 75%)"*.
+  - Pada formulir input fans (`FansView.jsx`), kolom yang memiliki keyakinan rendah (< 75%) otomatis diberi garis tepi (*border*) berwarna amber/kuning menyala serta lencana peringatan *"Cek Ulang (< 75%)"*.
   - Peringatan otomatis dihapus secara reaktif saat pelatih mengedit/memperbaiki nilai kolom, memilih saran karakter, atau menekan tombol skor cepat (*Quick Score*).
 
 ### 🚀 Optimasi PWA Offline Caching & Fallback Visual Anggun
 - **Pre-caching Aset GameTora via Workbox**:
-  - Menambahkan konfigurasi Workbox `runtimeCaching` pada [`vite.config.js`](file:///c:/Projects/uma-tracker/vite.config.js) untuk domain CDN `https://gametora.com/.*`.
+  - Menambahkan konfigurasi Workbox `runtimeCaching` pada `vite.config.js` untuk domain CDN `https://gametora.com/.*`.
   - Menggunakan strategi `CacheFirst` dengan masa kedaluwarsa 30 hari dan kapasitas hingga 1.500 aset (`gametora-cdn-cache`), memungkinkan ikon karakter, support card, dan skill tetap diakses dengan cepat saat offline atau koneksi lambat.
 - **Fallback Avatar Lokal saat Offline**:
-  - Menambahkan penanganan `onError` pada gambar avatar karakter di [`FansView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/FansView.jsx).
+  - Menambahkan penanganan `onError` pada gambar avatar karakter di `FansView.jsx`.
   - Menghasilkan avatar inisial vektor SVG lokal secara instan tanpa ketergantungan jaringan eksternal apabila gambar CDN gagal dimuat saat mode luring.
 
 ### 📚 Sinkronisasi Dokumentasi & Spesifikasi Proyek (`README.md`)
@@ -447,31 +447,31 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
 
 ### 🌐 Terjemahan Bahasa Indonesia Rincian Lomba & Green Skills
 - **Lokalisasi Lengkap Deskripsi Panduan Green Skills**:
-  - Menerjemahkan panduan pemanfaatan parameter lomba pada menu rincian event ([`CompetitionEventDetailView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CompetitionEventDetailView.jsx)) ke dalam Bahasa Indonesia:
+  - Menerjemahkan panduan pemanfaatan parameter lomba pada menu rincian event (`CompetitionEventDetailView.jsx`) ke dalam Bahasa Indonesia:
     *"Dengan mengetahui parameter lintasan, Anda dapat memanfaatkannya saat mempersiapkan Uma Musume untuk mengincar green skill spesifik (contoh: untuk syarat aktivasi Groundwork / 地固め maupun tambahan stat murni)."*
 
 ### 📊 Sinkronisasi Akurat Jumlah Data Katalog pada Footer
 - **Pembaruan Statistik Katalog Terkini**:
-  - Menyesuaikan angka total aset pada footer aplikasi ([`AppMain.jsx`](file:///c:/Projects/uma-tracker/resources/js/AppMain.jsx)) agar selaras dengan data basis data saat ini:
+  - Menyesuaikan angka total aset pada footer aplikasi (`AppMain.jsx`) agar selaras dengan data basis data saat ini:
     - **Support Cards**: Diperbarui menjadi **563 kartu** (316 SSR, 101 SR, 146 R).
     - **Varian Karakter**: Diperbarui menjadi **271 pilihan** (249 bintang 3★, 13 bintang 2★, 9 bintang 1★).
 
 ### 📈 Peningkatan Analisis Pelacakan Karir & Fans
 - **Visibilitas Target Kuota Circle Sesuai Tab**:
   - Garis referensi target kuota (`ReferenceLine`) serta label perbandingan target kuota pada grafik tren akumulasi fans harian kini hanya dimunculkan saat tab **"Bulan Berjalan"** aktif (`careerRange === 'this_month'`).
-  - Menyembunyikan target kuota pada tab **"30 Hari"** dan **"7 Hari"** di halaman Analisis ([`AnalyticsView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/AnalyticsView.jsx)) dan Dasbor ([`DashboardView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/DashboardView.jsx)) agar tampilan fokus pada rentang hari yang dipilih.
+  - Menyembunyikan target kuota pada tab **"30 Hari"** dan **"7 Hari"** di halaman Analisis (`AnalyticsView.jsx`) dan Dasbor (`DashboardView.jsx`) agar tampilan fokus pada rentang hari yang dipilih.
 - **Card Baru: Trek Akumulasi Fans Bulan-Bulan Sebelumnya**:
   - Menambahkan kartu arsip riwayat akumulasi fans per bulan lampau pada halaman Analisis Karir & Fans.
   - **Pemilih Bulan Lampau (Historical Month Selector)**: Memungkinkan pelatih memilih dan meninjau performa tiap bulan sebelumnya (misal: *September 2026* dengan total 83,11M fans dan 120 run) beserta status pencapaian target kuota bulanan.
   - **4 Metrik Ringkasan Utama**: Menampilkan Total Fans, Total Karir Run, Rata-Rata Fans/Run, serta Persentase dan Lencana Status Kuota (*Kuota Tercapai 🎉*).
   - **Grafik Akumulasi Harian Interaktif**: Menampilkan kurva akumulasi fans harian dari awal hingga akhir bulan lampau terhadap garis target kuota circle dalam satuan Jutaan (M).
-  - **Backend Support & Database Portability**: Menghitung data historis bulanan secara efisien dan portabel di [`CareerController.php`](file:///c:/Projects/uma-tracker/app/Http/Controllers/Api/CareerController.php) serta menambahkan pengujian fitur terintegrasi di [`UmaTrackerApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/UmaTrackerApiTest.php).
+  - **Backend Support & Database Portability**: Menghitung data historis bulanan secara efisien dan portabel di `CareerController.php` serta menambahkan pengujian fitur terintegrasi di `UmaTrackerApiTest.php`.
 
 ## [Versi 2.6.0] - 8 Oktober 2026
 
 ### 🏁 Halaman Khusus Rincian Event CM & LoH (Dedicated Page Navigation)
 - **Transisi Tampilan Penuh di Tab yang Sama**:
-  - Tombol **"Lihat Rincian Lengkap"** pada kartu event maupun pintasan kartu event pada Dasbor kini langsung membuka halaman rincian lengkap balapan di tab yang sama melalui komponen baru [`CompetitionEventDetailView.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/CompetitionEventDetailView.jsx).
+  - Tombol **"Lihat Rincian Lengkap"** pada kartu event maupun pintasan kartu event pada Dasbor kini langsung membuka halaman rincian lengkap balapan di tab yang sama melalui komponen baru `CompetitionEventDetailView.jsx`.
   - Mengeliminasi popup modal dialog sebelumnya demi kenyamanan analisis rincian trek dan strategi balapan.
   - Menyediakan tombol navigasi **"← Kembali ke Daftar Event"** serta breadcrumb untuk beralih kembali ke daftar event kapan saja.
 - **Dukungan URL Deep-Linking & Browser History**:
@@ -480,15 +480,15 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
 
 ### 🌿 Rekomendasi Green Skills Resmi (Standar GameTora & Zero Speculative Data)
 - **Mesin Pencocokan Green Skills Deterministik**:
-  - Mengimplementasikan modul recommender pada backend [`CompetitionGreenSkillRecommender.php`](file:///c:/Projects/uma-tracker/app/Support/CompetitionGreenSkillRecommender.php) dan utilitas frontend [`greenSkillHelper.js`](file:///c:/Projects/uma-tracker/resources/js/utils/greenSkillHelper.js).
-  - Menghimpun 26 katalog green skills GameTora lengkap dengan data kondisi aktivasi dan efeknya pada [`greenSkillsCatalog.json`](file:///c:/Projects/uma-tracker/resources/js/data/greenSkillsCatalog.json).
+  - Mengimplementasikan modul recommender pada backend `CompetitionGreenSkillRecommender.php` dan utilitas frontend `greenSkillHelper.js`.
+  - Menghimpun 26 katalog green skills GameTora lengkap dengan data kondisi aktivasi dan efeknya pada `greenSkillsCatalog.json`.
   - Mencocokkan kondisi resmi balapan terkonfirmasi:
     - **Arah Putaran**: *Right-Handed ○ (右回り○)* atau *Left-Handed ○ (左回り○)* (+40 Speed).
     - **Sirkuit / Venue**: *Kyoto Racecourse ○ (京都レース場○)*, *Nakayama Racecourse ○ (中山レース場○)*, *Tokyo*, *Hanshin*, dll. (+40 Stamina).
     - **Jarak Lintasan**: *Standard Distance ○ (根幹距離○)* untuk kelipatan 400m atau *Non-Standard Distance ○ (非根幹距離○)* untuk non-kelipatan 400m (+40 Stamina).
     - **Musim**: *Fall Runner ○ (秋ウマ娘○)*, *Winter Runner ○ (冬ウマ娘○)*, *Spring*, *Summer* (+40 Speed).
     - **Cuaca & Kondisi Trek** (pada gelaran CM dengan kondisi pasti): *Sunny Days ○*, *Cloudy Days ○*, *Good Track Condition ○*, dll.
-  - Setiap kartu green skill dilengkapi ikon resmi CDN GameTora, nama dwibahasa, lencana status stat (+40 Speed / Stamina / Power / Guts), deskripsi dwibahasa, lencana rekomendasi, serta tombol **"More"** untuk memeriksa formula aktivasi lengkap melalui modal [`SkillDetailModal.jsx`](file:///c:/Projects/uma-tracker/resources/js/components/SkillDetailModal.jsx).
+  - Setiap kartu green skill dilengkapi ikon resmi CDN GameTora, nama dwibahasa, lencana status stat (+40 Speed / Stamina / Power / Guts), deskripsi dwibahasa, lencana rekomendasi, serta tombol **"More"** untuk memeriksa formula aktivasi lengkap melalui modal `SkillDetailModal.jsx`.
 - **Proteksi Integritas Data (Event Belum Lengkap)**:
   - Pada gelaran kompetisi yang parameter sirkuit dan musimnya belum diumumkan secara resmi (seperti CM Classic Jan 2027, LoH Feb 2027, CM Mile Mar 2027), sistem secara tegas menampilkan kartu disclaimer:
     *"Rekomendasi green skill belum tersedia karena informasi balapan resmi belum memadai (Zero Speculative Data)"*.
@@ -507,8 +507,8 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
   - Sementara skill yang berbasis parameter pasti (*Right-Handed ○*, *Kyoto Racecourse ○*, *Non-Standard Distance ○*, dan *Fall Runner ○*) tetap berstatus **"Direkomendasikan (Pasti Aktif)"** (lencana hijau/emerald).
 
 ### 🧪 Rangkaian Pengujian Otomatis
-- Menambahkan 5 metode pengujian baru pada [`CompetitionEventTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/CompetitionEventTest.php) untuk menguji rekomendasi CM Classic Okt 2026, LoH acak Nov 2026, CM Long Des 2026, event belum diumumkan, serta integritas katalog JSON green skills.
-- Memperbarui pengujian [`ChangelogApiTest.php`](file:///c:/Projects/uma-tracker/tests/Feature/ChangelogApiTest.php) untuk memverifikasi versi terbaru 2.6.0.
+- Menambahkan 5 metode pengujian baru pada `CompetitionEventTest.php` untuk menguji rekomendasi CM Classic Okt 2026, LoH acak Nov 2026, CM Long Des 2026, event belum diumumkan, serta integritas katalog JSON green skills.
+- Memperbarui pengujian `ChangelogApiTest.php` untuk memverifikasi versi terbaru 2.6.0.
 
 ## [Versi 2.5.1] - 8 Oktober 2026
 
