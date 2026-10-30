@@ -145,7 +145,7 @@ export default function Quick10PullModal({
         e.preventDefault();
 
         if (!selectedBannerId) {
-            onNotify?.('Silakan pilih Banner JP 2026 terlebih dahulu!', 'error');
+            onNotify?.('Silakan pilih Banner JP 2026+ terlebih dahulu!', 'error');
             return;
         }
 
@@ -279,7 +279,7 @@ export default function Quick10PullModal({
                         <div className="sm:col-span-2 space-y-1">
                             <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
                                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                                <span>Banner JP 2026</span>
+                                <span>Banner JP 2026+</span>
                             </label>
                             <select
                                 value={selectedBannerId}

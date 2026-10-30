@@ -681,7 +681,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
         const activeBanner = banners.find(b => String(b.id) === String(singleBannerId) && b.banner_type === singleForm.banner_type);
         if (!activeBanner) {
             setSingleBannerError(true);
-            onNotify?.(`Kolom Banner JP 2026 wajib dipilih! Harap pilih banner yang sesuai dengan tipe tarikan (${singleForm.banner_type === 'character' ? 'Karakter' : 'Support Card'}).`, 'error');
+            onNotify?.(`Kolom Banner JP 2026+ wajib dipilih! Harap pilih banner yang sesuai dengan tipe tarikan (${singleForm.banner_type === 'character' ? 'Karakter' : 'Support Card'}).`, 'error');
             return;
         }
 
@@ -755,7 +755,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
         const activeBanner = banners.find(b => String(b.id) === String(selectedBannerId) && b.banner_type === multiBanner);
         if (!activeBanner) {
             setBannerError(true);
-            onNotify?.(`Kolom Banner JP 2026 wajib dipilih! Harap pilih banner yang sesuai dengan tipe tarikan (${multiBanner === 'character' ? 'Karakter' : 'Support Card'}).`, 'error');
+            onNotify?.(`Kolom Banner JP 2026+ wajib dipilih! Harap pilih banner yang sesuai dengan tipe tarikan (${multiBanner === 'character' ? 'Karakter' : 'Support Card'}).`, 'error');
             return;
         }
 
@@ -986,9 +986,9 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
 
         return (
             <>
-                <option value="">-- Pilih Banner JP 2026 (Wajib) --</option>
+                <option value="">-- Pilih Banner JP 2026+ (Wajib) --</option>
                 {anni.length > 0 && (
-                    <optgroup label="🌟 Anniversary & Skenario Baru 2026">
+                    <optgroup label="🌟 Anniversary & Skenario Baru 2026+">
                         {anni.map(b => (
                             <option key={b.id} value={b.id}>
                                 {b.name} ({b.start_date ? b.start_date.slice(5) : ''})
@@ -997,7 +997,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                     </optgroup>
                 )}
                 {twinkle.length > 0 && (
-                    <optgroup label="💫 Twinkle Collection 2026">
+                    <optgroup label="💫 Twinkle Collection 2026+">
                         {twinkle.map(b => (
                             <option key={b.id} value={b.id}>
                                 {b.name} ({b.start_date ? b.start_date.slice(5) : ''})
@@ -1006,7 +1006,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                     </optgroup>
                 )}
                 {selectUp.length > 0 && (
-                    <optgroup label="🎯 Select Pick Up 2026">
+                    <optgroup label="🎯 Select Pick Up 2026+">
                         {selectUp.map(b => (
                             <option key={b.id} value={b.id}>
                                 {b.name} ({b.start_date ? b.start_date.slice(5) : ''})
@@ -1015,7 +1015,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                     </optgroup>
                 )}
                 {standard.length > 0 && (
-                    <optgroup label="🎴 Standard Gacha 2026">
+                    <optgroup label="🎴 Standard Gacha 2026+">
                         {standard.map(b => (
                             <option key={b.id} value={b.id}>
                                 {b.name} ({b.start_date ? b.start_date.slice(5) : ''})
@@ -1253,7 +1253,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                         <div className="flex items-center gap-2">
                             <Sparkles className="w-4 h-4 text-amber-500" />
                             <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                                Rekap Gacha per Banner (Server Jepang 2026)
+                                Rekap Gacha per Banner (Server Jepang 2026+)
                             </h3>
                         </div>
                         <span className="text-[11px] font-bold text-slate-400">
@@ -1287,23 +1287,6 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                                 Base: 3.0%
                                             </span>
                                         )}
-                                    </div>
-                                </div>
-                                <div className="mt-2.5 pt-2 border-t border-slate-200/80 dark:border-slate-800">
-                                    <div className="flex items-center justify-between text-[11px] font-bold mb-1">
-                                        <span className="text-amber-700 dark:text-amber-400">Pity / Spark:</span>
-                                        <span className="font-mono text-slate-800 dark:text-slate-200">
-                                            {bb.current_pity ?? bb.pulls_count} / 200
-                                            <span className="text-[10px] text-slate-400 font-normal ml-1">
-                                                ({bb.pulls_to_spark ?? Math.max(0, 200 - (bb.current_pity ?? bb.pulls_count))} left)
-                                            </span>
-                                        </span>
-                                    </div>
-                                    <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all duration-300"
-                                            style={{ width: `${Math.min(100, Math.round(((bb.current_pity ?? bb.pulls_count) / 200) * 100))}%` }}
-                                        ></div>
                                     </div>
                                 </div>
                                 <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
@@ -1350,7 +1333,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                             </span>
                         </div>
                         <p className="text-xs font-bold text-slate-800 mt-0.5">
-                            {gachaMeta.characters?.length || 0} Karakter (Semua Varian & Kostum) &bull; {gachaMeta.support_cards?.length || 0} Support Cards &bull; {banners.length || 0} Banner Gacha 2026
+                            {gachaMeta.characters?.length || 0} Karakter (Semua Varian & Kostum) &bull; {gachaMeta.support_cards?.length || 0} Support Cards &bull; {banners.length || 0} Banner Gacha 2026+
                         </p>
                     </div>
                 </div>
@@ -1523,10 +1506,10 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                     </div>
                                 )}
 
-                                {/* 2026 JP Banner Selection */}
+                                {/* 2026+ JP Banner Selection */}
                                 <div className="flex items-center gap-2">
                                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-0.5">
-                                        <span>Banner JP 2026:</span>
+                                        <span>Banner JP 2026+:</span>
                                         <span className="text-rose-500 font-black">*</span>
                                     </label>
                                     {(() => {
@@ -1965,7 +1948,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                         <>
                                             <div className="flex items-center justify-between mb-1.5 h-4 leading-4">
                                                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
-                                                    Banner JP 2026 <span className="text-rose-500 font-black">*</span>
+                                                    Banner JP 2026+ <span className="text-rose-500 font-black">*</span>
                                                 </label>
                                                 {hasSingleBannerError && (
                                                     <span className="text-[10px] font-extrabold text-rose-600 dark:text-rose-400 shrink-0">
@@ -2477,13 +2460,13 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                             />
                         </div>
 
-                        {/* 2026 JP Banner Filter */}
+                        {/* 2026+ JP Banner Filter */}
                         <select
                             value={gachaBannerFilter}
                             onChange={(e) => { setGachaBannerFilter(e.target.value); setPage(1); }}
                             className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none max-w-[180px] truncate"
                         >
-                            <option value="all">Semua Banner 2026</option>
+                            <option value="all">Semua Banner 2026+</option>
                             {banners.map(b => (
                                 <option key={b.id} value={b.id}>
                                     [{getCategoryBadge(b.category, b).label}] {b.name}
@@ -2616,7 +2599,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                     />
                                 </th>
                                 <th className="px-4 py-3.5">Pulled At</th>
-                                <th className="px-4 py-3.5">Banner (2026 JP)</th>
+                                <th className="px-4 py-3.5">Banner (2026+ JP)</th>
                                 <th className="px-4 py-3.5">Pool</th>
                                 <th className="px-4 py-3.5">Type</th>
                                 <th className="px-4 py-3.5">Item / Character</th>

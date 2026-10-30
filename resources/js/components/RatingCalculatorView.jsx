@@ -105,7 +105,7 @@ function getSkillTypeBadge(type, isEvo) {
 function getSkillIconUrl(s) {
     if (!s) return null;
     if (s.icon_url) return s.icon_url;
-    if (s.icon_id) return `https://media.gametora.com/umamusume/skills/icon_skill_${s.icon_id}.png`;
+    if (s.icon_id) return `https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_${s.icon_id}.png`;
     return null;
 }
 
@@ -820,7 +820,13 @@ export default function RatingCalculatorView({ onApplyToCareerForm }) {
                                     className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs shadow-sm hover:border-slate-700 transition-colors"
                                 >
                                     {iconUrl ? (
-                                        <img src={iconUrl} alt="" className="w-4 h-4 rounded object-contain" />
+                                        <img
+                                            src={iconUrl}
+                                            alt=""
+                                            className="w-4 h-4 rounded object-contain shrink-0"
+                                            loading="lazy"
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                        />
                                     ) : (
                                         <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold border ${badge.bg}`}>
                                             {badge.label}
@@ -1098,7 +1104,13 @@ function SkillInputRow({ row, index, allSkills, raceConfig, onSelectSkill, onRem
                                 >
                                     <div className="flex items-center gap-2.5 truncate">
                                         {itemIconUrl ? (
-                                            <img src={itemIconUrl} alt="" className="w-5 h-5 rounded object-contain shrink-0" />
+                                            <img
+                                                src={itemIconUrl}
+                                                alt=""
+                                                className="w-5 h-5 rounded object-contain shrink-0"
+                                                loading="lazy"
+                                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                            />
                                         ) : (
                                             <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold border shrink-0 ${itemBadge.bg}`}>
                                                 {itemBadge.label}

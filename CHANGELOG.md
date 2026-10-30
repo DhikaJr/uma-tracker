@@ -4,6 +4,16 @@ Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurna
 
 ## [Versi 3.1.4] - 30 Oktober 2026
 
+### 🎯 Pembersihan Bar Pity Rekap Banner Gacha 2026+ & Perbaikan Ikon Skill Kalkulator Rating
+- **Pembersihan Bar Pity / Spark & Peremajaan Penamaan Banner 2026+ (`GachaView.jsx`, `Quick10PullModal.jsx`, `BulkEditGachaPullModal.jsx`)**:
+  - Menghapus komponen bilah kemajuan (*spark progress bar*) `Pity / Spark: X / 200` pada kartu ringkasan masing-masing banner di bagian rekap banner, karena penghitungan pity counter sudah tersaji akurat dan terisolasi pada tabel riwayat tarikan gacha.
+  - Memperbarui judul seksi menjadi *"Rekap Gacha per Banner (Server Jepang 2026+)"* untuk mengakomodasi pencatatan jangka panjang tarikan banner tahun 2026, 2027, dan seterusnya.
+  - Memperbarui seluruh label form, opsi dropdown, optgroup (*Anniversary & Skenario Baru 2026+*, *Twinkle Collection 2026+*, *Select Pick Up 2026+*, *Standard Gacha 2026+*), placeholder (*-- Pilih Banner JP 2026+ (Wajib) --*), header kolom tabel (*Banner (2026+ JP)*), dan filter banner gacha di `GachaView.jsx`, `Quick10PullModal.jsx`, dan `BulkEditGachaPullModal.jsx`.
+- **Perbaikan Resolusi Ikon Skill GameTora pada Kalkulator Proyeksi Rating (`RatingCalculatorView.jsx`)**:
+  - Memperbaiki helper pembentukan URL gambar ikon skill (`getSkillIconUrl`) agar menggunakan path CDN resmi GameTora: `https://gametora.com/images/umamusume/skill_icons/utx_ico_skill_${icon_id}.png`.
+  - Mengeliminasi galat gambar rusak (kotak kosong 404) pada chip ringkasan skill terpilih (*Selected Skills Summary*) maupun daftar saran pencarian skill (*autocomplete dropdown*).
+  - Menambahkan atribut `loading="lazy"` serta fallback elegan `onError` yang menyembunyikan elemen `<img>` yang gagal dimuat tanpa merusak tata letak teks nama skill dan skor evaluasi.
+
 ### 🏆 Pembaruan Benchmark Turnamen GameWith Skenario Baru, Notifikasi Arsip Event & Penyederhanaan Header Waktu
 - **Pembersihan Kalender Percobaan & Fokus Waktu Riil (`CompetitionEventsView.jsx`)**:
   - Menghapus kontrol kalender uji tanggal, input pemilih tanggal simulasi, dan tombol-tombol pintasan uji coba (*Uji 20 Okt 2026*, *Uji Akhir Nov 2026*, *Akhir Des 2026*) dari bilah referensi waktu event kompetisi.

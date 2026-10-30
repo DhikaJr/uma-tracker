@@ -133,11 +133,11 @@ export default function BulkEditGachaPullModal({
                         </p>
                     </div>
 
-                    {/* Banner JP 2026 Option (Optional) */}
+                    {/* Banner JP 2026+ Option (Optional) */}
                     <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                            <span>Banner JP 2026 (Opsional):</span>
+                            <span>Banner JP 2026+ (Opsional):</span>
                         </label>
                         <select
                             value={bannerId}
