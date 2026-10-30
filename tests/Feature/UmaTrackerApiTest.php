@@ -748,9 +748,9 @@ class UmaTrackerApiTest extends TestCase
         $this->assertContains('2026-09-01', $response->json('available_periods'));
     }
 
-    public function test_circle_tracker_refresh_enforces_3_hour_cooldown(): void
+    public function test_circle_tracker_refresh_enforces_1_hour_cooldown(): void
     {
-        // Snapshot refreshed 30 minutes ago (within 3 hour cooldown window)
+        // Snapshot refreshed 30 minutes ago (within 1 hour cooldown window)
         CircleSnapshot::create([
             'circle_id' => '441730573',
             'circle_name' => 'なんか適当',

@@ -2,6 +2,24 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.1.3] - 30 Oktober 2026
+
+### 🛡️ Validasi Ketat Banner Gacha, Penyederhanaan Header & Interval Refresh Circle 1 Jam
+- **Pembersihan Widget Counter Pity Aktif & Bar Spark pada Header Gacha (`GachaView.jsx`)**:
+  - Menghapus kartu widget *"PITY AKTIF X / 200"* beserta bilah kemajuan (*spark progress bar*) dan tombol *Reset / Spark* dari header hero modul Gacha Tracker, karena penghitungan dan pemantauan riwayat pity counter terisolasi per banner sudah tercatat jelas dan akurat pada tabel riwayat tarikan gacha.
+  - Memperbarui teks lencana (*badge*) dan deskripsi header gacha agar lebih ringkas dan fokus pada pencatatan tarikan dan verifikasi rasio SSR aktual.
+- **Penyesuaian Interval Refresh Data Fans Circle Club Menjadi 1 Jam (`CircleTrackerService.php`, `CircleTrackerController.php`, `CircleClubView.jsx`, `UmaTrackerApiTest.php`)**:
+  - Mengubah konstanta `COOLDOWN_SECONDS` dari 3 jam (`10800` detik) menjadi 1 jam (`3600` detik) pada `CircleTrackerService`.
+  - Menyelaraskan pesan penolakan cooldown, status tombol perbarui data, teks info, dan timer hitung mundur (*countdown*) di frontend (`CircleClubView.jsx`) menjadi per 1 jam (*"Pembaruan data hanya dapat dilakukan per 1 jam"* dan *"Tombol refresh data hanya dapat ditekan per 1 jam sekali"*).
+  - Memperbarui pengujian otomatis `test_circle_tracker_refresh_enforces_1_hour_cooldown` pada `UmaTrackerApiTest.php`.
+- **Penyempurnaan Validasi Ketat Tipe Banner & Katalog Pool Gacha (`BatchGachaPullRequest.php`, `StoreGachaPullRequest.php`, `UpdateGachaPullRequest.php`, `BulkUpdateGachaPullRequest.php`, `GachaView.jsx`, `GachaRateUpValidationTest.php`)**:
+  - **Sinkronisasi Otomatis Tipe Banner**: Ketika pengguna beralih tombol pilihan pool antara *Character* dan *Support Card*, jika ID banner yang sedang terpilih tidak cocok dengan tipe yang baru, state banner seketika dikosongkan (`''`), status centang rate-up di semua slot dibersihkan, dan indikator galat direset.
+  - **Guarded Value `<select>` & Peringatan Visual Wajib Dipilih**: Nilai dropdown `<select>` banner JP 2026 kini dijaga ketat: hanya memilih banner yang benar-benar ada dan bertipe sama dengan form aktif. Jika tidak cocok atau belum dipilih, dropdown otomatis menampilkan placeholder *"-- Pilih Banner JP 2026 (Wajib) --"*, bingkai merah tebal (`border-2 border-rose-500 bg-rose-50/80`), teks `* Wajib dipilih` muncul tegas, dan chip *Featured Rate-Up* dari tipe banner yang salah tidak akan pernah muncul.
+  - **Validasi Backend Komprehensif (HTTP 422)**: Menambahkan aturan pada `BatchGachaPullRequest`, `StoreGachaPullRequest`, `UpdateGachaPullRequest`, dan `BulkUpdateGachaPullRequest` untuk memastikan `$banner->banner_type === $bannerType`, serta menolak silang katalog jika karakter diinput pada banner Support Card atau kartu bantuan diinput pada banner Karakter.
+  - **Deteksi Ketidakcocokan Antar Pool Frontend (`checkItemPoolMismatch`)**: Memeriksa setiap baris slot tarikan sebelum form dikirim untuk mendeteksi kartu karakter pada pool support card (atau sebaliknya) dan menandai slot yang tidak sesuai.
+  - **Preservasi Tanda Kurung Kostum (`isItemInOptions`)**: Mempertahankan nama kostum/judul kartu dalam tanda kurung siku `[...]` saat pencocokan opsi agar varian karakter berkostum tidak tertukar dengan kartu bantuan yang memiliki nama Uma serupa.
+  - **Uji Regresi Otomatis PHPUnit**: Menambahkan 6 skenario pengujian baru pada `GachaRateUpValidationTest.php` yang mencakup penolakan mismatch tipe banner dan penolakan salah pool item pada single pull, batch pull, dan bulk update (seluruh 12 test lulus 100%).
+
 ## [Versi 3.1.2] - 29 Oktober 2026
 
 ### 🎨 Pemolesan Antarmuka Responsif 1366p, Lokalisasi Modal & Sinkronisasi Metrik Katalog

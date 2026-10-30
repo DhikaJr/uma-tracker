@@ -349,6 +349,27 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
         return false;
     };
 
+    // Helper: Detect cross-pool mismatch (character on support banner or support card on character banner)
+    const checkItemPoolMismatch = (name, bannerType) => {
+        if (!name || isPlaceholder(name)) return null;
+        const clean = name.trim().toLowerCase();
+
+        if (bannerType === 'support_card') {
+            const isChar = (gachaMeta.characters || []).some(c => typeof c === 'string' && c.toLowerCase() === clean);
+            if (isChar) {
+                return `Item '${name}' adalah Karakter Uma Musume, bukan Support Card. Harap pilih banner Karakter.`;
+            }
+        } else if (bannerType === 'character') {
+            const hasSupportPrefix = /^(ssr|sr|r)\s+\[/i.test(name.trim());
+            const hasSupportTag = /\((speed|stamina|power|guts|wisdom|wit|friend|group)\)$/i.test(name.trim());
+            const isSupport = hasSupportPrefix || hasSupportTag || (gachaMeta.support_cards || []).some(s => typeof s === 'string' && s.toLowerCase() === clean);
+            if (isSupport) {
+                return `Item '${name}' adalah Support Card, bukan Karakter. Harap pilih banner Support Card.`;
+            }
+        }
+        return null;
+    };
+
     // Helper: Verify if an item name is valid from the choices / pool
     const isItemInOptions = (name, pool = [], featured = []) => {
         if (isPlaceholder(name)) return false;
@@ -374,12 +395,12 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
             return true;
         }
 
-        // 3. Base name match ignoring brackets [Title] and tags (Speed), etc.
-        const cleanBase = clean.replace(/^(ssr|sr|r)\s+/i, '').replace(/\[.*?\]/, '').replace(/\(.*?\)/, '').trim();
-        if (cleanBase.length >= 3 && allOptions.some(opt => {
+        // 3. Base name match stripping rarity prefix (SSR/SR/R) and stat tags (Speed/Stamina/etc.), while preserving [costume/title]
+        const cleanNormalized = clean.replace(/^(ssr|sr|r)\s+/i, '').replace(/\s*\([^)]+\)\s*$/, '').trim();
+        if (cleanNormalized.length >= 3 && allOptions.some(opt => {
             if (typeof opt !== 'string') return false;
-            const optBase = opt.toLowerCase().replace(/^(ssr|sr|r)\s+/i, '').replace(/\[.*?\]/, '').replace(/\(.*?\)/, '').trim();
-            return optBase === cleanBase || optBase.includes(cleanBase) || cleanBase.includes(optBase);
+            const optNormalized = opt.toLowerCase().replace(/^(ssr|sr|r)\s+/i, '').replace(/\s*\([^)]+\)\s*$/, '').trim();
+            return optNormalized === cleanNormalized || optNormalized.includes(cleanNormalized) || cleanNormalized.includes(optNormalized);
         })) {
             return true;
         }
@@ -497,6 +518,35 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
         }
     };
 
+    // Helper: Switch multi pull banner type and reset selected banner if type mismatches
+    const handleMultiBannerTypeChange = (newType) => {
+        setMultiBanner(newType);
+        setShowSuggestions(false);
+        const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId));
+        if (currentBanner && currentBanner.banner_type !== newType) {
+            setSelectedBannerId('');
+            setMultiPulls(prev => prev.map(p => ({ ...p, is_rate_up: false })));
+            setBannerError(false);
+        }
+    };
+
+    // Helper: Switch single pull banner type and reset selected banner if type mismatches
+    const handleSingleBannerTypeChange = (newType) => {
+        const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+        const shouldReset = currentBanner && currentBanner.banner_type !== newType;
+        setSingleForm(prev => ({
+            ...prev,
+            banner_type: newType,
+            gacha_banner_id: shouldReset ? '' : prev.gacha_banner_id,
+            is_rate_up: shouldReset ? false : prev.is_rate_up,
+        }));
+        if (shouldReset) {
+            setSingleBannerId('');
+            setSingleBannerError(false);
+        }
+        setShowSuggestions(false);
+    };
+
     // Helper: Quick apply featured item from banner to slot
     const handleApplyFeaturedToSlot = (itemName, slotIndex = null) => {
         let autoRarity = 'SSR';
@@ -509,7 +559,8 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
         }
 
         const bannerIdToUse = (slotIndex !== null || pullMode !== 'single') ? selectedBannerId : singleBannerId;
-        const currentBanner = banners.find(b => String(b.id) === String(bannerIdToUse));
+        const bannerTypeToMatch = (slotIndex !== null || pullMode !== 'single') ? multiBanner : singleForm.banner_type;
+        const currentBanner = banners.find(b => String(b.id) === String(bannerIdToUse) && b.banner_type === bannerTypeToMatch);
         const autoRateUp = isItemRateUp(itemName, currentBanner);
 
         if (slotIndex !== null) {
@@ -572,7 +623,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
     // Helper: Select an item from autocomplete or directory
     const handleSelectItem = (name) => {
         let rarity = singleForm.rarity;
-        const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+        const currentBanner = banners.find(b => String(b.id) === String(singleBannerId) && b.banner_type === singleForm.banner_type);
         const isTwinkle = isTwinkleBanner(currentBanner);
         const isFeaturedTwinkle = isTwinkle && Array.isArray(currentBanner?.featured_items) && currentBanner.featured_items.includes(name);
 
@@ -600,7 +651,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
     };
 
     // Current Pool based on banner type & Twinkle Collection filter
-    const currentSingleBanner = banners.find(b => String(b.id) === String(singleBannerId));
+    const currentSingleBanner = banners.find(b => String(b.id) === String(singleBannerId) && b.banner_type === singleForm.banner_type);
     const currentPool = useMemo(() => {
         if (isTwinkleBanner(currentSingleBanner) && Array.isArray(currentSingleBanner?.featured_items) && currentSingleBanner.featured_items.length > 0) {
             const twinkleFeatured = currentSingleBanner.featured_items.filter(c => typeof c === 'string' ? c.includes('[') : true);
@@ -627,13 +678,14 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
     // Single Pull Submit
     const handleSingleSubmit = async (e) => {
         e.preventDefault();
-        if (!singleBannerId) {
+        const activeBanner = banners.find(b => String(b.id) === String(singleBannerId) && b.banner_type === singleForm.banner_type);
+        if (!activeBanner) {
             setSingleBannerError(true);
-            onNotify?.('Kolom Banner JP 2026 wajib dipilih! Tarikan tanpa banner khusus / custom tidak dapat diinput.', 'error');
+            onNotify?.(`Kolom Banner JP 2026 wajib dipilih! Harap pilih banner yang sesuai dengan tipe tarikan (${singleForm.banner_type === 'character' ? 'Karakter' : 'Support Card'}).`, 'error');
             return;
         }
 
-        const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+        const currentBanner = activeBanner;
         const isTwinkle = isTwinkleBanner(currentBanner);
         const featured = (currentBanner && Array.isArray(currentBanner.featured_items) ? currentBanner.featured_items : [])
             .filter(c => singleForm.banner_type === 'character' ? (typeof c === 'string' ? c.includes('[') : true) : true);
@@ -644,6 +696,12 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
         const name = (singleForm.item_name || '').trim();
         if (!name || isPlaceholder(name)) {
             onNotify?.('Harap pilih nama karakter / kartu dari pilihan yang ada!', 'error');
+            return;
+        }
+
+        const mismatch = checkItemPoolMismatch(name, singleForm.banner_type);
+        if (mismatch) {
+            onNotify?.(mismatch, 'error');
             return;
         }
 
@@ -694,19 +752,38 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
     const handleMultiSubmit = async (e) => {
         e.preventDefault();
 
-        if (!selectedBannerId) {
+        const activeBanner = banners.find(b => String(b.id) === String(selectedBannerId) && b.banner_type === multiBanner);
+        if (!activeBanner) {
             setBannerError(true);
-            onNotify?.('Kolom Banner JP 2026 wajib dipilih! Tarikan tanpa banner khusus / custom tidak dapat diinput.', 'error');
+            onNotify?.(`Kolom Banner JP 2026 wajib dipilih! Harap pilih banner yang sesuai dengan tipe tarikan (${multiBanner === 'character' ? 'Karakter' : 'Support Card'}).`, 'error');
             return;
         }
 
-        const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId));
+        const currentBanner = activeBanner;
         const isTwinkle = isTwinkleBanner(currentBanner);
         const featured = (currentBanner && Array.isArray(currentBanner.featured_items) ? currentBanner.featured_items : [])
             .filter(c => multiBanner === 'character' ? (typeof c === 'string' ? c.includes('[') : true) : true);
         const pool = multiBanner === 'character' 
             ? (gachaMeta.characters || []).filter(c => typeof c === 'string' ? c.includes('[') : true) 
             : (gachaMeta.support_cards || []);
+
+        const poolMismatchedSlots = [];
+        multiPulls.forEach((p, idx) => {
+            const name = (p.item_name || '').trim();
+            if (name && !isPlaceholder(name)) {
+                const mismatch = checkItemPoolMismatch(name, multiBanner);
+                if (mismatch) {
+                    poolMismatchedSlots.push({ slot: idx + 1, name, message: mismatch });
+                }
+            }
+        });
+
+        if (poolMismatchedSlots.length > 0) {
+            setValidationErrors(poolMismatchedSlots.map(m => m.slot));
+            const firstMismatch = poolMismatchedSlots[0];
+            onNotify?.(firstMismatch.message, 'error');
+            return;
+        }
 
         const invalidSlots = [];
         const invalidTwinkleSsrSlots = [];
@@ -800,28 +877,6 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
         }
     };
 
-    // Reset Pity / Claim Spark
-    const handleResetPity = async (bannerType, gachaBannerId = null, bannerName = null) => {
-        const displayName = bannerName || (bannerType === 'support_card' ? 'Support Card' : 'Character');
-        if (!window.confirm(`Apakah Anda yakin ingin mereset Pity / Klaim Spark untuk banner "${displayName}"? Tindakan ini akan mengembalikan hitungan pity menjadi 0.`)) {
-            return;
-        }
-
-        try {
-            const res = await fetch('/api/gacha/reset-pity', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({ banner_type: bannerType, gacha_banner_id: gachaBannerId }),
-            });
-            const result = await res.json();
-            onNotify?.(result.message, 'info');
-            fetchStats();
-            fetchPulls();
-        } catch (err) {
-            onNotify?.('Gagal mereset pity banner.', 'error');
-        }
-    };
-
     // Delete Pull
     const handleDelete = async (id) => {
         if (!window.confirm('Hapus catatan tarikan gacha ini?')) return;
@@ -844,7 +899,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
     const setPresetRarities = (pattern) => {
         const count = multiPulls.length;
         const last = count - 1;
-        const banner = banners.find(b => String(b.id) === String(selectedBannerId));
+        const banner = banners.find(b => String(b.id) === String(selectedBannerId) && b.banner_type === multiBanner);
         const feat1 = banner?.featured_items?.[0] || null;
         const feat2 = banner?.featured_items?.[1] || null;
 
@@ -920,10 +975,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
         setValidationErrors(prev => prev.filter(num => num <= clamped));
     };
 
-    const currentPity = stats?.active_pity ?? 0;
-    const pityPercent = Math.min(100, Math.round((currentPity / 200) * 100));
-
-    const currentMultiBanner = banners.find(b => String(b.id) === String(selectedBannerId));
+    const currentMultiBanner = banners.find(b => String(b.id) === String(selectedBannerId) && b.banner_type === multiBanner);
 
     const renderBannerOptions = (typeFilter = null) => {
         const filtered = typeFilter ? banners.filter(b => b.banner_type === typeFilter) : banners;
@@ -977,17 +1029,17 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
 
     return (
         <div className="space-y-8 animate-fadeIn">
-            {/* Header & Pity Spark Hero */}
+            {/* Header Hero */}
             <div className="bg-gradient-to-r from-amber-600 via-amber-700 to-rose-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div>
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-950/40 border border-amber-400/40 text-xs font-bold text-amber-200 mb-2">
                             <Sparkles className="w-3.5 h-3.5" />
-                            <span>Hoki Gacha & Penukaran Pity</span>
+                            <span>Pencatatan Tarikan & Verifikasi SSR</span>
                         </div>
                         <h1 className="text-2xl sm:text-3xl font-black">Gacha Pull Tracker</h1>
-                        <p className="text-amber-100 text-sm mt-1 max-w-xl">
-                            Catat tarikan tunggal dan 10x multi-pull, pantau progres spark menuju 200 tarikan, dan verifikasi rasio perolehan SSR aktual Anda.
+                        <p className="text-amber-100 text-sm mt-1 max-w-2xl">
+                            Catat tarikan tunggal dan 10x multi-pull, pantau riwayat tarikan dan pity count tiap banner, serta verifikasi rasio perolehan SSR aktual Anda.
                         </p>
                         <div className="flex flex-wrap items-center gap-2 mt-3">
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/25 border border-white/20 text-xs font-semibold text-amber-200">
@@ -1003,39 +1055,6 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                             >
                                 <RefreshCw className={`w-3 h-3 ${syncing ? 'animate-spin' : ''}`} />
                                 <span>{syncing ? 'Menyinkronkan...' : 'Sinkronkan'}</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Spark Pity Widget */}
-                    <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 min-w-[260px] text-right">
-                        <div className="text-xs text-amber-200 font-bold uppercase tracking-wider flex items-center justify-between gap-2">
-                            <span className="truncate max-w-[160px]" title={stats?.active_banner_name || 'Penghitung Pity Aktif'}>
-                                {stats?.active_banner_name ? stats.active_banner_name.replace('Pretty Derby Gacha', '').trim() : 'Pity Aktif'}
-                            </span>
-                            <span className="text-amber-300 font-mono font-black shrink-0">{currentPity} / 200</span>
-                        </div>
-                        <div className="w-full bg-black/20 rounded-full h-3 mt-2 overflow-hidden p-0.5">
-                            <div
-                                className="h-full bg-gradient-to-r from-amber-300 via-yellow-200 to-white rounded-full transition-all duration-500 shadow-sm"
-                                style={{ width: `${pityPercent}%` }}
-                            ></div>
-                        </div>
-                        <div className="flex items-center justify-between mt-2 pt-1 text-xs">
-                            <span className="text-amber-100 font-medium">
-                                {200 - currentPity > 0 ? `${200 - currentPity} to spark` : 'Spark ready!'}
-                            </span>
-                            <button
-                                onClick={() => handleResetPity(
-                                    bannerFilter === 'support_card' ? 'support_card' : 'character',
-                                    stats?.active_banner_id || (gachaBannerFilter !== 'all' ? gachaBannerFilter : null),
-                                    stats?.active_banner_name
-                                )}
-                                className="inline-flex items-center gap-1 text-[11px] font-bold bg-amber-900/60 hover:bg-amber-900 text-amber-200 px-2.5 py-1 rounded-lg border border-amber-400/30 transition-colors cursor-pointer"
-                                title="Reset pity after spark claim"
-                            >
-                                <RotateCcw className="w-3 h-3" />
-                                <span>Reset / Spark</span>
                             </button>
                         </div>
                     </div>
@@ -1451,7 +1470,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                     <div className="flex gap-1.5">
                                         <button
                                             type="button"
-                                            onClick={() => setMultiBanner('character')}
+                                            onClick={() => handleMultiBannerTypeChange('character')}
                                             className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
                                                 multiBanner === 'character'
                                                     ? 'bg-amber-600 text-white border-amber-600'
@@ -1462,7 +1481,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => setMultiBanner('support_card')}
+                                            onClick={() => handleMultiBannerTypeChange('support_card')}
                                             className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
                                                 multiBanner === 'support_card'
                                                     ? 'bg-amber-600 text-white border-amber-600'
@@ -1510,25 +1529,35 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                         <span>Banner JP 2026:</span>
                                         <span className="text-rose-500 font-black">*</span>
                                     </label>
-                                    <select
-                                        value={selectedBannerId}
-                                        onChange={(e) => {
-                                            setBannerError(false);
-                                            handleBannerChange(e.target.value, 'multi');
-                                        }}
-                                        className={`rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:outline-none max-w-xs truncate transition-all ${
-                                            bannerError || !selectedBannerId
-                                                ? 'bg-rose-50/80 dark:bg-rose-950/40 border-2 border-rose-500 text-rose-800 dark:text-rose-300 focus:ring-2 focus:ring-rose-500'
-                                                : 'bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-600/60 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500'
-                                        }`}
-                                    >
-                                        {renderBannerOptions(multiBanner)}
-                                    </select>
-                                    {(!selectedBannerId || bannerError) && (
-                                        <span className="text-[10px] font-extrabold text-rose-600 dark:text-rose-400">
-                                            * Wajib dipilih
-                                        </span>
-                                    )}
+                                    {(() => {
+                                        const isMultiBannerValid = banners.some(b => String(b.id) === String(selectedBannerId) && b.banner_type === multiBanner);
+                                        const activeMultiBannerId = isMultiBannerValid ? selectedBannerId : '';
+                                        const hasMultiBannerError = bannerError || !isMultiBannerValid;
+
+                                        return (
+                                            <>
+                                                <select
+                                                    value={activeMultiBannerId}
+                                                    onChange={(e) => {
+                                                        setBannerError(false);
+                                                        handleBannerChange(e.target.value, 'multi');
+                                                    }}
+                                                    className={`rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:outline-none max-w-xs truncate transition-all ${
+                                                        hasMultiBannerError
+                                                            ? 'bg-rose-50/80 dark:bg-rose-950/40 border-2 border-rose-500 text-rose-800 dark:text-rose-300 focus:ring-2 focus:ring-rose-500'
+                                                            : 'bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-600/60 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500'
+                                                    }`}
+                                                >
+                                                    {renderBannerOptions(multiBanner)}
+                                                </select>
+                                                {hasMultiBannerError && (
+                                                    <span className="text-[10px] font-extrabold text-rose-600 dark:text-rose-400">
+                                                        * Wajib dipilih
+                                                    </span>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
                                 </div>
 
                                 {/* Pull Date */}
@@ -1582,7 +1611,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
 
                         {/* Select Pick Up Mode Notice & Featured Chips for Batch Pull */}
                         {(() => {
-                            const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId));
+                            const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId) && b.banner_type === multiBanner);
                             if (!currentBanner) return null;
                             const isSelect = isSelectPickupBanner(currentBanner);
                             const isTwinkle = isTwinkleBanner(currentBanner);
@@ -1671,7 +1700,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                         {/* 10 Items Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {multiPulls.map((item, idx) => {
-                                const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId));
+                                const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId) && b.banner_type === multiBanner);
                                 const isTwinkle = isTwinkleBanner(currentBanner);
                                 const isInvalid = validationErrors.includes(idx + 1);
                                 return (
@@ -1859,7 +1888,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                         {/* Datalist for fast native browser suggestions in 10-pull */}
                         <datalist id="gacha-multi-suggestions">
                             {(() => {
-                                const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId));
+                                const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId) && b.banner_type === multiBanner);
                                 if (isTwinkleBanner(currentBanner)) {
                                     const featured = (Array.isArray(currentBanner?.featured_items) ? currentBanner.featured_items : [])
                                         .filter(c => typeof c === 'string' ? c.includes('[') : true);
@@ -1918,10 +1947,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 h-4 leading-4">Pool Type</label>
                                 <select
                                     value={singleForm.banner_type}
-                                    onChange={(e) => {
-                                        setSingleForm({ ...singleForm, banner_type: e.target.value });
-                                        setShowSuggestions(false);
-                                    }}
+                                    onChange={(e) => handleSingleBannerTypeChange(e.target.value)}
                                     className="w-full h-10 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl px-3 text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none"
                                 >
                                     <option value="character">Uma Musume</option>
@@ -1930,30 +1956,40 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                             </div>
 
                             <div>
-                                <div className="flex items-center justify-between mb-1.5 h-4 leading-4">
-                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
-                                        Banner JP 2026 <span className="text-rose-500 font-black">*</span>
-                                    </label>
-                                    {(!singleBannerId || singleBannerError) && (
-                                        <span className="text-[10px] font-extrabold text-rose-600 dark:text-rose-400 shrink-0">
-                                            * Wajib dipilih
-                                        </span>
-                                    )}
-                                </div>
-                                <select
-                                    value={singleBannerId}
-                                    onChange={(e) => {
-                                        setSingleBannerError(false);
-                                        handleBannerChange(e.target.value, 'single');
-                                    }}
-                                    className={`w-full h-10 rounded-xl px-3 text-xs font-semibold focus:outline-none truncate transition-all ${
-                                        singleBannerError || !singleBannerId
-                                            ? 'bg-rose-50/80 dark:bg-rose-950/40 border-2 border-rose-500 text-rose-800 dark:text-rose-300 focus:ring-2 focus:ring-rose-500'
-                                            : 'bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500'
-                                    }`}
-                                >
-                                    {renderBannerOptions(singleForm.banner_type)}
-                                </select>
+                                {(() => {
+                                    const isSingleBannerValid = banners.some(b => String(b.id) === String(singleBannerId) && b.banner_type === singleForm.banner_type);
+                                    const activeSingleBannerId = isSingleBannerValid ? singleBannerId : '';
+                                    const hasSingleBannerError = singleBannerError || !isSingleBannerValid;
+
+                                    return (
+                                        <>
+                                            <div className="flex items-center justify-between mb-1.5 h-4 leading-4">
+                                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
+                                                    Banner JP 2026 <span className="text-rose-500 font-black">*</span>
+                                                </label>
+                                                {hasSingleBannerError && (
+                                                    <span className="text-[10px] font-extrabold text-rose-600 dark:text-rose-400 shrink-0">
+                                                        * Wajib dipilih
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <select
+                                                value={activeSingleBannerId}
+                                                onChange={(e) => {
+                                                    setSingleBannerError(false);
+                                                    handleBannerChange(e.target.value, 'single');
+                                                }}
+                                                className={`w-full h-10 rounded-xl px-3 text-xs font-semibold focus:outline-none truncate transition-all ${
+                                                    hasSingleBannerError
+                                                        ? 'bg-rose-50/80 dark:bg-rose-950/40 border-2 border-rose-500 text-rose-800 dark:text-rose-300 focus:ring-2 focus:ring-rose-500'
+                                                        : 'bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500'
+                                                }`}
+                                            >
+                                                {renderBannerOptions(singleForm.banner_type)}
+                                            </select>
+                                        </>
+                                    );
+                                })()}
                             </div>
 
                             <div>
@@ -1989,7 +2025,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                             key={r}
                                             type="button"
                                             onClick={() => {
-                                                const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+                                                const currentBanner = banners.find(b => String(b.id) === String(singleBannerId) && b.banner_type === singleForm.banner_type);
                                                 const isSelect = isSelectPickupBanner(currentBanner);
                                                 let nextUp = singleForm.is_rate_up;
                                                 if (r === 'R' || (isSelect && r !== 'SSR')) {
@@ -2016,14 +2052,14 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                             <div>
                                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 h-4 leading-4">
                                     {(() => {
-                                        const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+                                        const currentBanner = banners.find(b => String(b.id) === String(singleBannerId) && b.banner_type === singleForm.banner_type);
                                         return isTwinkleBanner(currentBanner) ? 'Pool & Aksi' : 'Status & Aksi';
                                     })()}
                                 </label>
                                 <div className="flex items-center gap-2 h-10">
                                     {/* Rate Up Toggle: Interactive on Select Pick Up, read-only on standard banner, muted on Twinkle */}
                                     {(() => {
-                                        const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+                                        const currentBanner = banners.find(b => String(b.id) === String(singleBannerId) && b.banner_type === singleForm.banner_type);
                                         const isTwinkle = isTwinkleBanner(currentBanner);
                                         const isSelect = isSelectPickupBanner(currentBanner);
 
@@ -2044,7 +2080,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+                                                        const currentBanner = banners.find(b => String(b.id) === String(singleBannerId) && b.banner_type === singleForm.banner_type);
                                                         if (!singleForm.is_rate_up) {
                                                             if (!isItemRateUp(singleForm.item_name, currentBanner)) {
                                                                 onNotify?.(
@@ -2111,7 +2147,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
 
                         {/* Select Pick Up Mode Notice & Featured Chips for Single Pull */}
                         {(() => {
-                            const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+                            const currentBanner = banners.find(b => String(b.id) === String(singleBannerId) && b.banner_type === singleForm.banner_type);
                             if (!currentBanner) return null;
                             const isTwinkle = isTwinkleBanner(currentBanner);
                             const isSelect = isSelectPickupBanner(currentBanner);
@@ -2203,7 +2239,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
 
                         {/* Item Name with Autocomplete, Directory modal, and Quick Chips */}
                         {(() => {
-                            const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+                            const currentBanner = banners.find(b => String(b.id) === String(singleBannerId) && b.banner_type === singleForm.banner_type);
                             const isTwinkle = isTwinkleBanner(currentBanner);
 
                             return (
@@ -2240,7 +2276,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                             onChange={(e) => {
                                                 const val = e.target.value;
                                                 let autoRarity = singleForm.rarity;
-                                                const currentBanner = banners.find(b => String(b.id) === String(singleBannerId));
+                                                const currentBanner = banners.find(b => String(b.id) === String(singleBannerId) && b.banner_type === singleForm.banner_type);
                                                 const isFeaturedTwinkle = isTwinkle && Array.isArray(currentBanner?.featured_items) && currentBanner.featured_items.includes(val);
 
                                                 if (isFeaturedTwinkle) {

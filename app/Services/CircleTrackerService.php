@@ -16,7 +16,7 @@ class CircleTrackerService
 {
     public const BASE_URL = 'https://muxueuma.com';
 
-    public const COOLDOWN_SECONDS = 10800; // 3 hours in seconds
+    public const COOLDOWN_SECONDS = 3600; // 1 hour in seconds
 
     /**
      * Get Circle Tracker Status including latest snapshot and cooldown info.
@@ -164,7 +164,7 @@ class CircleTrackerService
 
                 return [
                     'success' => false,
-                    'message' => "Tombol refresh data hanya dapat ditekan per 3 jam sekali sebelum tombolnya dapat ditekan kembali. Silakan coba lagi dalam {$timeLeft}.",
+                    'message' => "Tombol refresh data hanya dapat ditekan per 1 jam sekali sebelum tombolnya dapat ditekan kembali. Silakan coba lagi dalam {$timeLeft}.",
                     'data' => $this->formatSnapshotResponse($latest, $circleId, $trackedViewerId),
                 ];
             }

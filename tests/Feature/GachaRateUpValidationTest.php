@@ -204,4 +204,136 @@ class GachaRateUpValidationTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['is_rate_up']);
     }
+
+    /**
+     * Single pull should reject when banner_type mismatches the gacha_banner's banner_type.
+     */
+    public function test_single_pull_rejects_banner_type_mismatch(): void
+    {
+        // Try submitting character pull type with support card banner
+        $response = $this->postJson('/api/gacha/pulls', [
+            'banner_type' => 'character',
+            'gacha_banner_id' => $this->selectPickupBanner->id, // support_card banner
+            'pull_type' => 'single',
+            'item_name' => 'Special Week [Special Dreamer]',
+            'rarity' => 'SSR',
+            'pulled_at' => '2026-09-19',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['gacha_banner_id']);
+    }
+
+    /**
+     * Single pull should reject Uma Musume character item submitted on a support card pool.
+     */
+    public function test_single_pull_rejects_character_item_on_support_card_pool(): void
+    {
+        $response = $this->postJson('/api/gacha/pulls', [
+            'banner_type' => 'support_card',
+            'gacha_banner_id' => $this->selectPickupBanner->id,
+            'pull_type' => 'single',
+            'item_name' => 'Mejiro Ryan [Down the Line]', // Character item, not support card
+            'rarity' => 'R',
+            'pulled_at' => '2026-09-19',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['item_name'])
+            ->assertJsonPath('errors.item_name.0', "Item 'Mejiro Ryan [Down the Line]' adalah Karakter Uma Musume, bukan Support Card. Harap pilih banner Karakter.");
+    }
+
+    /**
+     * Single pull should reject Support Card item submitted on a character pool.
+     */
+    public function test_single_pull_rejects_support_card_item_on_character_pool(): void
+    {
+        $response = $this->postJson('/api/gacha/pulls', [
+            'banner_type' => 'character',
+            'gacha_banner_id' => $this->standardBanner->id,
+            'pull_type' => 'single',
+            'item_name' => 'R [Tracen Academy] Special Week (Guts)', // Support card, not character
+            'rarity' => 'R',
+            'pulled_at' => '2026-01-02',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['item_name'])
+            ->assertJsonPath('errors.item_name.0', "Item 'R [Tracen Academy] Special Week (Guts)' adalah Support Card, bukan Karakter. Harap pilih banner Support Card.");
+    }
+
+    /**
+     * Batch pull should reject when banner_type mismatches the gacha_banner's banner_type.
+     */
+    public function test_batch_pull_rejects_banner_type_mismatch(): void
+    {
+        $response = $this->postJson('/api/gacha/pulls/batch', [
+            'banner_type' => 'character',
+            'gacha_banner_id' => $this->selectPickupBanner->id, // support_card banner
+            'pull_type' => 'multi_10',
+            'pulled_at' => '2026-09-19',
+            'pulls' => [
+                [
+                    'item_name' => 'Mejiro Ryan [Down the Line]',
+                    'rarity' => 'R',
+                    'is_rate_up' => false,
+                ],
+            ],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['gacha_banner_id']);
+    }
+
+    /**
+     * Batch pull should reject character items submitted under support card banner type.
+     */
+    public function test_batch_pull_rejects_character_items_on_support_card_pool(): void
+    {
+        $response = $this->postJson('/api/gacha/pulls/batch', [
+            'banner_type' => 'support_card',
+            'gacha_banner_id' => $this->selectPickupBanner->id,
+            'pull_type' => 'multi_10',
+            'pulled_at' => '2026-09-19',
+            'pulls' => [
+                [
+                    'item_name' => 'Mejiro Ryan [Down the Line]',
+                    'rarity' => 'R',
+                    'is_rate_up' => false,
+                ],
+            ],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['pulls.0.item_name']);
+        $this->assertSame(
+            "Item 'Mejiro Ryan [Down the Line]' pada slot #1 adalah Karakter Uma Musume, bukan Support Card. Harap pilih banner Karakter.",
+            $response->json('errors')['pulls.0.item_name'][0]
+        );
+    }
+
+    /**
+     * Bulk update should reject banner type mismatch with the pull's existing banner_type.
+     */
+    public function test_bulk_update_rejects_banner_type_mismatch(): void
+    {
+        $pull = GachaPull::create([
+            'banner_type' => 'character',
+            'gacha_banner_id' => $this->standardBanner->id,
+            'pull_type' => 'single',
+            'item_name' => 'Special Week [Special Dreamer]',
+            'rarity' => 'SSR',
+            'is_rate_up' => false,
+            'pity_count_at_pull' => 1,
+            'pulled_at' => '2026-01-02',
+        ]);
+
+        $response = $this->postJson('/api/gacha/pulls/bulk-update', [
+            'ids' => [$pull->id],
+            'gacha_banner_id' => $this->selectPickupBanner->id, // support_card banner
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['gacha_banner_id']);
+    }
 }

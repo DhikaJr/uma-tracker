@@ -214,7 +214,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
             const result = await res.json();
             if (res.ok && result.success) {
                 setStatusData(result.data);
-                setCountdownSecs(result.data?.cooldown_seconds_remaining || 10800);
+                setCountdownSecs(result.data?.cooldown_seconds_remaining || 3600);
                 setIsChangingCircle(false);
                 setInputCircleId('');
                 onNotify?.(result.message || 'Circle Club berhasil dihubungkan!', 'success');
@@ -244,7 +244,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
     // Refresh Handler
     const handleRefresh = async () => {
         if (countdownSecs > 0) {
-            onNotify?.('Tombol refresh data hanya dapat ditekan per 3 jam sekali.', 'warning');
+            onNotify?.('Tombol refresh data hanya dapat ditekan per 1 jam sekali.', 'warning');
             return;
         }
 
@@ -259,7 +259,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
 
             if (res.ok && result.success) {
                 setStatusData(result.data);
-                setCountdownSecs(result.data.cooldown_seconds_remaining || 10800);
+                setCountdownSecs(result.data.cooldown_seconds_remaining || 3600);
                 onNotify?.(result.message || 'Data Fans Club berhasil diperbarui!', 'success');
             } else {
                 if (result.data) {
@@ -699,7 +699,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                                     ? 'Data historis ini bersifat permanen'
                                     : canRefresh 
                                         ? 'Data siap diperbarui dari server' 
-                                        : `Pembaruan data hanya dapat dilakukan per 3 jam (${formatCountdown(countdownSecs)} tersisa)`}
+                                        : `Pembaruan data hanya dapat dilakukan per 1 jam (${formatCountdown(countdownSecs)} tersisa)`}
                             </span>
                         </div>
                     </div>

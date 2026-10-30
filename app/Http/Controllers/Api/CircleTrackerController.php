@@ -32,7 +32,7 @@ class CircleTrackerController extends Controller
     }
 
     /**
-     * Refresh Circle data with 3-hour cooldown enforcement.
+     * Refresh Circle data with 1-hour cooldown enforcement.
      */
     public function refresh(Request $request): JsonResponse
     {

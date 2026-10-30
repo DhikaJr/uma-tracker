@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Models\GachaBanner;
+use App\Models\GachaPull;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class BulkUpdateGachaPullRequest extends FormRequest
 {
@@ -50,5 +53,29 @@ class BulkUpdateGachaPullRequest extends FormRequest
             'gacha_banner_id.exists' => 'Banner gacha yang dipilih tidak ditemukan dalam basis data.',
             'pulled_at.date' => 'Format tanggal pull tidak valid.',
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $bannerId = $this->input('gacha_banner_id');
+            if ($bannerId) {
+                $banner = GachaBanner::find($bannerId);
+                if ($banner) {
+                    $pulls = GachaPull::whereIn('id', $this->input('ids', []))->get();
+                    foreach ($pulls as $pull) {
+                        if ($pull->banner_type !== $banner->banner_type) {
+                            $expected = $banner->banner_type === 'character' ? 'Karakter' : 'Support Card';
+                            $actual = $pull->banner_type === 'character' ? 'Karakter' : 'Support Card';
+                            $validator->errors()->add('gacha_banner_id', "Banner '{$banner->name}' adalah banner {$expected}, tidak dapat digunakan untuk pull berjenis {$actual}.");
+                            break;
+                        }
+                    }
+                }
+            }
+        });
     }
 }
