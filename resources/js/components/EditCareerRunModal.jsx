@@ -141,6 +141,10 @@ export default function EditCareerRunModal({
         }
 
         const scoreNum = parseNumber(form.evaluation_score);
+        if (scoreNum > 200000) {
+            setErrorMsg('Skor evaluasi tidak boleh melebihi 200.000 pts.');
+            return;
+        }
         const computedRank = (scoreNum > 0 ? getRankFromScore(scoreNum) : null) || form.final_rank || 'G';
 
         setSaving(true);
@@ -330,14 +334,21 @@ export default function EditCareerRunModal({
                         <div>
                             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
                                 <span>Rating Points (pts)</span>
-                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Auto-Rank</span>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] text-slate-400 font-semibold">(Maks: 200.000 pts)</span>
+                                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Auto-Rank</span>
+                                </div>
                             </label>
                             <input
                                 type="text"
                                 value={form.evaluation_score}
                                 onChange={(e) => handleScoreChange(e.target.value)}
                                 placeholder="Misal: 21.500"
-                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                                className={`w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:outline-none ${
+                                    form.evaluation_score && parseNumber(form.evaluation_score) > 200000
+                                        ? 'border-rose-500 ring-2 ring-rose-500/30 text-rose-600 dark:text-rose-400 focus:ring-rose-500'
+                                        : 'border-slate-200 dark:border-slate-700 focus:ring-emerald-500'
+                                }`}
                             />
                         </div>
                     </div>
@@ -348,7 +359,11 @@ export default function EditCareerRunModal({
                             <div className="flex items-center gap-2.5">
                                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Hasil Rank:</span>
                                 <RankBadge rank={form.final_rank || 'G'} score={form.evaluation_score} size="md" />
-                                {form.evaluation_score && parseNumber(form.evaluation_score) > 0 ? (
+                                {form.evaluation_score && parseNumber(form.evaluation_score) > 200000 ? (
+                                    <span className="text-xs font-mono font-semibold text-rose-600 dark:text-rose-400">
+                                        (⚠️ Skor melebihi batas 200.000 pts)
+                                    </span>
+                                ) : form.evaluation_score && parseNumber(form.evaluation_score) > 0 ? (
                                     <span className="text-xs font-mono font-semibold text-emerald-700 dark:text-emerald-400">
                                         (Auto-Rank dari {form.evaluation_score} pts)
                                     </span>

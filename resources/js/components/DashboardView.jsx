@@ -154,7 +154,14 @@ export default function DashboardView({
 
     const { gacha, career, recent_pulls = [], recent_runs = [], fan_trends = [], active_banners = [] } = summaryData;
 
-    const bannerPities = gacha?.banner_pities || [];
+    // Filter out expired banners (pity expires 1 month after banner end_date)
+    const bannerPities = (gacha?.banner_pities || []).filter(bp => {
+        if (!bp.end_date) return true;
+        const end = new Date(bp.end_date);
+        end.setMonth(end.getMonth() + 1);
+        return new Date() <= end;
+    });
+
     const currentBannerPity = selectedPityBannerId
         ? bannerPities.find(b => b.banner_id === selectedPityBannerId)
         : (bannerPities[0] || null);
@@ -293,23 +300,23 @@ export default function DashboardView({
                             <span className="font-semibold text-amber-600 dark:text-amber-400">{pullsToSpark} lagi</span>
                         </div>
 
-                        {/* Banner selector chips if multiple banners have active pity */}
+                        {/* Dropdown Selector for Multi-Banner Active Pity */}
                         {bannerPities.length > 1 && (
-                            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto pb-1">
-                                {bannerPities.map(bp => (
-                                    <button
-                                        key={bp.banner_id}
-                                        type="button"
-                                        onClick={() => setSelectedPityBannerId(bp.banner_id)}
-                                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold shrink-0 transition-colors cursor-pointer ${
-                                            (selectedPityBannerId === bp.banner_id || (!selectedPityBannerId && bannerPities[0]?.banner_id === bp.banner_id))
-                                                ? 'bg-amber-500 text-white shadow-2xs'
-                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
-                                        }`}
-                                    >
-                                        {bp.name.replace('Pretty Derby Gacha', '').trim()} ({bp.current_pity})
-                                    </button>
-                                ))}
+                            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-1">
+                                    Pilih Banner Pity:
+                                </label>
+                                <select
+                                    value={selectedPityBannerId || bannerPities[0]?.banner_id}
+                                    onChange={(e) => setSelectedPityBannerId(Number(e.target.value))}
+                                    className="w-full text-xs font-bold py-1.5 px-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 cursor-pointer transition-colors truncate"
+                                >
+                                    {bannerPities.map(bp => (
+                                        <option key={bp.banner_id} value={bp.banner_id}>
+                                            {bp.name.replace('Pretty Derby Gacha', '').trim()} — {bp.current_pity} / 200 ({bp.pity_percent}%)
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         )}
                     </div>

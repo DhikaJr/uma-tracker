@@ -332,6 +332,43 @@ class UmaTrackerApiTest extends TestCase
             ->assertJsonValidationErrors(['fans_gained']);
     }
 
+    public function test_career_run_validation_rejects_evaluation_score_exceeding_200000(): void
+    {
+        $payload = [
+            'uma_name' => 'Tokai Teio',
+            'scenario' => 'The Shuntaisai Festival',
+            'fans_gained' => 500000,
+            'evaluation_score' => 1000000, // Exceeds 200.000 cap!
+            'final_rank' => 'LS24',
+            'run_date' => '2026-10-30',
+        ];
+
+        $response = $this->postJson('/api/career/runs', $payload);
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['evaluation_score']);
+
+        $this->assertStringContainsString(
+            'tidak boleh melebihi 200.000 pts',
+            $response->json('errors.evaluation_score.0')
+        );
+    }
+
+    public function test_career_run_validation_accepts_valid_evaluation_score_within_200000(): void
+    {
+        $payload = [
+            'uma_name' => 'Tokai Teio',
+            'scenario' => 'The Shuntaisai Festival',
+            'fans_gained' => 500000,
+            'evaluation_score' => 200000, // Exactly at cap
+            'final_rank' => 'LS24',
+            'run_date' => '2026-10-30',
+        ];
+
+        $response = $this->postJson('/api/career/runs', $payload);
+        $response->assertStatus(201)
+            ->assertJsonPath('data.evaluation_score', 200000);
+    }
+
     public function test_career_metadata_includes_rank_score_thresholds(): void
     {
         $response = $this->getJson('/api/career/metadata');
@@ -1308,6 +1345,44 @@ class UmaTrackerApiTest extends TestCase
         // Verify active pity is now 10
         $this->assertEquals(10, GachaPity::forBanner('support_card', $banner->id)->fresh()->current_pity);
         $this->assertEquals(1, GachaPity::forBanner('support_card', $banner->id)->fresh()->total_sparks);
+    }
+
+    public function test_dashboard_pity_expires_one_month_after_banner_end(): void
+    {
+        // 1. Expired banner (ended 2 months ago)
+        $expiredBanner = GachaBanner::create([
+            'id' => 90050,
+            'name' => 'Expired Banner Test',
+            'banner_type' => 'character',
+            'category' => 'standard',
+            'start_date' => now()->subMonths(3)->toDateString(),
+            'end_date' => now()->subMonths(2)->toDateString(),
+            'is_active' => false,
+        ]);
+        $pityExpired = GachaPity::forBanner('character', $expiredBanner->id);
+        $pityExpired->current_pity = 70;
+        $pityExpired->save();
+
+        // 2. Active banner (ended 10 days ago, within 1 month grace period)
+        $activeBanner = GachaBanner::create([
+            'id' => 90051,
+            'name' => 'Recent Banner Test',
+            'banner_type' => 'support_card',
+            'category' => 'scenario_release',
+            'start_date' => now()->subMonth()->toDateString(),
+            'end_date' => now()->subDays(10)->toDateString(),
+            'is_active' => true,
+        ]);
+        $pityActive = GachaPity::forBanner('support_card', $activeBanner->id);
+        $pityActive->current_pity = 120;
+        $pityActive->save();
+
+        $res = $this->getJson('/api/dashboard/summary');
+        $res->assertStatus(200);
+
+        $bannerPities = collect($res->json('gacha.banner_pities'));
+        $this->assertFalse($bannerPities->contains('banner_id', 90050));
+        $this->assertTrue($bannerPities->contains('banner_id', 90051));
     }
 
     public function test_can_record_career_run_with_independent_training_type(): void

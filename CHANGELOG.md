@@ -2,6 +2,22 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.1.5] - 4 November 2026
+
+### 🎯 Dropdown Pity Aktif Dasbor, Validasi Cap Skor Evaluasi 200.000 pts & Pembaruan Jadwal Cygames
+- **Dropdown Pemilih Banner Pity & Filter Kadaluarsa 1 Bulan (`DashboardView.jsx`, `DashboardController.php`)**:
+  - Mengganti deretan tombol tab pemilih pity horizontal yang bergeser dan terpotong pada widget *Pity Aktif (Spark)* di Dasbor dengan komponen dropdown `<select>` yang kompak dan rapi: `[Nama Banner] — [Pity Aktif] / 200 ([Persen]%)`.
+  - Menerapkan mekanisme kadaluarsa otomatis: pity aktif dari banner yang telah selesai akan disembunyikan secara otomatis dari Dasbor jika telah melewati 1 bulan (30 hari) pasca-tanggal berakhirnya banner (`end_date`), menjaga fokus pengguna hanya pada banner aktif dan relevan.
+- **Lokalisasi Penuh Kartu Metrik Ringkasan Karier (`FansView.jsx`)**:
+  - Menerjemahkan 4 kartu metrik performa utama pada modul Karier ke Bahasa Indonesia: *Total Sesi Karier*, *Total Perolehan Fans*, *Rata-rata Fans / Sesi*, dan *Rekor Fans Terbaik (1 Sesi)*, serta melokalisasi tombol dan prompt *Ubah Target*.
+- **Pembaruan Jadwal Resmi Turnamen Cygames News #3525 (`CompetitionEventSeeder.php`, `CompetitionEvent.php`)**:
+  - **League of Heroes November 2026 (`loh-2026-11`)**: Memperbarui status pelaksanaan dengan tanggal pasti **22 November 2026** (`2026-11-22`), periode `exact`, dan label *"22 November 2026"*.
+  - **Champions Meeting CLASSIC Januari 2027 (`cm-2027-01`)**: Mengintegrasikan konfirmasi resmi kondisi balapan: Sirkuit Tokyo, Turf (Rumput), 2400m (Jarak Menengah), Putaran Kiri, Musim Dingin, Siang Hari, Cuaca Cerah, Kondisi Baik/Kering. Layout trek resmi dan 6 rekomendasi green skill langsung terpasang otomatis.
+- **Batas Maksimal (Cap) Skor Evaluasi 200.000 pts & Proteksi Antarmuka (`StoreCareerRunRequest.php`, `UpdateCareerRunRequest.php`, `FansView.jsx`, `EditCareerRunModal.jsx`)**:
+  - Menetapkan batas atas skor evaluasi sebesar `200.000` pts pada validasi backend (HTTP 422) maupun frontend.
+  - Menambahkan indikator visual merah jika input skor melebihi batas (seperti `200.001` atau `1.000.000`), menggantikan badge auto-rank dengan pesan peringatan galat batas maksimum, dan mencegah pengiriman formulir.
+  - Memperbaiki impor ikon `AlertCircle` pada `FansView.jsx` sehingga transisi galat skor render mulus tanpa memicu error batas tampilan (*ReferenceError*).
+
 ## [Versi 3.1.4] - 30 Oktober 2026
 
 ### 🎯 Pembersihan Bar Pity Rekap Banner Gacha 2026+ & Perbaikan Ikon Skill Kalkulator Rating

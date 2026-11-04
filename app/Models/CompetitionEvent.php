@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Support\CompetitionGreenSkillRecommender;
 use App\Support\CompetitionStatRecoveryRecommender;
+use Database\Seeders\CompetitionEventSeeder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +14,36 @@ use Illuminate\Database\Eloquent\Model;
 class CompetitionEvent extends Model
 {
     use HasFactory;
+
+    /**
+     * The "booted" method of the model.
+     * Overlays canonical official Cygames schedule updates from CompetitionEventSeeder::OFFICIAL_EVENTS
+     * when records in the persistent database are missing newly announced race parameters.
+     */
+    protected static function booted(): void
+    {
+        static::retrieved(function (self $event) {
+            $canonical = CompetitionEventSeeder::OFFICIAL_EVENTS[$event->event_key] ?? null;
+            if ($canonical) {
+                // Overlay newly announced race parameters where persistent DB currently holds NULL
+                foreach ($canonical as $attr => $val) {
+                    if ($val !== null && $event->getAttribute($attr) === null) {
+                        $event->setAttribute($attr, $val);
+                    }
+                }
+
+                // For loh-2026-11: overlay confirmed start_date and exact period if not yet set
+                if ($event->event_key === 'loh-2026-11' && $event->getAttribute('period') === 'late') {
+                    $event->setAttribute('period', 'exact');
+                    $event->setAttribute('start_date', '2026-11-22');
+                    $event->setAttribute('date_label', '22 November 2026');
+                    $event->setAttribute('source_url', 'https://umamusume.jp/news/detail?id=3525');
+                }
+
+                $event->syncOriginal();
+            }
+        });
+    }
 
     /**
      * The table associated with the model.

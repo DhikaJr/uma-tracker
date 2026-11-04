@@ -80,10 +80,11 @@ class CompetitionEventTest extends TestCase
         $this->assertSame('champions_meeting', $events[0]['event_type']);
         $this->assertSame('Champions Meeting CLASSIC', $events[0]['event_name']);
 
-        // 2. Late Nov 2026
+        // 2. Exact Nov 2026 (22 November 2026)
         $this->assertSame(2026, $events[1]['year']);
         $this->assertSame(11, $events[1]['month']);
-        $this->assertSame('late', $events[1]['period']);
+        $this->assertSame('exact', $events[1]['period']);
+        $this->assertSame('2026-11-22', $events[1]['start_date']);
         $this->assertSame('league_of_heroes', $events[1]['event_type']);
 
         // 3. Late Dec 2026
@@ -93,12 +94,14 @@ class CompetitionEventTest extends TestCase
         $this->assertSame('champions_meeting', $events[2]['event_type']);
         $this->assertSame('Champions Meeting LONG', $events[2]['event_name']);
 
-        // 4. Late Jan 2027
+        // 4. Late Jan 2027 (Tokyo 2400m Turf)
         $this->assertSame(2027, $events[3]['year']);
         $this->assertSame(1, $events[3]['month']);
         $this->assertSame('late', $events[3]['period']);
         $this->assertSame('champions_meeting', $events[3]['event_type']);
         $this->assertSame('Champions Meeting CLASSIC', $events[3]['event_name']);
+        $this->assertSame('Tokyo', $events[3]['venue']);
+        $this->assertSame(2400, $events[3]['distance']);
 
         // 5. Mid Feb 2027
         $this->assertSame(2027, $events[4]['year']);
@@ -126,18 +129,6 @@ class CompetitionEventTest extends TestCase
 
         $events = $response->json('data');
 
-        // Jan 2027 event (Index 3)
-        $janEvent = $events[3];
-        $this->assertNull($janEvent['venue']);
-        $this->assertNull($janEvent['distance']);
-        $this->assertNull($janEvent['direction']);
-        $this->assertNull($janEvent['season']);
-        $this->assertNull($janEvent['time_of_day']);
-        $this->assertNull($janEvent['weather']);
-        $this->assertNull($janEvent['track_condition']);
-        $this->assertNull($janEvent['special_rule']);
-        $this->assertNull($janEvent['start_date']);
-
         // Feb 2027 event (Index 4)
         $febEvent = $events[4];
         $this->assertNull($febEvent['venue']);
@@ -149,6 +140,17 @@ class CompetitionEventTest extends TestCase
         $this->assertNull($febEvent['track_condition']);
         $this->assertNull($febEvent['special_rule']);
         $this->assertNull($febEvent['start_date']);
+
+        // Mar 2027 event (Index 5)
+        $marEvent = $events[5];
+        $this->assertNull($marEvent['venue']);
+        $this->assertNull($marEvent['distance']);
+        $this->assertNull($marEvent['direction']);
+        $this->assertNull($marEvent['season']);
+        $this->assertNull($marEvent['time_of_day']);
+        $this->assertNull($marEvent['weather']);
+        $this->assertNull($marEvent['track_condition']);
+        $this->assertNull($marEvent['start_date']);
     }
 
     /**
@@ -209,10 +211,10 @@ class CompetitionEventTest extends TestCase
         $this->assertSame('2026-10-20', $events[0]['start_date']);
         $this->assertSame('20 Oktober 2026', $events[0]['date_label']);
 
-        // Nov 2026 has late period without start_date
-        $this->assertSame('late', $events[1]['period']);
-        $this->assertNull($events[1]['start_date']);
-        $this->assertSame('Akhir November 2026', $events[1]['date_label']);
+        // Nov 2026 has exact start_date (2026-11-22)
+        $this->assertSame('exact', $events[1]['period']);
+        $this->assertSame('2026-11-22', $events[1]['start_date']);
+        $this->assertSame('22 November 2026', $events[1]['date_label']);
 
         // Feb 2027 has mid period without start_date
         $this->assertSame('mid', $events[4]['period']);
@@ -425,8 +427,8 @@ class CompetitionEventTest extends TestCase
     {
         $this->seed(CompetitionEventSeeder::class);
 
-        // January 2027 CM Classic (Venue and Distance are NULL)
-        $event = CompetitionEvent::where('year', 2027)->where('month', 1)->firstOrFail();
+        // February 2027 LoH (Venue and Distance are NULL)
+        $event = CompetitionEvent::where('year', 2027)->where('month', 2)->firstOrFail();
 
         $this->assertFalse($event->is_fully_confirmed);
         $recs = $event->recommended_green_skills;
@@ -435,6 +437,11 @@ class CompetitionEventTest extends TestCase
         $this->assertFalse($recs['has_recommendations']);
         $this->assertEmpty($recs['skills']);
         $this->assertStringContainsString('Rekomendasi green skill belum tersedia', $recs['disclaimer']);
+
+        // January 2027 CM Classic (Now fully confirmed: Tokyo Turf 2400m)
+        $janEvent = CompetitionEvent::where('year', 2027)->where('month', 1)->firstOrFail();
+        $this->assertTrue($janEvent->is_fully_confirmed);
+        $this->assertTrue($janEvent->recommended_green_skills['has_recommendations']);
     }
 
     /**
@@ -527,8 +534,12 @@ class CompetitionEventTest extends TestCase
         $this->assertSame('https://gametora.com/umamusume/racetracks/nakayama#2500-turf-inner', $events[2]['racetrack_course']['gametora_url']);
         $this->assertSame(2500, $events[2]['racetrack_course']['course']['length']);
 
-        // Events #4, #5, #6: Unannounced events must strictly have NULL racetrack_course
-        $this->assertNull($events[3]['racetrack_course']);
+        // Event #4: Jan 2027 CM Classic (Tokyo 2400m Turf)
+        $this->assertNotNull($events[3]['racetrack_course']);
+        $this->assertSame('tokyo', $events[3]['racetrack_course']['track_slug']);
+        $this->assertSame(2400, $events[3]['racetrack_course']['course']['length']);
+
+        // Events #5, #6: Unannounced events must strictly have NULL racetrack_course
         $this->assertNull($events[4]['racetrack_course']);
         $this->assertNull($events[5]['racetrack_course']);
     }
@@ -538,28 +549,28 @@ class CompetitionEventTest extends TestCase
         $this->seed(CompetitionEventSeeder::class);
         $this->assertSame(6, CompetitionEvent::count());
 
-        $janEvent = CompetitionEvent::where('event_key', 'cm-2027-01')->first();
-        $this->assertNotNull($janEvent);
-        $this->assertSame('late', $janEvent->period);
-        $this->assertNull($janEvent->venue);
-        $this->assertNull($janEvent->start_date);
+        $febEvent = CompetitionEvent::where('event_key', 'loh-2027-02')->first();
+        $this->assertNotNull($febEvent);
+        $this->assertSame('mid', $febEvent->period);
+        $this->assertNull($febEvent->venue);
+        $this->assertNull($febEvent->start_date);
 
         // Update when details become confirmed
         CompetitionEvent::updateOrCreate(
-            ['event_key' => 'cm-2027-01'],
+            ['event_key' => 'loh-2027-02'],
             [
                 'period' => 'exact',
-                'start_date' => '2027-01-24',
+                'start_date' => '2027-02-14',
                 'venue' => 'Tokyo',
             ]
         );
 
         $this->assertSame(6, CompetitionEvent::count());
 
-        $updated = CompetitionEvent::where('event_key', 'cm-2027-01')->first();
+        $updated = CompetitionEvent::where('event_key', 'loh-2027-02')->first();
         $this->assertNotNull($updated);
         $this->assertSame('exact', $updated->period);
-        $this->assertSame('2027-01-24', $updated->start_date?->format('Y-m-d'));
+        $this->assertSame('2027-02-14', $updated->start_date?->format('Y-m-d'));
         $this->assertSame('Tokyo', $updated->venue);
     }
 
@@ -967,17 +978,17 @@ class CompetitionEventTest extends TestCase
     {
         $this->seed(CompetitionEventSeeder::class);
 
-        // 1. Unannounced event (Jan 2027)
-        $cmJan = CompetitionEvent::where('event_key', 'cm-2027-01')->firstOrFail();
-        $this->assertFalse($cmJan->is_fully_confirmed);
+        // 1. Unannounced event (Feb 2027 LoH)
+        $lohFeb = CompetitionEvent::where('event_key', 'loh-2027-02')->firstOrFail();
+        $this->assertFalse($lohFeb->is_fully_confirmed);
 
-        $recJan = $cmJan->recommended_build_guide;
-        $this->assertFalse($recJan['is_fully_confirmed']);
-        $this->assertFalse($recJan['has_guide_reference']);
-        $this->assertEmpty($recJan['stat_tiers']);
-        $this->assertNull($recJan['recovery_guide']);
-        $this->assertEmpty($recJan['reference_recovery_catalog']);
-        $this->assertSame('Rekomendasi target stats dan kebutuhan recovery belum ditampilkan karena detail lintasan dan jarak resmi belum diumumkan secara lengkap oleh Cygames.', $recJan['disclaimer']);
+        $recFeb = $lohFeb->recommended_build_guide;
+        $this->assertFalse($recFeb['is_fully_confirmed']);
+        $this->assertFalse($recFeb['has_guide_reference']);
+        $this->assertEmpty($recFeb['stat_tiers']);
+        $this->assertNull($recFeb['recovery_guide']);
+        $this->assertEmpty($recFeb['reference_recovery_catalog']);
+        $this->assertSame('Rekomendasi target stats dan kebutuhan recovery belum ditampilkan karena detail lintasan dan jarak resmi belum diumumkan secara lengkap oleh Cygames.', $recFeb['disclaimer']);
 
         // 2. Event with confirmed track but NO community guide entry
         $eventNoGuide = CompetitionEvent::create([

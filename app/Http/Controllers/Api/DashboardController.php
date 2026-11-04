@@ -30,12 +30,24 @@ class DashboardController extends Controller
         $totalPulls = GachaPull::count();
         $ssrPulls = GachaPull::where('rarity', 'SSR')->count();
         $ssrRate = $totalPulls > 0 ? round(($ssrPulls / $totalPulls) * 100, 2) : 0.0;
-        // Active Banner Pity Spark
+        // Active Banner Pity Spark (with 1-month post-banner-end expiration)
+        $now = Carbon::now();
         $bannerPities = GachaPity::whereNotNull('gacha_banner_id')
             ->where('current_pity', '>', 0)
-            ->with('banner:id,name,banner_type,category,base_rate')
+            ->with('banner:id,name,banner_type,category,base_rate,start_date,end_date')
             ->orderByDesc('current_pity')
             ->get()
+            ->filter(function ($p) use ($now) {
+                if ($p->banner?->end_date) {
+                    $cutoff = Carbon::parse($p->banner->end_date)->addMonth();
+                    if ($now->greaterThan($cutoff)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            })
+            ->values()
             ->map(fn ($p) => [
                 'banner_id' => $p->gacha_banner_id,
                 'name' => $p->banner?->name,
@@ -45,6 +57,7 @@ class DashboardController extends Controller
                 'current_pity' => $p->current_pity,
                 'pulls_to_spark' => max(0, 200 - $p->current_pity),
                 'pity_percent' => min(100, (int) round(($p->current_pity / 200) * 100)),
+                'end_date' => $p->banner?->end_date ? Carbon::parse($p->banner->end_date)->format('Y-m-d') : null,
             ]);
 
         $topBannerPity = $bannerPities->first();

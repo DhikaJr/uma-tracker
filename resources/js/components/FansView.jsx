@@ -18,6 +18,7 @@ import {
     Calendar,
     RotateCcw,
     AlertTriangle,
+    AlertCircle,
     Calculator
 } from 'lucide-react';
 import RankBadge from './RankBadge';
@@ -295,6 +296,11 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
             return;
         }
 
+        if (scoreNum > 200000) {
+            onNotify?.('Skor evaluasi terlalu besar! Maksimal skor evaluasi yang diizinkan adalah 200.000 pts.', 'error');
+            return;
+        }
+
         const computedRank = getRankFromScore(scoreNum) || form.final_rank || 'G';
 
         setSubmitting(true);
@@ -414,7 +420,7 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
         return `≥ ${min.toLocaleString('id-ID')} pts`;
     };
 
-    // Handle Score Input Change (Auto-detects & auto-selects rank)
+    // Handle Score Input Change (Auto-detects & auto-selects rank, caps at 200.000 pts)
     const handleScoreInput = (e) => {
         const raw = e.target.value;
         const formatted = formatNumber(raw);
@@ -422,7 +428,7 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
 
         setForm(prev => {
             const next = { ...prev, evaluation_score: formatted };
-            if (raw.trim() !== '' && scoreNum > 0) {
+            if (raw.trim() !== '' && scoreNum > 0 && scoreNum <= 200000) {
                 const autoRank = getRankFromScore(scoreNum);
                 if (autoRank) {
                     next.final_rank = autoRank;
@@ -612,7 +618,7 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                             <span>Target: {(circleGoal).toLocaleString('id-ID')} fans</span>
                             <button
                                 onClick={() => {
-                                    const input = prompt('Enter new monthly Circle Goal (Fans):', String(circleGoal));
+                                    const input = prompt('Masukkan target fans bulanan Circle yang baru (Fans):', String(circleGoal));
                                     if (input) {
                                         const clean = parseInt(input.replace(/[^0-9]/g, ''), 10);
                                         if (clean > 0) setCircleGoal(clean);
@@ -620,7 +626,7 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                                 }}
                                 className="text-amber-300 hover:text-white underline font-semibold cursor-pointer"
                             >
-                                Edit Goal
+                                Ubah Target
                             </button>
                         </div>
                     </div>
@@ -630,25 +636,25 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
             {/* Career Metrics KPI Bar */}
             {stats && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
-                        <span className="text-xs font-bold text-slate-500 uppercase">Total Career Runs</span>
-                        <div className="text-2xl font-black text-slate-900 font-mono mt-1">{stats.total_runs}</div>
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
+                        <span className="text-xs font-bold text-slate-500 uppercase">Total Sesi Karier</span>
+                        <div className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono mt-1">{stats.total_runs}</div>
                     </div>
-                    <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
-                        <span className="text-xs font-bold text-slate-500 uppercase">Lifetime Fans Gained</span>
-                        <div className="text-2xl font-black text-emerald-600 font-mono mt-1">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
+                        <span className="text-xs font-bold text-slate-500 uppercase">Total Perolehan Fans</span>
+                        <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-1">
                             {(stats.total_fans).toLocaleString('id-ID')}
                         </div>
                     </div>
-                    <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
-                        <span className="text-xs font-bold text-slate-500 uppercase">Avg Fans / Run</span>
-                        <div className="text-2xl font-black text-slate-900 font-mono mt-1">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
+                        <span className="text-xs font-bold text-slate-500 uppercase">Rata-rata Fans / Sesi</span>
+                        <div className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono mt-1">
                             {(stats.avg_fans).toLocaleString('id-ID')}
                         </div>
                     </div>
-                    <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
-                        <span className="text-xs font-bold text-slate-500 uppercase">Best Single Run Record</span>
-                        <div className="text-xl font-black text-amber-600 font-mono mt-1 truncate">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
+                        <span className="text-xs font-bold text-slate-500 uppercase">Rekor Fans Terbaik (1 Sesi)</span>
+                        <div className="text-xl font-black text-amber-600 dark:text-amber-400 font-mono mt-1 truncate">
                             {stats.record_run ? `+${(stats.record_run.fans_gained).toLocaleString('id-ID')}` : '-'}
                         </div>
                         {stats.record_run && (
@@ -1042,12 +1048,15 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                                         <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                                         <span>Skor Evaluasi / Rating Points (Wajib Diisi) *</span>
                                     </span>
-                                    {ocrWarnings.evaluation_score && (
-                                        <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1">
-                                            <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
-                                            <span>Cek Ulang ({ocrWarnings.evaluation_score}%)</span>
-                                        </span>
-                                    )}
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-[10px] text-slate-400 font-semibold">(Maks: 200.000 pts)</span>
+                                        {ocrWarnings.evaluation_score && (
+                                            <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1">
+                                                <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
+                                                <span>Cek Ulang ({ocrWarnings.evaluation_score}%)</span>
+                                            </span>
+                                        )}
+                                    </div>
                                 </label>
                                 <div className="relative">
                                     <input
@@ -1060,10 +1069,12 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
                                             handleScoreInput(e);
                                         }}
                                         placeholder="Contoh: 19.200 atau 23.900"
-                                        className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl px-3.5 py-2 text-sm font-mono font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none ${
-                                            ocrWarnings.evaluation_score
-                                                ? 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/30'
-                                                : 'border-slate-300 dark:border-slate-600'
+                                        className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl px-3.5 py-2 text-sm font-mono font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:outline-none ${
+                                            form.evaluation_score && parseNumber(form.evaluation_score) > 200000
+                                                ? 'border-rose-500 dark:border-rose-500 ring-2 ring-rose-500/30 text-rose-600 dark:text-rose-400 focus:ring-rose-500'
+                                                : ocrWarnings.evaluation_score
+                                                    ? 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/30 focus:ring-emerald-500'
+                                                    : 'border-slate-300 dark:border-slate-600 focus:ring-emerald-500'
                                         }`}
                                     />
                                     <span className="absolute right-3.5 top-2.5 text-xs font-bold text-slate-400 pointer-events-none">
@@ -1074,7 +1085,17 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
 
                             {/* Auto Select Indicator & Hint */}
                             <div className="text-xs">
-                                {form.evaluation_score && parseNumber(form.evaluation_score) > 0 ? (
+                                {form.evaluation_score && parseNumber(form.evaluation_score) > 200000 ? (
+                                    <div className="bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 rounded-xl p-2.5 text-rose-900 dark:text-rose-200">
+                                        <div className="font-bold flex items-center gap-1.5 text-[11px] text-rose-700 dark:text-rose-300">
+                                            <AlertCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
+                                            <span>Skor Melebihi Batas Maksimal!</span>
+                                        </div>
+                                        <div className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 leading-tight">
+                                            Skor {form.evaluation_score} pts melebihi limit 200.000 pts. Harap periksa kembali angka evaluasi Anda.
+                                        </div>
+                                    </div>
+                                ) : form.evaluation_score && parseNumber(form.evaluation_score) > 0 ? (
                                     <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-emerald-900">
                                         <div className="font-bold flex items-center gap-1 text-[11px]">
                                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
