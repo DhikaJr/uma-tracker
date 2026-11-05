@@ -230,7 +230,7 @@ php artisan uma:restore storage/app/backups/nama-backup.json --mode=overwrite --
 Aplikasi dilengkapi rangkaian pengujian otomatis berbasis **PHPUnit** pada database memori terisolasi (`:memory:`):
 
 ```bash
-# Menjalankan seluruh pengujian (269 tests, 8.868 assertions)
+# Menjalankan seluruh pengujian (276 tests, 8.912 assertions)
 php artisan test --compact
 
 # Menjalankan pengujian spesifik
@@ -252,6 +252,7 @@ vendor/bin/pint
 ```
 
 ### Cakupan Pengujian:
+- **Normalisasi Special Scaling Skill & Eliminasi Duplikat Koleksi**: Verifikasi penggantian teks placeholder teknis GameTora (*Special scaling rule 36.*) menjadi deskripsi resmi kontekstual (*Add 0.2 to the effect value in Medium races.*), penyaringan duplikat karakter tanpa judul kostum (*Air Groove*), serta pembersihan cliff-drop grafik tren fans circle bulanan.
 - **Kalkulator Proyeksi Rating JP & Kalibrasi Rank 298-Tier (`G` s.d. `LS24`)**: Verifikasi formula skor stat (`0–3000`), bonus unique skill, pengali aptitude, akurasi batas `US9` ke `LG` (`76.000 pts`), serta sinkronisasi rank dinamis pada Karier dan Dashboard.
 - **Reverse Skill Finder, Katalog Skill, Komparator & Simulasi Deck 6 Kartu**: Pengujian pencarian sumber skill (`/api/collection/skill-sources`), katalog seluruh skill dengan tag taktis (`/api/collection/skills`), unit test parser efek unik (`SupportCardUniqueEffectFormatterTest`), manajemen retensi backup (`prune`), serta CRUD preset formasi dek (`/api/collection/deck-presets`).
 - **Validasi Silang Pool Gacha & Cooldown Circle 1 Jam**: Pengujian penolakan mismatch tipe banner dan item lintas-pool karakter vs support card (`GachaRateUpValidationTest`), serta penegakan interval refresh Circle Club 1 jam (`3600` detik).

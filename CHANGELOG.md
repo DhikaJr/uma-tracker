@@ -2,6 +2,25 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.1.6] - 5 November 2026
+
+### 🔍 Perbaikan Deskripsi Special Scaling Skill, Eliminasi Duplikat Karakter, Cut-off Grafik Circle & Tabel Mekanik Aptitude
+- **Perbaikan Teks Formula Special Scaling Rule Skill (`GameToraSyncService.php`, `CollectionController.php`, `SkillDetailModal.jsx`, `skillEffectFormatter.js`)**:
+  - Memperbaiki teks placeholder teknis seperti *"Special scaling rule 36."* pada modal rincian skill (contohnya pada skill unik *Peerless Heroine* milik Almond Eye) menjadi formula deskriptif resmi GameTora: *"Add 0.2 to the effect value in Medium races."* beserta terjemahan bahasa Indonesia *"Tambahkan 0.2 pada nilai efek pada balapan Jarak Menengah (Medium)."*.
+  - Mengintegrasikan seluruh definisi scaling GameTora yang sebelumnya belum terpetakan: Rule 35 (Arima Kinen & Mile bonus), Rule 36 (Medium race bonus), Rule 37 (Team Rank S+ multiplier), dan Rule 40 (Tracen-ken Excitement Pt).
+  - Menambahkan lapisan normalisasi otomatis di backend (`CollectionController.php`) dan frontend (`skillEffectFormatter.js`), memastikan data skill yang dikirim maupun ditampilkan selalu memiliki deskripsi yang valid dan informatif.
+- **Pembersihan Kartu & Gambar Duplikat Karakter (`UmaCatalogItem.php`, `CollectionController.php`)**:
+  - Menghapus entri duplikat dan gambar ganda pada menu Koleksi Karakter, di mana sebelumnya kartu tanpa judul kostum (*"Air Groove"*, ID 994) menggunakan thumbnail kostum Halloween yang identik dengan varian resminya (*"Air Groove [Eternal Hekateia]"*, ID 999).
+  - Menerapkan model global scope pada `UmaCatalogItem` dan deduplikasi cerdas berbasis `card_id` pada `CollectionController::getCharacters()` yang memprioritaskan entri dengan kurung siku kostum lengkap (`[...]`) dan membuang duplikat yatim tanpa nama kostum. Koleksi karakter kini menampilkan 3 varian Air Groove yang sah (*[Empress Road]*, *[Eternal Hekateia]*, *[Quercus Civilis]*).
+- **Penyempurnaan Grafik Tren Fans Circle Club dengan Cut-Off Akhir Bulan Lalu (`CircleTrackerService.php`, `CircleClubView.jsx`)**:
+  - Menyaring data tren poin 7 hari (*trend segments*) pada modul Circle agar mengabaikan riwayat perolehan fans dari bulan sebelumnya.
+  - Mengeliminasi grafik curam (*reset cliff drop*) dari ~1.900M di akhir Oktober ke ~50M di awal November akibat reset poin bulanan in-game, sehingga grafik kini mencerminkan tren peningkatan poin yang murni dan akurat pada bulan berjalan.
+- **Pembaruan Komprehensif Tabel & Panduan Mekanik Grade Aptitude (`CharacterDetailModal.jsx`)**:
+  - Memperbarui seksi *Panduan Grade Aptitude* pada tab Kesesuaian (Aptitude) modal detail karakter dengan 3 tabel panduan mekanik balapan mendalam yang diterjemahkan ke Bahasa Indonesia:
+    - **Lintasan (Track)**: Pengaruh kesesuaian lintasan terhadap akselerasi (Akselerasi grade S: 1.05x, A: 1.0x, B: 0.9x, C: 0.8x, D: 0.7x, E: 0.5x, F: 0.3x, G: 0.1x) serta catatan perbandingan dengan skill akselerasi.
+    - **Jarak (Distance)**: Pengaruh kesesuaian jarak terhadap Kecepatan Target fase Last Spurt (S: 1.05x, A: 1.0x, B: 0.9x, C: 0.8x, D: 0.6x, E: 0.4x, F: 0.2x, G: 0.1x) dan akselerasi (S~D: 1.0x, E: 0.6x, F: 0.5x, G: 0.4x).
+    - **Gaya Lari / Taktik (Style)**: Pengaruh terhadap stat Kecerdasan (Wit) untuk pengecekan mekanik balapan/Wit Checks (S: 1.1x, A: 1.0x, B: 0.85x, C: 0.75x, D: 0.6x, E: 0.4x, F: 0.2x, G: 0.1x) beserta penegasan bahwa kesesuaian ini tidak mempengaruhi peluang aktivasi skill.
+
 ## [Versi 3.1.5] - 4 November 2026
 
 ### 🎯 Dropdown Pity Aktif Dasbor, Validasi Cap Skor Evaluasi 200.000 pts & Pembaruan Jadwal Cygames

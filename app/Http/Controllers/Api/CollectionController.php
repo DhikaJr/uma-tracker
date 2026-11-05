@@ -198,15 +198,87 @@ class CollectionController extends Controller
     }
 
     /**
+     * Normalize any legacy special scaling placeholders in character or card skills.
+     */
+    protected function normalizeSkillsScaling(mixed $skills): mixed
+    {
+        if (! is_array($skills)) {
+            return $skills;
+        }
+
+        $rules = [
+            35 => 'Normally, there is no bonus. Add 0.1 in Mile races, or add 0.2 on the Arima Kinen course when you have at least 146,738 fans.',
+            36 => 'Add 0.2 to the effect value in Medium races.',
+            37 => 'The multiplier is 1.2 when your team rank is S or higher, otherwise it is 1.0.',
+            40 => 'The effect increases with the total Excitement Pt earned in the Tracen-ken scenario. The exact thresholds are still under investigation.',
+        ];
+
+        $sanitizeSkill = function (array $sk) use (&$sanitizeSkill, $rules): array {
+            if (! empty($sk['effects']) && is_array($sk['effects'])) {
+                foreach ($sk['effects'] as &$eff) {
+                    if (! empty($eff['special_scaling']) && is_array($eff['special_scaling'])) {
+                        $scaleId = $eff['special_scaling']['scale_id'] ?? null;
+                        $text = $eff['special_scaling']['text'] ?? '';
+                        if (! $scaleId && preg_match('/Special scaling rule\s*(\d+)/i', $text, $m)) {
+                            $scaleId = (int) $m[1];
+                            $eff['special_scaling']['scale_id'] = $scaleId;
+                        }
+                        if ($scaleId && isset($rules[$scaleId])) {
+                            if (empty($text) || preg_match('/Special scaling rule\s*\d+/i', $text)) {
+                                $eff['special_scaling']['text'] = $rules[$scaleId];
+                            }
+                        }
+                    }
+                }
+                unset($eff);
+            }
+
+            return $sk;
+        };
+
+        foreach ($skills as $key => &$val) {
+            if (is_array($val)) {
+                if (isset($val['effects'])) {
+                    $val = $sanitizeSkill($val);
+                } elseif (isset($val[0]) && is_array($val[0])) {
+                    foreach ($val as &$subSkill) {
+                        if (is_array($subSkill)) {
+                            $subSkill = $sanitizeSkill($subSkill);
+                        }
+                    }
+                    unset($subSkill);
+                }
+            }
+        }
+        unset($val);
+
+        return $skills;
+    }
+
+    /**
      * Retrieve full character collection with user ownership and statistics.
      */
     public function getCharacters(Request $request): JsonResponse
     {
         // 1. Fetch catalog characters
-        $catalogItems = UmaCatalogItem::where('type', 'character')
+        $rawCatalogItems = UmaCatalogItem::where('type', 'character')
             ->orderBy('name')
-            ->get()
-            ->keyBy('name');
+            ->get();
+
+        // Deduplicate any orphan duplicate records with missing brackets
+        $catalogItems = $rawCatalogItems->reject(function ($item) use ($rawCatalogItems) {
+            $cardId = $item->raw_data['card_id'] ?? null;
+            if (! $cardId) {
+                return false;
+            }
+            if (! str_contains($item->name, '[')) {
+                return $rawCatalogItems->contains(function ($other) use ($cardId) {
+                    return ($other->raw_data['card_id'] ?? null) === $cardId && str_contains($other->name, '[');
+                });
+            }
+
+            return false;
+        })->keyBy('name');
 
         $characterNames = $catalogItems->isNotEmpty()
             ? $catalogItems->keys()->all()
@@ -252,7 +324,7 @@ class CollectionController extends Controller
                 'image_url' => $imageUrl,
                 'icon_url' => $imageUrl,
                 'aptitudes' => $catalogItem?->aptitudes,
-                'skills' => $catalogItem?->skills,
+                'skills' => $this->normalizeSkillsScaling($catalogItem?->skills),
                 'objectives' => $catalogItem?->objectives ?? [],
                 'base_stats' => $catalogItem?->raw_data['base_stats'] ?? null,
                 'five_star_stats' => $catalogItem?->raw_data['five_star_stats'] ?? null,
@@ -321,7 +393,7 @@ class CollectionController extends Controller
                 'is_owned' => $userChar ? (bool) $userChar->is_owned : false,
                 'image_url' => $imageUrl,
                 'aptitudes' => $catalogItem->aptitudes,
-                'skills' => $catalogItem->skills,
+                'skills' => $this->normalizeSkillsScaling($catalogItem->skills),
                 'objectives' => $catalogItem->objectives ?? [],
                 'base_stats' => $catalogItem->raw_data['base_stats'] ?? null,
                 'five_star_stats' => $catalogItem->raw_data['five_star_stats'] ?? null,

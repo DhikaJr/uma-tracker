@@ -2045,10 +2045,19 @@ class GameToraSyncService
             case 34:
                 $text = 'If you are at least 8 horse lengths (20 metres) behind first place, add 0.2 to the effect value.';
                 break;
+            case 35:
+                $text = 'Normally, there is no bonus. Add 0.1 in Mile races, or add 0.2 on the Arima Kinen course when you have at least 146,738 fans.';
+                break;
+            case 36:
+                $text = 'Add 0.2 to the effect value in Medium races.';
+                break;
             case 37:
-                $text = "The multiplier scales with your team's rank.";
-                $header = 'Rank';
+                $text = 'The multiplier is 1.2 when your team rank is S or higher, otherwise it is 1.0.';
+                $header = 'Team Rank';
                 $rawRows = [['x < S', 1.0], ['S <= x', 1.2]];
+                break;
+            case 40:
+                $text = 'The effect increases with the total Excitement Pt earned in the Tracen-ken scenario. The exact thresholds are still under investigation.';
                 break;
             default:
                 $text = "Special scaling rule {$scaleId}.";

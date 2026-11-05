@@ -256,6 +256,82 @@ export function formatSkillBaseDuration(baseTime, fallbackDuration = null) {
 }
 
 /**
+ * Format and normalize special scaling rule text, mapping known rule IDs or legacy placeholders.
+ *
+ * @param {object|null|undefined} scaling
+ * @param {number|string|null|undefined} fallbackScaleId
+ * @returns {object|null}
+ */
+export function normalizeSpecialScaling(scaling, fallbackScaleId = null) {
+    if (!scaling && !fallbackScaleId) return null;
+
+    let scaleId = scaling?.scale_id ?? (fallbackScaleId ? Number(fallbackScaleId) : null);
+    let text = scaling?.text || '';
+    let header = scaling?.header || null;
+    let rows = scaling?.rows || [];
+
+    // Extract scale ID from legacy text e.g. "Special scaling rule 36."
+    if (!scaleId && typeof text === 'string') {
+        const match = text.match(/Special scaling rule\s*(\d+)/i);
+        if (match) {
+            scaleId = Number(match[1]);
+        }
+    }
+
+    // Canonical descriptions for rules
+    const knownRules = {
+        35: {
+            text: 'Normally, there is no bonus. Add 0.1 in Mile races, or add 0.2 on the Arima Kinen course when you have at least 146,738 fans.',
+            text_id: 'Biasanya tidak ada bonus. Tambahkan 0.1 pada balapan Jarak Mil (Mile), atau tambahkan 0.2 di lintasan Arima Kinen saat memiliki setidaknya 146.738 fans.',
+        },
+        36: {
+            text: 'Add 0.2 to the effect value in Medium races.',
+            text_id: 'Tambahkan 0.2 pada nilai efek pada balapan Jarak Menengah (Medium).',
+        },
+        37: {
+            text: 'The multiplier is 1.2 when your team rank is S or higher, otherwise it is 1.0.',
+            text_id: 'Pengali adalah 1.2x saat rank tim mencapai S atau lebih tinggi; jika tidak, pengali adalah 1.0x.',
+            header: 'Team Rank',
+        },
+        40: {
+            text: 'The effect increases with the total Excitement Pt earned in the Tracen-ken scenario. The exact thresholds are still under investigation.',
+            text_id: 'Efek meningkat seiring total Excitement Pt yang diperoleh di skenario Tracen-ken (ambang batas pasti masih dalam investigasi).',
+        },
+    };
+
+    if (scaleId && knownRules[scaleId]) {
+        const rule = knownRules[scaleId];
+        if (!text || /Special scaling rule\s*\d+/i.test(text)) {
+            text = rule.text;
+        }
+        if (!header && rule.header) {
+            header = rule.header;
+        }
+    }
+
+    if (!scaling && text) {
+        return {
+            scale_id: scaleId,
+            text,
+            header,
+            rows,
+        };
+    }
+
+    if (scaling) {
+        return {
+            ...scaling,
+            scale_id: scaleId,
+            text,
+            header: header || scaling.header,
+            rows: rows.length > 0 ? rows : (scaling.rows || []),
+        };
+    }
+
+    return null;
+}
+
+/**
  * Fully enrich an effect object for display in UI.
  *
  * @param {object} eff
@@ -271,6 +347,7 @@ export function enrichSkillEffect(eff) {
     const targetName = eff.target_name || getSkillTargetName(eff.target, eff.target_details);
     const targetNameId = eff.target_name_id || getSkillTargetTranslation(eff.target, eff.target_details);
     const isDebuff = Number(value) < 0 || eff.type === 13 || eff.type === 14 || eff.type === 8;
+    const specialScaling = normalizeSpecialScaling(eff.special_scaling, eff.value_scale);
 
     return {
         ...eff,
@@ -282,5 +359,6 @@ export function enrichSkillEffect(eff) {
         is_debuff: isDebuff,
         target_name: targetName,
         target_name_id: targetNameId,
+        special_scaling: specialScaling,
     };
 }

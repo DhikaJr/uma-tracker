@@ -363,6 +363,18 @@ class CircleTrackerService
         $canRefresh = $isCurrentPeriod && ($secondsRemaining === 0);
         $nextRefreshAt = $isCurrentPeriod ? $lastRefreshed->copy()->addSeconds(self::COOLDOWN_SECONDS)->toIso8601String() : null;
 
+        $currentMonth = substr((string) ($snapshot->period ?? date('Y-m')), 0, 7);
+        $filteredSegments = [];
+        foreach ($trend['segments'] ?? [] as $seg) {
+            $pts = array_values(array_filter($seg['points'] ?? [], function ($p) use ($currentMonth) {
+                return ! isset($p['date']) || str_starts_with((string) $p['date'], $currentMonth);
+            }));
+            if (! empty($pts)) {
+                $seg['points'] = $pts;
+                $filteredSegments[] = $seg;
+            }
+        }
+
         return [
             'has_circle' => true,
             'has_data' => true,
@@ -381,7 +393,7 @@ class CircleTrackerService
             'tracked_viewer_id' => $trackedViewerId,
             'tracked_player' => $trackedPlayer,
             'members' => $rows,
-            'trend_segments' => $trend['segments'] ?? [],
+            'trend_segments' => $filteredSegments,
             'last_refreshed_at' => $snapshot->last_refreshed_at->toIso8601String(),
             'next_refresh_at' => $nextRefreshAt,
             'cooldown_seconds_remaining' => $secondsRemaining,

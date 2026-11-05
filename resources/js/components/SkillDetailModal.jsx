@@ -554,6 +554,11 @@ export default function SkillDetailModal({ skill: rawSkill, onClose, onFindSkill
                                                                     <div className="text-xs text-slate-700 dark:text-slate-300">
                                                                         {effScaling.text}
                                                                     </div>
+                                                                    {effScaling.text_id && (
+                                                                        <div className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+                                                                            {effScaling.text_id}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
 
                                                                 {/* Scaling Table */}

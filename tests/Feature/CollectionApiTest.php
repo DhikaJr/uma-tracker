@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CollectionController;
 use App\Models\UmaCatalogItem;
 use App\Models\UserCharacter;
 use App\Models\UserSupportCard;
+use App\Services\GameToraSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
@@ -1274,5 +1275,115 @@ class CollectionApiTest extends TestCase
             ->assertJsonValidationErrors(['slots']);
 
         $this->tearDownTestDeckPresetPath($testPath);
+    }
+
+    public function test_get_characters_excludes_phantom_duplicate_without_brackets_and_retains_variant_with_brackets(): void
+    {
+        // Phantom duplicate without brackets
+        UmaCatalogItem::create([
+            'type' => 'character',
+            'name' => 'Air Groove',
+            'rarity' => 'SSR',
+            'raw_data' => [
+                'rarity' => 3,
+                'name_en' => 'Air Groove',
+                'char_id' => 1018,
+                'card_id' => 101803,
+            ],
+        ]);
+
+        // Legitimate variant with brackets
+        UmaCatalogItem::create([
+            'type' => 'character',
+            'name' => 'Air Groove [Eternal Hekateia]',
+            'rarity' => 'SSR',
+            'raw_data' => [
+                'rarity' => 3,
+                'name_en' => 'Air Groove',
+                'char_id' => 1018,
+                'card_id' => 101803,
+                'image_url' => 'https://gametora.com/images/umamusume/characters/thumb/chara_stand_1018_101803.png',
+            ],
+        ]);
+
+        $res = $this->getJson('/api/collection/characters');
+        $res->assertStatus(200);
+
+        $characters = collect($res->json('characters'));
+
+        // Ensure "Air Groove [Eternal Hekateia]" is present
+        $eternal = $characters->firstWhere('name', 'Air Groove [Eternal Hekateia]');
+        $this->assertNotNull($eternal, 'Air Groove [Eternal Hekateia] must be present in collection');
+        $this->assertStringContainsString('chara_stand_1018_101803.png', $eternal['image_url']);
+
+        // Ensure phantom duplicate "Air Groove" (without costume brackets) is excluded
+        $duplicate = $characters->firstWhere('name', 'Air Groove');
+        $this->assertNull($duplicate, 'Phantom duplicate "Air Groove" must not be present');
+    }
+
+    public function test_get_characters_normalizes_special_scaling_rule_36_placeholder(): void
+    {
+        UmaCatalogItem::create([
+            'type' => 'character',
+            'name' => 'Almond Eye [The Changer]',
+            'rarity' => 'SSR',
+            'raw_data' => [
+                'rarity' => 3,
+                'name_en' => 'Almond Eye',
+                'char_id' => 1109,
+                'card_id' => 110901,
+            ],
+            'skills' => [
+                'unique' => [
+                    'name_en' => 'Peerless Heroine',
+                    'effects' => [
+                        [
+                            'name' => 'Increase Current Speed',
+                            'special_scaling' => [
+                                'scale_id' => 36,
+                                'text' => 'Special scaling rule 36.',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $res = $this->getJson('/api/collection/characters');
+        $res->assertStatus(200);
+
+        $characters = collect($res->json('characters'));
+        $almondEye = $characters->firstWhere('name', 'Almond Eye [The Changer]');
+        $this->assertNotNull($almondEye);
+
+        $unique = $almondEye['skills']['unique'] ?? null;
+        $this->assertNotNull($unique);
+        $speedEffect = collect($unique['effects'] ?? [])->firstWhere('name', 'Increase Current Speed');
+        $this->assertNotNull($speedEffect);
+
+        $this->assertNotNull($speedEffect['special_scaling']);
+        $this->assertSame(36, $speedEffect['special_scaling']['scale_id']);
+        $this->assertSame('Add 0.2 to the effect value in Medium races.', $speedEffect['special_scaling']['text']);
+    }
+
+    public function test_gametora_sync_service_formats_special_scaling_rules(): void
+    {
+        $syncService = app(GameToraSyncService::class);
+
+        $rule35 = $syncService->formatSpecialScaling(35, 0.45);
+        $this->assertNotNull($rule35);
+        $this->assertStringContainsString('Normally, there is no bonus', $rule35['text']);
+
+        $rule36 = $syncService->formatSpecialScaling(36, 0.45);
+        $this->assertNotNull($rule36);
+        $this->assertSame('Add 0.2 to the effect value in Medium races.', $rule36['text']);
+
+        $rule37 = $syncService->formatSpecialScaling(37, 0.45);
+        $this->assertNotNull($rule37);
+        $this->assertStringContainsString('team rank is S or higher', $rule37['text']);
+
+        $rule40 = $syncService->formatSpecialScaling(40, 0.45);
+        $this->assertNotNull($rule40);
+        $this->assertStringContainsString('Tracen-ken scenario', $rule40['text']);
     }
 }

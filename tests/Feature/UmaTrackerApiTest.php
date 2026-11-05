@@ -741,6 +741,57 @@ class UmaTrackerApiTest extends TestCase
             ->assertJsonPath('can_refresh', false);
     }
 
+    public function test_circle_tracker_status_filters_trend_segments_to_current_month(): void
+    {
+        CircleSnapshot::create([
+            'circle_id' => '441730573',
+            'circle_name' => 'Cutoff Test Circle',
+            'rank' => 900,
+            'point' => 150000000,
+            'member_count' => 30,
+            'active_total' => 150000000,
+            'period' => '2026-11-01',
+            'payload' => [
+                'contributions' => [
+                    'circle' => ['id' => 441730573, 'name' => 'Cutoff Test Circle', 'memberCount' => 30],
+                    'activeTotal' => 150000000,
+                    'rows' => [],
+                ],
+                'trend' => [
+                    'current' => ['rank' => 900, 'point' => 150000000],
+                    'segments' => [
+                        [
+                            'points' => [
+                                ['date' => '2026-10-30', 'rank' => 850, 'point' => 1900000000],
+                                ['date' => '2026-10-31', 'rank' => 840, 'point' => 1950000000],
+                            ],
+                        ],
+                        [
+                            'points' => [
+                                ['date' => '2026-11-02', 'rank' => 1200, 'point' => 50000000],
+                                ['date' => '2026-11-03', 'rank' => 1050, 'point' => 100000000],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            'last_refreshed_at' => now(),
+        ]);
+
+        $res = $this->getJson('/api/circle-tracker/status?period=2026-11-01');
+        $res->assertStatus(200);
+
+        $segments = $res->json('trend_segments');
+        $this->assertNotEmpty($segments);
+
+        // Every point in returned segments must be in November 2026 (no October reset cliff)
+        foreach ($segments as $seg) {
+            foreach ($seg['points'] as $pt) {
+                $this->assertStringStartsWith('2026-11', $pt['date']);
+            }
+        }
+    }
+
     public function test_circle_tracker_status_with_historical_period_returns_past_month_data(): void
     {
         CircleSnapshot::create([

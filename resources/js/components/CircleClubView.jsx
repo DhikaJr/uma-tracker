@@ -578,15 +578,20 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
     const activeMembersCount = members.filter(m => m.rank && !m.isVoided).length;
     const outMembersCount = members.filter(m => !m.rank || m.isVoided).length;
 
-    // Chart Data for Ranking Trend
-    const chartData = (statusData?.trend_segments || []).flatMap(seg => 
-        (seg.points || []).map(p => ({
+    // Chart Data for Ranking Trend (cut off previous month to avoid end-of-month reset cliff)
+    const currentPeriodMonth = statusData?.period 
+        ? String(statusData.period).slice(0, 7) 
+        : new Date().toISOString().slice(0, 7);
+
+    const chartData = (statusData?.trend_segments || [])
+        .flatMap(seg => seg.points || [])
+        .filter(p => !p.date || String(p.date).startsWith(currentPeriodMonth))
+        .map(p => ({
             time: p.date ? String(p.date).slice(5) : '',
             rank: p.rank || 0,
             point: Math.round((p.point || 0) / 10000) / 100, // in Millions
             rawPoint: p.point || 0,
-        }))
-    );
+        }));
 
     // Personal Progress toward Circle Goal
     const playerContribution = trackedPlayer?.contribution || 0;
