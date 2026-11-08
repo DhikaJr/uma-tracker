@@ -162,6 +162,8 @@ function getEventStatus(event, activeDateStr) {
 export default function CompetitionEventsView({ onNotify }) {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [syncing, setSyncing] = useState(false);
+    const [syncMeta, setSyncMeta] = useState(null);
     const [error, setError] = useState(null);
     const [typeFilter, setTypeFilter] = useState('all'); // 'all' | 'champions_meeting' | 'league_of_heroes'
     const [yearFilter, setYearFilter] = useState('all'); // 'all' | '2026' | '2027'
@@ -183,12 +185,53 @@ export default function CompetitionEventsView({ onNotify }) {
             const json = await res.json();
             const list = Array.isArray(json) ? json : (json.data || []);
             setEvents(list);
+            if (json.sync_meta) {
+                setSyncMeta(json.sync_meta);
+            }
         } catch (err) {
             console.error('Failed to fetch competition events:', err);
             setError(err.message || 'Gagal memuat jadwal kompetisi.');
             onNotify?.('Gagal memuat jadwal event kompetisi resmi', 'error');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSync = async () => {
+        if (syncing) return;
+        setSyncing(true);
+        try {
+            const res = await fetch('/api/competition-events/sync', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+            });
+            const json = await res.json();
+            if (!res.ok || !json.success) {
+                throw new Error(json.message || 'Gagal menyinkronkan data kompetisi resmi.');
+            }
+            const list = Array.isArray(json.data) ? json.data : [];
+            setEvents(list);
+            if (json.last_synced_at) {
+                setSyncMeta({
+                    last_synced_at: json.last_synced_at,
+                    status: 'success',
+                });
+            }
+            if (selectedEvent) {
+                const updated = list.find(e => e.id === selectedEvent.id || e.event_key === selectedEvent.event_key);
+                if (updated) {
+                    setSelectedEvent(updated);
+                }
+            }
+            onNotify?.(json.message || 'Berhasil menyinkronkan data turnamen dari Cygames JP & GameWith JP.', 'success');
+        } catch (err) {
+            console.error('Failed to sync competition events:', err);
+            onNotify?.(err.message || 'Terjadi kesalahan saat menyinkronkan jadwal kompetisi resmi.', 'error');
+        } finally {
+            setSyncing(false);
         }
     };
 
@@ -276,6 +319,9 @@ export default function CompetitionEventsView({ onNotify }) {
                 event={selectedEvent}
                 activeDate={activeDate}
                 onBack={handleBackToList}
+                onSync={handleSync}
+                onNotify={onNotify}
+                syncing={syncing}
             />
         );
     }
@@ -300,21 +346,31 @@ export default function CompetitionEventsView({ onNotify }) {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Zero Speculative Data</span>
-                    </span>
-                    <button
-                        type="button"
-                        onClick={fetchEvents}
-                        disabled={loading}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all cursor-pointer disabled:opacity-60 shadow-2xs"
-                        title="Muat Ulang Data Resmi"
-                    >
-                        <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                        <span>Segarkan</span>
-                    </button>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    {syncMeta?.last_synced_at && (
+                        <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 self-end sm:self-center">
+                            Terakhir disinkronkan: {formatIndonesianDate(syncMeta.last_synced_at, 'short')}{' '}
+                            <span className="font-mono text-[10px]">
+                                ({new Date(syncMeta.last_synced_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })})
+                            </span>
+                        </span>
+                    )}
+                    <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Zero Speculative Data</span>
+                        </span>
+                        <button
+                            type="button"
+                            onClick={handleSync}
+                            disabled={loading || syncing}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all cursor-pointer disabled:opacity-60 shadow-2xs"
+                            title="Sinkronkan pembaruan resmi dari Cygames JP dan GameWith JP"
+                        >
+                            <RefreshCw className={`w-3.5 h-3.5 ${syncing || loading ? 'animate-spin' : ''}`} />
+                            <span>{syncing ? 'Menyinkronkan...' : 'Segarkan'}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 

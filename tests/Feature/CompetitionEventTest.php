@@ -5,16 +5,32 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\CompetitionEvent;
+use App\Services\CompetitionSyncService;
 use App\Support\CompetitionGreenSkillRecommender;
 use App\Support\CompetitionRacetrackHelper;
 use App\Support\CompetitionStatRecoveryRecommender;
 use Database\Seeders\CompetitionEventSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class CompetitionEventTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function tearDown(): void
+    {
+        CompetitionSyncService::setStoragePath(null);
+        CompetitionSyncService::clearCache();
+        CompetitionStatRecoveryRecommender::clearGuidesCache();
+
+        $testSyncPath = storage_path('framework/testing/test_competition_live_sync.json');
+        if (file_exists($testSyncPath)) {
+            @unlink($testSyncPath);
+        }
+
+        parent::tearDown();
+    }
 
     /**
      * Test that CompetitionEventSeeder seeds exactly six official events.
@@ -1196,5 +1212,160 @@ class CompetitionEventTest extends TestCase
 
         // Sprint-only skill MUST NOT be included in Long event
         $this->assertNotContains(200662, $novIds, 'Wait and See (Sprint-only) must not be included in Long event');
+    }
+
+    /**
+     * Test cm-2027-01 (Champions Meeting CLASSIC Jan 2027 - Tokyo Turf 2400m)
+     * has GameWith build guide reference, target stats tiers, and Stamina Competition notes.
+     */
+    public function test_cm_january_2027_has_gamewith_build_guide_with_stamina_competition(): void
+    {
+        $this->seed(CompetitionEventSeeder::class);
+
+        $event = CompetitionEvent::where('event_key', 'cm-2027-01')->firstOrFail();
+
+        $this->assertTrue($event->is_fully_confirmed);
+        $this->assertSame('Tokyo', $event->venue);
+        $this->assertSame(2400, $event->distance);
+        $this->assertSame('middle', $event->distance_category);
+
+        $guide = $event->recommended_build_guide;
+        $this->assertTrue($guide['has_guide_reference']);
+        $this->assertSame('GameWith', $guide['source_name']);
+        $this->assertSame('https://gamewith.jp/uma-musume/article/show/586061', $guide['source_url']);
+
+        // Check Stat Tiers
+        $tiers = $guide['stat_tiers'];
+        $this->assertCount(2, $tiers);
+
+        // Intermediate tier: 2100 / 1600 / 1400 / 1000 / 1400
+        $inter = $tiers[0];
+        $this->assertSame('intermediate', $inter['tier_key']);
+        $this->assertSame('2100', $inter['speed']);
+        $this->assertSame('1600', $inter['stamina']);
+        $this->assertSame('1400', $inter['power']);
+        $this->assertSame('1000', $inter['guts']);
+        $this->assertSame('1400', $inter['wisdom']);
+
+        // Advanced tier: 2200 / 1800 / 1700 / 1200 / 1700
+        $adv = $tiers[1];
+        $this->assertSame('advanced', $adv['tier_key']);
+        $this->assertSame('2200', $adv['speed']);
+        $this->assertSame('1800', $adv['stamina']);
+        $this->assertSame('1700', $adv['power']);
+        $this->assertSame('1200', $adv['guts']);
+        $this->assertSame('1700', $adv['wisdom']);
+
+        // Check Recovery & Stamina Competition Notes
+        $recovery = $guide['recovery_guide'];
+        $this->assertNotNull($recovery);
+        $this->assertStringContainsString('Stamina Competition', $recovery['summary_label']);
+        $recs = implode(' ', $recovery['recommendations']);
+        $this->assertStringContainsString('Stamina Competition', $recs);
+        $this->assertStringContainsString('Tokyo 2400m', $recs);
+
+        // Check that filtered recovery catalog includes Medium recovery skills
+        $catalog = $guide['reference_recovery_catalog'];
+        $ids = array_column($catalog, 'id');
+        $this->assertContains(200351, $ids, 'Arc Maestro (all-distance) must be included');
+        $this->assertContains(200711, $ids, 'Trailblazer (Medium) must be included');
+        $this->assertNotContains(200741, $ids, 'Cooldown (Long-only) must not be included');
+    }
+
+    /**
+     * Test live sync service and POST /api/competition-events/sync endpoint
+     * overlays newly confirmed race parameters and build guides without modifying SQLite DB.
+     */
+    public function test_live_sync_service_and_api_sync_endpoint_with_official_cygames_and_gamewith_mock(): void
+    {
+        $testSyncPath = storage_path('framework/testing/test_competition_live_sync.json');
+        CompetitionSyncService::setStoragePath($testSyncPath);
+        CompetitionStatRecoveryRecommender::clearGuidesCache();
+
+        $this->seed(CompetitionEventSeeder::class);
+
+        // Mock Cygames and GameWith HTTP responses
+        Http::fake([
+            CompetitionSyncService::CYGAMES_INDEX_URL.'*' => Http::response([
+                'information_list' => [
+                    [
+                        'announce_id' => 3525,
+                        'title' => '11月～4月対戦レースイベント',
+                        'post_at' => '2026-10-30 12:00:00',
+                    ],
+                    [
+                        'announce_id' => 9999,
+                        'title' => '「リーグ オブ ヒーローズ」開催予定！',
+                        'post_at' => '2027-01-20 12:00:00',
+                    ],
+                ],
+            ], 200),
+            CompetitionSyncService::CYGAMES_DETAIL_URL.'*' => function ($request) {
+                $url = (string) $request->url();
+                if (str_contains($url, 'announce_id=9999')) {
+                    // loh-2027-02 confirmed at Oi 2000m Dirt Night
+                    return Http::response([
+                        'detail' => [
+                            'message' => '<p class="heading">■イベント開催期間</p><p>2/14 12:00 ～ 2/20 11:59</p><p class="heading">■対象レース</p><p>大井 ダート 2000m（中距離） 右 冬 夜 ランダム ランダム</p>',
+                        ],
+                    ], 200);
+                }
+
+                return Http::response([
+                    'detail' => [
+                        'message' => '<p class="heading">■2027年1月下旬：チャンピオンズミーティングCLASSIC</p><p>・東京 レース場 芝 2400m（中距離） 左 冬 昼 晴 良</p>',
+                    ],
+                ], 200);
+            },
+            CompetitionSyncService::GAMEWITH_SUMMARY_URL.'*' => Http::response(
+                '<a href="/uma-musume/article/show/586061">1月チャンミ中距離のおすすめキャラと育成</a>',
+                200
+            ),
+            'https://gamewith.jp/uma-musume/article/show/586061*' => Http::response(
+                '<div>2027年1月 チャンミ中距離 スタミナ勝負<table><tr><th>初~中級者</th><td>2100</td><td>1600</td><td>1400</td><td>1000</td><td>1400</td></tr><tr><th>上級者</th><td>2200</td><td>1800</td><td>1700</td><td>1200</td><td>1700</td></tr></table></div>',
+                200
+            ),
+        ]);
+
+        // Prior to sync: loh-2027-02 has null venue and distance
+        $lohBefore = CompetitionEvent::where('event_key', 'loh-2027-02')->firstOrFail();
+        $this->assertNull($lohBefore->venue);
+        $this->assertNull($lohBefore->distance);
+        $this->assertFalse($lohBefore->is_fully_confirmed);
+
+        // Trigger Sync API Endpoint
+        $syncResponse = $this->postJson('/api/competition-events/sync');
+
+        $syncResponse->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('events_checked', 6);
+
+        $this->assertContains('loh-2027-02', $syncResponse->json('updated_events'));
+        $this->assertFileExists($testSyncPath);
+
+        // Fetch GET /api/competition-events
+        $listResponse = $this->getJson('/api/competition-events');
+        $listResponse->assertOk()
+            ->assertJsonPath('success', true);
+
+        $events = collect($listResponse->json('data'))->keyBy('event_key');
+        $lohAfter = $events->get('loh-2027-02');
+
+        $this->assertNotNull($lohAfter);
+        $this->assertSame('Oi', $lohAfter['venue']);
+        $this->assertSame(2000, $lohAfter['distance']);
+        $this->assertSame('dirt', $lohAfter['surface']);
+        $this->assertSame('right', $lohAfter['direction']);
+        $this->assertSame('winter', $lohAfter['season']);
+        $this->assertSame('night', $lohAfter['time_of_day']);
+        $this->assertSame('random', $lohAfter['weather']);
+        $this->assertSame('random', $lohAfter['track_condition']);
+        $this->assertTrue($lohAfter['is_fully_confirmed']);
+
+        // Racetrack course & green skills must be computed automatically
+        $this->assertNotNull($lohAfter['racetrack_course']);
+        $this->assertSame('ooi', $lohAfter['racetrack_course']['track_slug']);
+        $this->assertSame(2000, $lohAfter['racetrack_course']['course']['length']);
+        $this->assertNotEmpty($lohAfter['recommended_green_skills']['skills']);
     }
 }

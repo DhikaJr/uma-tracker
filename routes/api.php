@@ -130,5 +130,6 @@ Route::get('/changelog', [ChangelogController::class, 'index']);
 // Upcoming Competition Events (CM / LoH Planner)
 Route::prefix('competition-events')->group(function () {
     Route::get('/', [CompetitionEventController::class, 'index']);
+    Route::post('/sync', [CompetitionEventController::class, 'sync']);
     Route::get('/{id}', [CompetitionEventController::class, 'show']);
 });

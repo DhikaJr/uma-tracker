@@ -22,7 +22,8 @@ import {
     Flame,
     Gauge,
     Target,
-    Award
+    Award,
+    RefreshCw
 } from 'lucide-react';
 import { 
     SURFACE_MAP, 
@@ -109,7 +110,7 @@ function RandomBadge() {
     );
 }
 
-export default function CompetitionEventDetailView({ event, onBack, activeDate }) {
+export default function CompetitionEventDetailView({ event, onBack, activeDate, onSync, onNotify, syncing = false }) {
     const [selectedSkillModal, setSelectedSkillModal] = useState(null);
     const [showNoDebuffModal, setShowNoDebuffModal] = useState(false);
     const [recoveryCategoryTab, setRecoveryCategoryTab] = useState('recovery_only');
@@ -401,18 +402,32 @@ export default function CompetitionEventDetailView({ event, onBack, activeDate }
                         </p>
                     </div>
 
-                    {/* Official Source Link Pill */}
+                    {/* Official Source Link Pill & Sync Check */}
                     <div className="shrink-0 flex md:flex-col items-start md:items-end justify-between gap-2">
                         <div className="text-xs text-white/70">Sumber Pengumuman Resmi:</div>
-                        <a
-                            href={event.source_url || 'https://umamusume.jp/news/detail?id=3483'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-xs text-white font-bold text-xs transition-colors cursor-pointer border border-white/20 shadow-xs"
-                        >
-                            <span>Cygames JP Portal</span>
-                            <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {(!Boolean(event.venue && event.distance && event.direction && event.season) || !buildGuideResult.has_guide_reference) && onSync && (
+                                <button
+                                    type="button"
+                                    onClick={onSync}
+                                    disabled={syncing}
+                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition-all cursor-pointer shadow-md disabled:opacity-60"
+                                    title="Cek pembaruan pengumuman resmi Cygames JP dan panduan GameWith"
+                                >
+                                    <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                                    <span>{syncing ? 'Memeriksa...' : 'Cek Update Resmi'}</span>
+                                </button>
+                            )}
+                            <a
+                                href={event.source_url || 'https://umamusume.jp/news/detail?id=3483'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-xs text-white font-bold text-xs transition-colors cursor-pointer border border-white/20 shadow-xs"
+                            >
+                                <span>Cygames JP Portal</span>
+                                <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -680,19 +695,33 @@ export default function CompetitionEventDetailView({ event, onBack, activeDate }
 
                 {/* Case 1: Unconfirmed or No Guide Reference */}
                 {(!buildGuideResult.is_fully_confirmed || !buildGuideResult.has_guide_reference) && (
-                    <div className="p-5 sm:p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 flex items-start gap-3.5">
-                        <Info className="w-5 h-5 text-slate-400 mt-0.5 shrink-0" />
-                        <div className="space-y-1.5">
-                            <h4 className="text-sm font-black text-slate-700 dark:text-slate-200">
-                                Referensi Target Stats & Recovery Belum Tersedia
-                            </h4>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                                {buildGuideResult.disclaimer}
-                            </p>
-                            <p className="text-[11px] text-slate-400 italic">
-                                Sesuai prinsip integritas data (Zero Speculative Data), sistem tidak membuat angka target stats atau rekomendasi recovery spekulatif sebelum parameter resmi dan panduan komunitas terverifikasi tersedia.
-                            </p>
+                    <div className="p-5 sm:p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-start gap-3.5">
+                            <Info className="w-5 h-5 text-slate-400 mt-0.5 shrink-0" />
+                            <div className="space-y-1.5">
+                                <h4 className="text-sm font-black text-slate-700 dark:text-slate-200">
+                                    Referensi Target Stats & Recovery Belum Tersedia
+                                </h4>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                    {buildGuideResult.disclaimer}
+                                </p>
+                                <p className="text-[11px] text-slate-400 italic">
+                                    Sesuai prinsip integritas data (Zero Speculative Data), sistem tidak membuat angka target stats atau rekomendasi recovery spekulatif sebelum parameter resmi dan panduan komunitas terverifikasi tersedia.
+                                </p>
+                            </div>
                         </div>
+                        {onSync && (
+                            <button
+                                type="button"
+                                onClick={onSync}
+                                disabled={syncing}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all cursor-pointer disabled:opacity-60 shadow-xs shrink-0 self-start sm:self-center"
+                                title="Cek pembaruan pengumuman resmi Cygames JP dan panduan GameWith"
+                            >
+                                <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                                <span>{syncing ? 'Memeriksa...' : 'Cek Update Resmi'}</span>
+                            </button>
+                        )}
                     </div>
                 )}
 

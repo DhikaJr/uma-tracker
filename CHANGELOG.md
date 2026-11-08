@@ -2,6 +2,25 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.2.0] - 8 November 2026
+
+### 🏆 Panduan Target Stats CM Classic 2027 Tokyo 2400m, Live Sync Otomatis Jadwal Cygames & CLI Command
+- **Integrasi Panduan Target Stats & Recovery CM Classic Jan 2027 Tokyo 2400m (`cm-2027-01`) (`competitionEventGuides.json`)**:
+  - Menambahkan panduan build lengkap berbasis rekomendasi GameWith JP (`show/586061`) untuk Champions Meeting CLASSIC Januari 2027 pada sirkuit Tokyo Turf 2400m.
+  - Memetakan patokan stats tier Intermediate (Speed 2100, Stamina 1600, Power 1400, Guts 1000, Wisdom 1400) dan Advanced (Speed 2200, Stamina 1800, Power 1700, Guts 1200, Wisdom 1700).
+  - Mengintegrasikan analisis aktivasi mekanisme *Stamina Competition (スタミナ勝負)* pada jarak 2400m di mana kelebihan stamina dan power meningkatkan kecepatan fase Last Spurt, serta rekomendasi skill recovery untuk menjamin ketahanan stamina penuh dan mengantisipasi debuff/kakari.
+- **Fitur Live Sync Otomatis Jadwal Turnamen & Panduan Build Komunitas (`CompetitionSyncService.php`, `CompetitionEventController.php`, `routes/api.php`)**:
+  - Mengembangkan service sinkronisasi dinamis `CompetitionSyncService` yang memindai pengumuman resmi portal Cygames JP (`pr_info_index` & `pr_info_detail`) serta panduan GameWith JP (`show/272329`).
+  - Menerapkan prinsip non-downgrade dan zero-speculative data: pembaruan hanya menimpa atribut balapan yang telah resmi diumumkan, tanpa mengubah atau menghapus data valid yang sudah ada.
+  - Menyimpan data hasil sinkronisasi secara terisolasi pada berkas runtime `storage/app/competition_events_live_sync.json` dan menggabungkannya secara dinamis pada lifecycle Eloquent model `CompetitionEvent::booted()` dan `CompetitionStatRecoveryRecommender::getGuides()`. Seluruh kalkulasi atribut lanjutan (`is_fully_confirmed`, `recommended_green_skills`, `racetrack_course`, `recommended_build_guide`) diperbarui secara instan tanpa menyentuh atau memodifikasi database SQLite (`database/database.sqlite`).
+  - Menyediakan endpoint REST API baru: `POST /api/competition-events/sync` untuk memicu sinkronisasi berkala dari frontend atau layanan eksternal.
+- **Perintah Artisan CLI `php artisan uma:sync-competitions` (`SyncCompetitionEventsCommand.php`)**:
+  - Menghadirkan command CLI untuk menyinkronkan jadwal turnamen Cygames JP dan panduan build GameWith dari terminal, lengkap dengan opsi `--force`, output tabel ringkasan status 6 event turnamen, dan informasi waktu sinkronisasi terakhir.
+- **Penyempurnaan Antarmuka & Tombol Sinkronisasi Cerdas (`CompetitionEventsView.jsx`, `CompetitionEventDetailView.jsx`)**:
+  - Memperbarui tombol *"🔄 Segarkan"* pada halaman utama *Upcoming Competition Events* agar memicu panggilan live sync `POST /api/competition-events/sync`, menampilkan status loading berputar (*spinning animation*), label interaktif *"Menyinkronkan..."*, pencegahan *double submission*, dan notifikasi toast sukses instan.
+  - Menampilkan metadata waktu terakhir sinkronisasi di sebelah tombol segarkan.
+  - Menambahkan tombol kontekstual *"🔄 Cek Update Resmi"* pada kartu detail turnamen (`CompetitionEventDetailView.jsx`) jika event memiliki parameter balapan yang belum diumumkan atau panduan build komunitas belum tersedia.
+
 ## [Versi 3.1.6] - 5 November 2026
 
 ### 🔍 Perbaikan Deskripsi Special Scaling Skill, Eliminasi Duplikat Karakter, Cut-off Grafik Circle & Tabel Mekanik Aptitude

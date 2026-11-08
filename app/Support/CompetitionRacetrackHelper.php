@@ -85,12 +85,24 @@ class CompetitionRacetrackHelper
         $normDirection = is_string($direction) ? strtolower(trim($direction)) : '';
         $targetDistance = (int) $distance;
 
+        // Support aliases such as Oi / Ooi
+        $aliases = [
+            'oi' => 'ooi',
+            'ooi' => 'oi',
+        ];
+        $aliasVenue = $aliases[$normVenue] ?? null;
+
         $track = null;
         foreach ($catalog as $t) {
+            $tEn = strtolower((string) ($t['name_en'] ?? ''));
+            $tSlug = strtolower((string) ($t['slug'] ?? ''));
+            $tJa = (string) ($t['name_ja'] ?? '');
+
             if (
-                strtolower((string) ($t['name_en'] ?? '')) === $normVenue ||
-                strtolower((string) ($t['slug'] ?? '')) === $normVenue ||
-                strtolower((string) ($t['name_ja'] ?? '')) === $normVenue
+                $tEn === $normVenue ||
+                $tSlug === $normVenue ||
+                $tJa === $normVenue ||
+                ($aliasVenue !== null && ($tEn === $aliasVenue || $tSlug === $aliasVenue))
             ) {
                 $track = $t;
                 break;

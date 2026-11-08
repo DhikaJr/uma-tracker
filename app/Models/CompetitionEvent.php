@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Services\CompetitionSyncService;
 use App\Support\CompetitionGreenSkillRecommender;
 use App\Support\CompetitionStatRecoveryRecommender;
 use Database\Seeders\CompetitionEventSeeder;
@@ -38,6 +39,17 @@ class CompetitionEvent extends Model
                     $event->setAttribute('start_date', '2026-11-22');
                     $event->setAttribute('date_label', '22 November 2026');
                     $event->setAttribute('source_url', 'https://umamusume.jp/news/detail?id=3525');
+                }
+
+                // Overlay dynamic live sync data if available
+                $syncData = CompetitionSyncService::getLiveSyncData();
+                $liveEvent = $syncData['events'][$event->event_key] ?? null;
+                if (is_array($liveEvent)) {
+                    foreach ($liveEvent as $attr => $val) {
+                        if ($val !== null) {
+                            $event->setAttribute($attr, $val);
+                        }
+                    }
                 }
 
                 $event->syncOriginal();

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Models\CompetitionEvent;
+use App\Services\CompetitionSyncService;
 
 class CompetitionStatRecoveryRecommender
 {
@@ -33,7 +34,7 @@ class CompetitionStatRecoveryRecommender
     }
 
     /**
-     * Load verified community event guides from JSON.
+     * Load verified community event guides from JSON, merging with live sync updates.
      *
      * @return array<string, array<string, mixed>>
      */
@@ -44,13 +45,31 @@ class CompetitionStatRecoveryRecommender
         }
 
         $path = resource_path('js/data/competitionEventGuides.json');
-        if (! file_exists($path)) {
-            return [];
+        $guides = [];
+        if (file_exists($path)) {
+            $decoded = json_decode((string) file_get_contents($path), true);
+            $guides = is_array($decoded) ? $decoded : [];
         }
 
-        $decoded = json_decode((string) file_get_contents($path), true);
+        // Overlay guides dynamically from live sync
+        $syncData = CompetitionSyncService::getLiveSyncData();
+        if (! empty($syncData['guides']) && is_array($syncData['guides'])) {
+            foreach ($syncData['guides'] as $key => $guide) {
+                if (is_array($guide)) {
+                    $guides[$key] = array_merge($guides[$key] ?? [], $guide);
+                }
+            }
+        }
 
-        return self::$guidesCache = (is_array($decoded) ? $decoded : []);
+        return self::$guidesCache = $guides;
+    }
+
+    /**
+     * Clear the guides memory cache.
+     */
+    public static function clearGuidesCache(): void
+    {
+        self::$guidesCache = null;
     }
 
     /**

@@ -154,5 +154,57 @@
         "Gold Recovery tidak bersifat mutlak untuk setiap karakter, terutama bagi pemain tingkat lanjut; kebutuhan pemulihan dapat disesuaikan dengan alternatif pemulihan lain (seperti White Recovery berbobot tinggi, skill hijau penambah stamina, skill kecepatan berefek pemulihan, maupun distribusi stats akhir)."
       ]
     }
+  },
+  "cm-2027-01": {
+    "event_key": "cm-2027-01",
+    "source_name": "GameWith",
+    "source_url": "https://gamewith.jp/uma-musume/article/show/586061",
+    "verified_at": "2026-11-08",
+    "is_community_recommendation": true,
+    "benchmark_disclaimer": "Angka di bawah adalah contoh patokan rekomendasi komunitas dari GameWith, bukan persyaratan resmi Cygames maupun jaminan kemenangan.",
+    "scenario_note": "Acuan lingkungan skenario baru The Shuntaisai Festival (旬菜祭) JP untuk Tokyo 2400m.",
+    "stat_tiers": [
+      {
+        "tier_key": "intermediate",
+        "tier_label": "Pemula / Intermediate",
+        "is_provisional": false,
+        "speed": "2100",
+        "stamina": "1600",
+        "power": "1400",
+        "guts": "1000",
+        "wisdom": "1400",
+        "stats": {
+          "speed": "2100",
+          "stamina": "1600",
+          "power": "1400",
+          "guts": "1000",
+          "wisdom": "1400"
+        }
+      },
+      {
+        "tier_key": "advanced",
+        "tier_label": "Advanced",
+        "is_provisional": false,
+        "speed": "2200",
+        "stamina": "1800",
+        "power": "1700",
+        "guts": "1200",
+        "wisdom": "1700",
+        "stats": {
+          "speed": "2200",
+          "stamina": "1800",
+          "power": "1700",
+          "guts": "1200",
+          "wisdom": "1700"
+        }
+      }
+    ],
+    "recovery_guide": {
+      "summary_label": "Stamina 1600–1800 untuk Mengaktifkan Stamina Competition (Tokyo 2400m)",
+      "recommendations": [
+        "Lintasan Tokyo 2400m mengaktifkan mekanisme Stamina Competition (スタミナ勝負), di mana semakin tinggi Stamina dan Power, semakin tinggi pula peningkatan kecepatan saat fase Last Spurt.",
+        "Sebagai jarak terpanjang dalam kategori Jarak Menengah, kebutuhan stamina sangat tinggi. Disarankan membawa skill recovery (misal 1 Gold Recovery atau kombinasi White Recovery) untuk menjamin ketahanan stamina penuh dan mengantisipasi debuff stamina maupun kondisi kakari (rushing)."
+      ]
+    }
   }
 }
