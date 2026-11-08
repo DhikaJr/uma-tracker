@@ -166,4 +166,24 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Rerun a test after each change to it.
 - Run `vendor/bin/phpunit` to call the test runner directly. It accepts the same file path and `--filter=testName` arguments.
 
+=== uma-tracker project rules ===
+
+# Uma Tracker Project Rules
+
+## 1. Proteksi Mutlak database/database.sqlite (CRITICAL)
+- DILARANG KERAS menyentuh, memodifikasi, atau menjalankan migrasi/seeder destruktif pada berkas fisik `database/database.sqlite` kecuali diminta secara eksplisit oleh pengguna.
+- Wajib memeriksa hash SHA-256 `database/database.sqlite` sebelum memulai dan setelah menyelesaikan pekerjaan untuk memastikan hash tetap 100% identik.
+- Seluruh pengujian PHPUnit wajib berjalan di SQLite `:memory:`.
+
+## 2. Kebersihan Working Tree & Skrip Sementara
+- Dilarang meninggalkan berkas skrip diagnostik/sementara (`check_*.php`, `inspect_*.php`, `fetch_*.js`, `.html`, dll.) di root proyek maupun folder scratch. Pastikan `git status -u` bersih sebelum menyelesaikan tugas.
+
+## 3. Standar Frontend Bundling & Code-Splitting
+- Pertahankan ukuran seluruh chunk Vite di bawah `500 kB` (`build.emptyOutDir: true`). Gunakan `React.lazy()` + `<Suspense>` untuk komponen view/modal dan `manualChunks` di `vite.config.js` untuk dataset JSON statis berukuran besar.
+- Gunakan Bahasa Indonesia yang konsisten untuk seluruh label antarmuka pengguna (UI), pesan validasi, dan dokumentasi.
+
+## 4. Sinkronisasi Rilis & Dokumentasi (CHANGELOG.md & ChangelogApiTest.php)
+- Dilarang menyertakan tautan path lokal `file:///c:/...` di dalam `CHANGELOG.md` maupun `README.md` (gunakan inline code `` `NamaFile` ``).
+- Setiap kali menambahkan versi baru di `CHANGELOG.md`, wajib memperbarui assertion versi terbaru pada `tests/Feature/ChangelogApiTest.php`.
+
 </laravel-boost-guidelines>
