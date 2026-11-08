@@ -256,6 +256,18 @@ export default function FansView({ onNotify, circleGoal, setCircleGoal, onCareer
         fetchRuns();
     }, [scenarioFilter, rankMinFilter, rankMaxFilter, trainingTypeFilter, dateFrom, dateTo, perPage, page]);
 
+    // Auto-switch to calculator tab when deck skills event or pending sessionStorage exists
+    useEffect(() => {
+        const handleOpenRatingCalculator = () => {
+            setActiveSubTab('calculator');
+        };
+        if (sessionStorage.getItem('uma_import_deck_skills_v1')) {
+            setActiveSubTab('calculator');
+        }
+        window.addEventListener('uma:open-rating-calculator-with-skills', handleOpenRatingCalculator);
+        return () => window.removeEventListener('uma:open-rating-calculator-with-skills', handleOpenRatingCalculator);
+    }, []);
+
     // Handle Search
     const handleSearch = (e) => {
         e.preventDefault();

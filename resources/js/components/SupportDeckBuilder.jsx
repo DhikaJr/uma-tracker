@@ -22,7 +22,8 @@ import {
     SlidersHorizontal,
     Heart,
     Flame,
-    Trophy
+    Trophy,
+    Calculator
 } from 'lucide-react';
 import { 
     SUPPORT_EFFECTS_MAP, 
@@ -665,6 +666,29 @@ export default function SupportDeckBuilder({
         return { total: seen.size, gold, hint, event };
     }, [slots]);
 
+    // Send active deck skills to Rating Calculator & Skill Optimizer
+    const handleTestDeckInCalculator = () => {
+        const activeCards = slots.map(s => s.card).filter(Boolean);
+        if (activeCards.length === 0) {
+            onNotify?.('Pasang minimal 1 kartu support di deck terlebih dahulu!', 'error');
+            return;
+        }
+
+        const payload = {
+            cards: activeCards,
+            timestamp: Date.now(),
+        };
+
+        try {
+            sessionStorage.setItem('uma_import_deck_skills_v1', JSON.stringify(payload));
+        } catch (e) {
+            console.error('Failed to save deck skills to sessionStorage:', e);
+        }
+
+        window.dispatchEvent(new CustomEvent('uma:open-rating-calculator-with-skills', { detail: payload }));
+        onNotify?.(`Membawa ${activeCards.length} kartu support ke Kalkulator Rating & Optimizer...`, 'success');
+    };
+
     return (
         <div className="space-y-6">
             {/* Header & Preset Toolbar */}
@@ -1260,16 +1284,28 @@ export default function SupportDeckBuilder({
                             </p>
                         </div>
 
-                        {/* Search Filter */}
-                        <div className="relative w-full sm:w-64">
-                            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
-                            <input
-                                type="text"
-                                value={skillSearch}
-                                onChange={(e) => setSkillSearch(e.target.value)}
-                                placeholder="Cari nama skill..."
-                                className="w-full pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                            />
+                        {/* Search Filter & Test in Calculator Button */}
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                            <div className="relative w-full sm:w-56">
+                                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                                <input
+                                    type="text"
+                                    value={skillSearch}
+                                    onChange={(e) => setSkillSearch(e.target.value)}
+                                    placeholder="Cari nama skill..."
+                                    className="w-full pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                />
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={handleTestDeckInCalculator}
+                                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/25 border border-emerald-500/40 transition-all transform active:scale-95 cursor-pointer shrink-0"
+                                title="Uji formasi skill deck ini di Kalkulator Proyeksi Rating & Skill Optimizer"
+                            >
+                                <Calculator className="w-3.5 h-3.5" />
+                                <span>🧮 Uji Skill Deck Ini di Kalkulator / Optimizer</span>
+                            </button>
                         </div>
                     </div>
 

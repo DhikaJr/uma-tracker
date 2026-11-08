@@ -134,6 +134,15 @@ export default function AppMain() {
         return () => window.removeEventListener('uma:find-skill-sources', handleFindSkillSources);
     }, []);
 
+    // Global listener to switch to Career/Calculator tab from Deck Builder
+    useEffect(() => {
+        const handleOpenRatingCalculator = () => {
+            setActiveTab('career');
+        };
+        window.addEventListener('uma:open-rating-calculator-with-skills', handleOpenRatingCalculator);
+        return () => window.removeEventListener('uma:open-rating-calculator-with-skills', handleOpenRatingCalculator);
+    }, []);
+
     // Dark Mode Theme (persisted in localStorage)
     const [darkMode, setDarkMode] = useState(() => {
         const saved = localStorage.getItem('uma_dark_mode');

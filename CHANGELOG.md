@@ -2,6 +2,29 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.0] - 8 November 2026
+
+### ⚡ Skill Optimizer Server JP (Knapsack AI) & Jembatan Impor Formasi Deck 6 Kartu
+- **Jembatan Impor Cepat Skill dari Preset Deck 6 Kartu & Karakter (`DeckSkillImporterModal.jsx`, `SupportDeckBuilder.jsx`, `AppMain.jsx`, `FansView.jsx`)**:
+  - Menghadirkan modal cerdas `DeckSkillImporterModal` untuk mengekstrak dan memuat seluruh pohon skill dari preset formasi deck 6 kartu support (`/api/collection/deck-presets`) serta karakter koleksi (`/api/collection/characters`).
+  - Mengelompokkan skill ke dalam 4 kategori taktis:
+    1. **🌸 Skill Karakter**: Skill bawaan (*Innate*), peningkatan awakening (*Awakening Lv. 2 s.d. 5*), dan varian skill evolusi (*Evolved Skills*).
+    2. **🌟 Gold / Rare Skills Deck**: Seluruh skill emas tingkat tinggi dari peristiwa kartu bantuan di deck.
+    3. **💡 Hint Skills Deck**: Kumpulan skill yang dapat dipelajari lewat latihan hint kartu, dilengkapi deteksi kemunculan ganda dengan lencana `🔥 X Kartu di Deck` dan rekomendasi diskon otomatis `Lv. 3` (untuk $\ge 2$ kartu) atau `Lv. 2` (1 kartu).
+    4. **⚡ Event Skills Deck**: Skill normal/putih dari event kartu support dengan rekomendasi hint default `Lv. 1`.
+  - Dilengkapi fitur pemilihan massal (*Pilih Semua*, *Hanya Gold & Karakter*, *Reset Pilihan*), penyesuaian level diskon hint langsung di dalam modal, penguncian prioritas (*lock*), pencarian cepat, serta 2 aksi utama: *Tambahkan ke Kalkulator Rating* atau *Kirim ke Skill Optimizer*.
+  - Menyediakan tombol jalan pintas *"🧮 Uji Skill Deck Ini di Kalkulator / Optimizer"* pada tab *Daftar Skill Deck* di modul `SupportDeckBuilder.jsx` yang mentransfer formasi kartu aktif via event global `uma:open-rating-calculator-with-skills` dan mengarahkan navigasi pengguna seketika ke modul kalkulator rating.
+- **Skill Optimizer Server JP Berbasis Algoritma Grouped Knapsack Dynamic Programming (`skillOptimizerHelper.js`, `RatingCalculatorView.jsx`, `ratingSkillsCatalog.json`)**:
+  - Mengadaptasi formula benchmark optimizer server Jepang (`daftuyda.moe/optimizer`) untuk menghitung kombinasi pembelian skill paling optimal yang menghasilkan kenaikan skor evaluasi / rating tertinggi dalam batasan sisa anggaran Skill Points (Pt).
+  - Mengakomodasi tingkat diskon Hint resmi server JP: `Lv0` (0%), `Lv1` (10%), `Lv2` (20%), `Lv3` (30%), `Lv4` (35%), dan `Lv5` (40%).
+  - Mengintegrasikan toggle status **Fast Learner (`切れ者`)** yang memberikan diskon tambahan akumulatif sebesar 10% dengan formula pembulatan JP: `floor(baseCost * max(0, 1 - hintDiscount - fastLearnerDiscount) + 1e-9)`.
+  - Menangani rantai dependensi skill eksklusif (*Grouped Knapsack Choices*): peningkatan *White $\rightarrow$ Gold* (Gold menggantikan skor White pada evaluasi rating), rantai *$\bigcirc$ $\rightarrow$ $\bigodot$*, serta skill evolusi.
+  - Menghadirkan rasio efisiensi perolehan skor per 1 Pt (`Rating Gain / Net Cost`) dengan tingkatan lencana: `Tier S+` (Gratis), `Tier S` ($\ge 2.0$), `Tier A` ($\ge 1.5$), `Tier B` ($\ge 1.0$), dan `Tier C` ($< 1.0$).
+  - Menyajikan dasbor hasil optimasi real-time: indikator progres penggunaan Pt, sisa Pt, perolehan rating (`+X.XXX pts`), perbandingan transisi rank sebelum vs sesudah (`<RankBadge rankAwal /> ➔ <RankBadge rankAkhir />`), rata-rata efisiensi, peringatan keterbatasan anggaran untuk skill terkunci (🔒), serta daftar rincian skill terpilih dan yang tidak terpilih.
+  - Menyediakan tombol 1-klik *"✅ Terapkan Kombinasi Optimal ke Kalkulator Rating"* yang langsung mengisi seluruh rekomendasi skill terbaik ke kalkulator manual.
+  - Memperkaya katalog `ratingSkillsCatalog.json` dengan atribut biaya (`base_cost`, `cost`) dan relasi prasyarat (`prereq_id`, `lower_id`) serta memastikan ukuran bundle chunk Vite tetap di bawah 500 kB.
+  - Menyimpan status anggaran Pt, Fast Learner, dan pool kandidat secara persisten di `localStorage` (`uma_skill_optimizer_state_v1`).
+
 ## [Versi 3.2.0] - 8 November 2026
 
 ### 🏆 Panduan Target Stats CM Classic 2027 Tokyo 2400m, Live Sync Otomatis Jadwal Cygames & CLI Command

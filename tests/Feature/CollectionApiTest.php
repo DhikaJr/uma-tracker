@@ -1386,4 +1386,38 @@ class CollectionApiTest extends TestCase
         $this->assertNotNull($rule40);
         $this->assertStringContainsString('Tracen-ken scenario', $rule40['text']);
     }
+
+    public function test_rating_skills_catalog_contains_valid_costs_and_prerequisites_for_optimizer(): void
+    {
+        $catalogPath = resource_path('js/data/ratingSkillsCatalog.json');
+        $this->assertFileExists($catalogPath);
+
+        $json = File::get($catalogPath);
+        $skills = json_decode($json, true);
+
+        $this->assertIsArray($skills);
+        $this->assertGreaterThan(1000, count($skills));
+
+        $skillsWithCost = 0;
+        $skillsWithPrereq = 0;
+
+        foreach ($skills as $skill) {
+            $this->assertArrayHasKey('id', $skill);
+            $this->assertArrayHasKey('name_en', $skill);
+            $this->assertArrayHasKey('score', $skill);
+            $this->assertArrayHasKey('base_cost', $skill);
+            $this->assertIsNumeric($skill['base_cost']);
+            $this->assertGreaterThanOrEqual(0, $skill['base_cost']);
+
+            if (! empty($skill['base_cost'])) {
+                $skillsWithCost++;
+            }
+            if (! empty($skill['prereq_id']) || ! empty($skill['lower_id'])) {
+                $skillsWithPrereq++;
+            }
+        }
+
+        $this->assertGreaterThan(1000, $skillsWithCost);
+        $this->assertGreaterThan(100, $skillsWithPrereq);
+    }
 }
