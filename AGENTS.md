@@ -98,13 +98,6 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Prefer PHPDoc blocks over inline comments. Only add inline comments for exceptionally complex logic.
 - Use array shape type definitions in PHPDoc blocks.
 
-=== deployments rules ===
-
-# Deployment
-
-- Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
-- Activate the `deploying-to-cloud` skill whenever deploying to Laravel Cloud, configuring Cloud environments or resources, using the Cloud CLI, or troubleshooting Cloud deployments.
-
 === tests rules ===
 
 # Test Enforcement
@@ -185,5 +178,9 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 ## 4. Sinkronisasi Rilis & Dokumentasi (CHANGELOG.md & ChangelogApiTest.php)
 - Dilarang menyertakan tautan path lokal `file:///c:/...` di dalam `CHANGELOG.md` maupun `README.md` (gunakan inline code `` `NamaFile` ``).
 - Setiap kali menambahkan versi baru di `CHANGELOG.md`, wajib memperbarui assertion versi terbaru pada `tests/Feature/ChangelogApiTest.php`.
+
+## 5. Aktivasi Skill Domain & Engineering (.claude/skills)
+- Wajib membaca dan mengikuti aturan pada skill `uma-tracker-domain` (`.claude/skills/uma-tracker-domain/SKILL.md`) setiap kali bekerja pada fitur domain Uma Musume JP (Gacha, Karier, Kalkulator Proyeksi Rating, Skill Optimizer, Koleksi, Simulasi Deck 6 Kartu, Afinitas, Perencana Jewel, maupun Event Kompetisi CM & LoH).
+- Aktifkan pula skill teknis yang relevan di `.claude/skills/`: `frontend-ui-engineering`, `performance-optimization`, `source-driven-development`, `constraint-driven-development`, `debugging-and-error-recovery`, `code-simplification`, `git-workflow-and-versioning`, `browser-testing-with-devtools`, dan `api-and-interface-design`.
 
 </laravel-boost-guidelines>
