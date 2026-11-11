@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
     X, 
     Zap, 
@@ -67,13 +68,15 @@ export default function NoDebuffSkillsModal({ onClose }) {
         });
     }, [skills, search, filterType]);
 
-    return (
+    if (typeof document === 'undefined') return null;
+
+    return createPortal(
         <div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn"
+            className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn"
             onClick={onClose}
         >
             <div 
-                className="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[92vh] flex flex-col"
+                className="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[90vh] flex flex-col my-auto"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
@@ -345,6 +348,7 @@ export default function NoDebuffSkillsModal({ onClose }) {
                     }}
                 />
             )}
-        </div>
+        </div>,
+        document.body
     );
 }

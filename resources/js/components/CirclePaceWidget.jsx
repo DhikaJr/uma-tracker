@@ -129,10 +129,18 @@ export default function CirclePaceWidget({
         },
     };
 
-    const formatPeriodJp = (periodStr) => {
+    const formatPeriodId = (periodStr) => {
         if (!periodStr) return 'Bulan Ini';
         const match = String(periodStr).match(/^(\d{4})-(\d{2})/);
-        return match ? `${match[1]}年${parseInt(match[2], 10)}月` : String(periodStr);
+        if (match) {
+            const monthNames = [
+                'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+            ];
+            const monthIdx = parseInt(match[2], 10) - 1;
+            return `${monthNames[monthIdx] || ''} ${match[1]}`;
+        }
+        return String(periodStr);
     };
 
     const currentStatus = isHistorical
@@ -169,7 +177,7 @@ export default function CirclePaceWidget({
                                         ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30'
                                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                                 }`}>
-                                    {isHistorical ? `Arsip ${formatPeriodJp(selectedPeriod)}` : 'Bulan Ini'}
+                                    {isHistorical ? `Arsip ${formatPeriodId(selectedPeriod)}` : 'Bulan Ini'}
                                 </span>
                             </div>
                             <p className="text-xs text-slate-500 dark:text-slate-400">

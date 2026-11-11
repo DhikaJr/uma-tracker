@@ -2,6 +2,21 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.1] - 11 November 2026
+
+### 🎨 Perbaikan Tampilan Modal Aturan Khusus No Debuff & Lokalisasi Penuh Bahasa Indonesia Menu Circle
+- **Perbaikan Modal Aturan Khusus No Debuff Terpotong Navbar (`NoDebuffSkillsModal.jsx`, `SkillDetailModal.jsx`)**:
+  - Mengimplementasikan `createPortal(..., document.body)` dari `react-dom` pada modal `NoDebuffSkillsModal` agar elemen dirender langsung di tingkat root DOM (`document.body`) di luar konteks penumpukan `<main>`.
+  - Meningkatkan lapisan z-index menjadi `z-[60]` (di atas sticky navbar yang berada di `z-40`), menerapkan batas tinggi `max-h-[90vh]`, dan perataan `my-auto` sehingga modal memiliki margin vertikal yang proporsional, backdrop blur menggelapkan seluruh layar termasuk navbar, dan header merah beserta tombol tutup (`X`) terlihat utuh tanpa terpotong.
+  - Memasang `createPortal(..., document.body)` pada modal `SkillDetailModal` (`z-70`) agar rincian formula dan trigger kondisi skill yang dibuka dari dalam modal debuff maupun modul lainnya selalu tampil di lapisan teratas.
+- **Lokalisasi dan Penerjemahan Teks Bahasa Jepang pada Modul Circle (`CircleClubView.jsx`, `CirclePaceWidget.jsx`)**:
+  - Menerjemahkan judul tabel `2026年11月のメンバー別貢献 (November 2026)` menjadi format Bahasa Indonesia dinamis: `Kontribusi per Anggota (November 2026)`.
+  - Menerjemahkan tombol pemilih periode `2026年11月 ▼` menjadi `November 2026 ▼` (`formatPeriodId`).
+  - Menerjemahkan pilihan bulan di dalam popover `11月`, `10月`, `9月` menjadi singkatan bulan Bahasa Indonesia yang ringkas (`Nov`, `Okt`, `Sep`) lengkap dengan tooltip nama bulan penuh.
+  - Menerjemahkan subheader `メンバーのファン増加` menjadi `Pertambahan Fans Anggota`.
+  - Menyelaraskan teks keterangan anggota keluar `脱退、貢献は除外済み (Sudah Keluar dari Club)` menjadi `Keluar dari club, kontribusi dikecualikan`.
+  - Mengubah label badge arsip pada widget ritme bulanan (`CirclePaceWidget.jsx`) dari `Arsip 2026年10月` menjadi `Arsip Oktober 2026`.
+
 ## [Versi 3.3.0] - 8 November 2026
 
 ### ⚡ Skill Optimizer Server JP (Knapsack AI) & Jembatan Impor Formasi Deck 6 Kartu

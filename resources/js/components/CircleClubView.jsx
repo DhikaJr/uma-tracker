@@ -32,25 +32,29 @@ import {
 } from 'recharts';
 import CirclePaceWidget from './CirclePaceWidget';
 
-// Period Formatting Helpers (Gambar 1)
-const formatPeriodJp = (periodStr) => {
-    if (!periodStr) return '2026年10月';
-    const match = String(periodStr).match(/^(\d{4})-(\d{2})/);
-    return match ? `${match[1]}年${parseInt(match[2], 10)}月` : String(periodStr);
-};
+// Period Formatting Helpers
+const monthNames = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
+
+const monthNamesShort = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+    'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'
+];
 
 const formatPeriodId = (periodStr) => {
     if (!periodStr) return 'Oktober 2026';
     const match = String(periodStr).match(/^(\d{4})-(\d{2})/);
     if (match) {
-        const monthNames = [
-            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-        ];
         const monthIdx = parseInt(match[2], 10) - 1;
         return `${monthNames[monthIdx] || ''} ${match[1]}`;
     }
     return String(periodStr);
+};
+
+const formatPeriodJp = (periodStr) => {
+    return formatPeriodId(periodStr);
 };
 
 export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
@@ -641,7 +645,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                         <p className="text-emerald-200/90 text-xs sm:text-sm mt-1 max-w-xl">
                             {isCurrentPeriod
                                 ? 'Pantau perolehan fans keseluruhan club dan kontribusi pribadi anggota secara real-time via data muxueuma.'
-                                : `Rekapitulasi arsip performa dan kontribusi anggota periode ${formatPeriodJp(period)} (${formatPeriodId(period)}).`}
+                                : `Rekapitulasi arsip performa dan kontribusi anggota periode ${formatPeriodId(period)}.`}
                         </p>
                     </div>
 
@@ -720,7 +724,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                         </div>
                         <div className="text-xs">
                             <div className="font-black text-sm text-amber-800 dark:text-amber-300">
-                                Sedang Melihat Arsip Periode: {formatPeriodJp(period)} ({formatPeriodId(period)})
+                                Sedang Melihat Arsip Periode: {formatPeriodId(period)}
                             </div>
                             <p className="text-amber-700/90 dark:text-amber-300/80 mt-0.5">
                                 Halaman ini menampilkan rekapitulasi akhir kontribusi anggota dan total fans pada bulan tersebut.
@@ -981,18 +985,15 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
             {/* Full Members Roster Table */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-visible">
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800 space-y-4">
-                    {/* Top Row: Japanese Title + Period Selector Dropdown (Gambar 1) */}
+                    {/* Top Row: Title + Period Selector Dropdown (Gambar 1) */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative pb-4 border-b border-slate-100 dark:border-slate-800/80">
                         <div className="flex flex-wrap items-center gap-2">
                             <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white font-sans tracking-tight">
-                                {formatPeriodJp(period)}のメンバー別貢献
+                                Kontribusi per Anggota ({formatPeriodId(period)})
                             </h2>
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                                ({formatPeriodId(period)})
-                            </span>
                         </div>
 
-                        {/* Period Selector Dropdown Trigger & Popover (Gambar 1) */}
+                        {/* Period Selector Dropdown Trigger & Popover */}
                         <div className="relative" ref={periodDropdownRef}>
                             <button
                                 type="button"
@@ -1000,7 +1001,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                                 className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-slate-100 dark:bg-[#1c1c1f] hover:bg-slate-200 dark:hover:bg-[#28282e] text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700/80 font-mono text-xs sm:text-sm font-semibold transition-colors cursor-pointer shadow-xs"
                                 title="Pilih Periode Bulan"
                             >
-                                <span>{formatPeriodJp(period)}</span>
+                                <span>{formatPeriodId(period)}</span>
                                 <span className="text-[10px] text-slate-400">▾</span>
                             </button>
 
@@ -1015,6 +1016,8 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                                             <div className="flex flex-wrap items-center gap-5 pt-1">
                                                 {groupedPeriods.map[yr].map((item) => {
                                                     const isSelected = activePeriodKey === item.key;
+                                                    const shortLabel = monthNamesShort[item.month - 1] || `${item.month}`;
+                                                    const fullLabel = monthNames[item.month - 1] || `${item.month}`;
                                                     return (
                                                         <button
                                                             key={item.key}
@@ -1025,8 +1028,9 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                                                                     ? 'text-white' 
                                                                     : 'text-slate-400 hover:text-slate-200'
                                                             }`}
+                                                            title={fullLabel}
                                                         >
-                                                            <span>{item.month}月</span>
+                                                            <span>{shortLabel}</span>
                                                             {isSelected && (
                                                                 <span className="absolute -bottom-1 left-0 right-0 h-[2px] bg-[#e07a5f] rounded-full" />
                                                             )}
@@ -1041,11 +1045,11 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                         </div>
                     </div>
 
-                    {/* Sub-bar: メンバーのファン増加 + Search Filter */}
+                    {/* Sub-bar: Pertambahan Fans Anggota + Search Filter */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
                         <div>
                             <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
-                                メンバーのファン増加
+                                Pertambahan Fans Anggota
                             </h3>
                             <p className="text-xs text-slate-500 dark:text-slate-400">
                                 Pertambahan fans seluruh anggota circle ({activeMembersCount} aktif{outMembersCount > 0 ? `, ${outMembersCount} keluar` : ''})
@@ -1179,8 +1183,8 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                                                     {isOut && (
                                                         <span className="text-[10px] text-rose-500/80 dark:text-rose-400/80 font-medium mt-0.5">
                                                             {member.leftOn 
-                                                                ? `${member.leftOn.slice(5)} 脱退、貢献は除外済み (Sudah Keluar dari Club)` 
-                                                                : '脱退、貢献は除外済み (Sudah Keluar dari Club)'}
+                                                                ? `${member.leftOn.slice(5)} - Keluar dari club, kontribusi dikecualikan` 
+                                                                : 'Keluar dari club, kontribusi dikecualikan'}
                                                         </span>
                                                     )}
                                                 </div>

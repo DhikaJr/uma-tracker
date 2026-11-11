@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
     X, 
     Search,
@@ -149,7 +150,9 @@ export default function SkillDetailModal({ skill: rawSkill, onClose, onFindSkill
 
     const hasMultipleTriggers = conditionGroups.length > 1;
 
-    return (
+    if (typeof document === 'undefined') return null;
+
+    return createPortal(
         <div 
             className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150"
             onClick={onClose}
@@ -627,6 +630,7 @@ export default function SkillDetailModal({ skill: rawSkill, onClose, onFindSkill
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
