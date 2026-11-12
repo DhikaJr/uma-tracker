@@ -31,9 +31,9 @@ class PlannerController extends Controller
             'spark_goal_multiplier' => 1.0, // 0.5 (100 pulls), 1.0 (200 pulls), 2.0 (400 pulls)
             'include_predictions' => true,  // true: hitung spark dengan prediksi, false: hanya aset saat ini
             'f2p_daily_missions' => true,   // 50 carats/day
-            'f2p_login_bonus' => true,      // 110 carats / 8 days (~13.75 carats/day)
-            'f2p_training_pass' => true,    // Free Training Pass: 500 carats/month
-            'stadium_class' => 6,           // Class 6: 250/wk, Class 5: 200/wk, Class 4: 150/wk, Class 3: 100/wk, Class 2: 70/wk, Class 1: 50/wk
+            'f2p_login_bonus' => true,      // Estimate: 110 carats per 7 days
+            'f2p_training_pass' => true,    // Standard Training Pass: 500 carats and 2 tickets of each type per period
+            'stadium_class' => 6,           // Class 6: 250/wk, Class 5: 150/wk, Class 4: 150/wk, Class 3: 100/wk, Class 2: 70/wk, Class 1: 50/wk
             'circle_rank' => 'A',           // SS: 3000, S+: 2400, S: 2100, A+: 1800, A: 1500, B+: 1200, B: 900, C+: 600, C: 300, D+: 150, Unranked: 0
             'champions_meeting_target' => 'final_a_2', // 'final_a_1', 'final_a_2', 'final_a_3', 'final_b_1', 'final_b_2', 'final_b_3', 'loh_*', 'none'
             'shop_friendship_enabled' => true,      // Friendship Point Shop: 1 Tiket Karakter + 1 Tiket Support / bulan (20.000 FP per tiket)

@@ -2,6 +2,14 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.5] - 13 November 2026
+
+### Kalibrasi Perencana Jewel dan biaya farming
+
+- Perencana Jewel memakai estimasi login 7 hari, retensi Class 5 sebesar 150 Carat per pekan, dan tiket Standard Training Pass sesuai banner. Hadiah Circle dan reset toko dihitung saat melewati tanggal 1.
+- Kalkulator farming membandingkan jumlah tarikan sebelum dan sesudah biaya untuk aset saat ini serta proyeksi target.
+- Indikator menampilkan persentase penuh dan membedakan target yang sudah tercapai dari target yang baru tercapai dalam proyeksi.
+
 ## [Versi 3.3.4] - 12 November 2026
 
 ### Modal Koleksi dan kondisi skill

@@ -26,15 +26,15 @@ import {
 } from 'lucide-react';
 import JewelSacrificeCalculator from './JewelSacrificeCalculator';
 
-const STADIUM_RATES = {
-    6: 250,
-    5: 200,
-    4: 150,
-    3: 100,
-    2: 70,
-    1: 50,
-    0: 0,
-};
+import {
+    STADIUM_RETENTION_CARATS,
+    calculateProjectionPeriod,
+    calculateRoutineRewards,
+    calculateTargetReadiness,
+    getBannerTickets,
+    getPlannerDate,
+    getPullCapacity,
+} from '../utils/jewelPlannerHelper';
 
 const CIRCLE_RANK_RATES = {
     'SS': 3000,
@@ -104,7 +104,7 @@ const CM_OPTIONS = {
     'loh_plat_4_plus_10': { label: 'LoH - Plat 4 +20.000pt (4.290 Carat + 4 Tiket)', carats: 4290, tickets: 4, charTickets: 2, suppTickets: 2, group: 'League of Heroes (Platinum 4 Score Rewards)' },
 
     // None
-    'none': { label: 'Tidak Mengikuti / Skip Hadiah (0 Carat)', carats: 0, tickets: 0, charTickets: 0, suppTickets: 0, group: 'Lainnya' },
+    'none': { label: '0 / Lewati', carats: 0, tickets: 0, charTickets: 0, suppTickets: 0, group: 'Lainnya' },
 };
 
 export default function JewelPlannerView({ onNotify }) {
@@ -124,7 +124,7 @@ export default function JewelPlannerView({ onNotify }) {
         character_tickets: 5,
         support_tickets: 5,
         target_banner_type: 'character', // 'character' | 'support' | 'all'
-        target_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        target_date: getPlannerDate(30),
         spark_goal_multiplier: 1.0,
         include_predictions: true,
         f2p_daily_missions: true,
@@ -153,11 +153,11 @@ export default function JewelPlannerView({ onNotify }) {
             if (res.ok) {
                 const data = await res.json();
                 if (data.config) {
-                    const todayStr = new Date().toISOString().split('T')[0];
+                    const todayStr = getPlannerDate();
                     let targetDate = data.config.target_date;
                     // Jika target date di database sudah lewat atau hari ini, default ke 30 hari ke depan
                     if (!targetDate || targetDate <= todayStr) {
-                        targetDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                        targetDate = getPlannerDate(30);
                     }
 
                     setConfig(prev => ({
@@ -204,33 +204,10 @@ export default function JewelPlannerView({ onNotify }) {
         }
     };
 
-    // Calculate days and periods
+    const today = getPlannerDate();
     const calculation = useMemo(() => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const target = new Date(config.target_date);
-        target.setHours(0, 0, 0, 0);
-
-        const diffTime = target.getTime() - today.getTime();
-        const diffDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-        const diffWeeks = Math.floor(diffDays / 7);
-
-        // Count 1st of month occurrences for Circle payouts & Shop Resets
-        let circlePayoutCount = 0;
-        const curDate = new Date(today);
-        while (curDate <= target) {
-            if (curDate.getDate() === 1 && curDate > today) {
-                circlePayoutCount++;
-            }
-            curDate.setDate(curDate.getDate() + 1);
-        }
-        if (circlePayoutCount === 0 && diffDays >= 20) {
-            circlePayoutCount = 1;
-        }
-
+        const { diffDays, diffWeeks, monthTransitions } = calculateProjectionPeriod(today, config.target_date);
         const monthsCount = Math.max(1, Math.round(diffDays / 30));
-        const shopResetCount = Math.max(1, circlePayoutCount > 0 ? circlePayoutCount : monthsCount);
 
         // 1. Current Holdings
         const freeCarats = parseInt(config.free_carats, 10) || 0;
@@ -240,44 +217,32 @@ export default function JewelPlannerView({ onNotify }) {
         const targetBannerType = config.target_banner_type || 'character';
 
         const currentCarats = freeCarats + paidCarats;
-        const currentCaratsPulls = Math.floor(currentCarats / 150);
+        const currentCaratsPulls = getPullCapacity(currentCarats);
         const currentCaratsRemainder = currentCarats % 150;
 
-        // Current tickets applicable according to target banner type
-        let currentTicketsPulls = 0;
-        if (targetBannerType === 'character') {
-            currentTicketsPulls = characterTickets;
-        } else if (targetBannerType === 'support') {
-            currentTicketsPulls = supportTickets;
-        } else {
-            currentTicketsPulls = characterTickets + supportTickets;
-        }
-        const currentTotalPulls = currentCaratsPulls + currentTicketsPulls;
+        const currentTicketsPulls = getBannerTickets(targetBannerType, characterTickets, supportTickets);
+        const currentTotalPulls = getPullCapacity(currentCarats, currentTicketsPulls);
 
         // 2. Projected Incomes
-        // F2P Dailies & Routine
-        const dailyMissions = config.f2p_daily_missions ? diffDays * 50 : 0;
-        const loginBonus = config.f2p_login_bonus ? Math.floor(diffDays * (110 / 8)) : 0;
-        const stadiumRate = STADIUM_RATES[config.stadium_class] ?? 250;
-        const stadiumCarats = stadiumRate * diffWeeks;
-        const f2pPassCarats = config.f2p_training_pass !== false ? monthsCount * 500 : 0;
+        const { dailyMissions, loginBonus, stadiumCarats, f2pPassCarats, f2pPassTickets } =
+            calculateRoutineRewards(config, diffDays, diffWeeks, monthsCount);
         const totalF2pCarats = dailyMissions + loginBonus + stadiumCarats + f2pPassCarats;
 
         // Shop Exchanges (Friendship Shop & Cleat/Horseshoe Shop)
         // 1. Friendship Point Shop: 1 Tiket Karakter + 1 Tiket Support Card per bulan (@ 20.000 FP)
-        const shopFriendshipCharTickets = config.shop_friendship_enabled !== false ? shopResetCount * 1 : 0;
-        const shopFriendshipSuppTickets = config.shop_friendship_enabled !== false ? shopResetCount * 1 : 0;
+        const shopFriendshipCharTickets = config.shop_friendship_enabled !== false ? monthTransitions * 1 : 0;
+        const shopFriendshipSuppTickets = config.shop_friendship_enabled !== false ? monthTransitions * 1 : 0;
 
         // 2. Horseshoe / Cleat Shop:
         // Silver Horseshoe: 2 Char + 2 Support / bulan
-        const shopSilverCharTickets = config.shop_horseshoe_silver !== false ? shopResetCount * 2 : 0;
-        const shopSilverSuppTickets = config.shop_horseshoe_silver !== false ? shopResetCount * 2 : 0;
+        const shopSilverCharTickets = config.shop_horseshoe_silver !== false ? monthTransitions * 2 : 0;
+        const shopSilverSuppTickets = config.shop_horseshoe_silver !== false ? monthTransitions * 2 : 0;
         // Gold Horseshoe: 2 Char + 2 Support / bulan
-        const shopGoldCharTickets = config.shop_horseshoe_gold !== false ? shopResetCount * 2 : 0;
-        const shopGoldSuppTickets = config.shop_horseshoe_gold !== false ? shopResetCount * 2 : 0;
+        const shopGoldCharTickets = config.shop_horseshoe_gold !== false ? monthTransitions * 2 : 0;
+        const shopGoldSuppTickets = config.shop_horseshoe_gold !== false ? monthTransitions * 2 : 0;
         // Rainbow Horseshoe (Opsional, butuh buang SSR): 2 Char + 2 Support / bulan
-        const shopRainbowCharTickets = config.shop_horseshoe_rainbow === true ? shopResetCount * 2 : 0;
-        const shopRainbowSuppTickets = config.shop_horseshoe_rainbow === true ? shopResetCount * 2 : 0;
+        const shopRainbowCharTickets = config.shop_horseshoe_rainbow === true ? monthTransitions * 2 : 0;
+        const shopRainbowSuppTickets = config.shop_horseshoe_rainbow === true ? monthTransitions * 2 : 0;
 
         const totalCleatCharTickets = shopSilverCharTickets + shopGoldCharTickets + shopRainbowCharTickets;
         const totalCleatSuppTickets = shopSilverSuppTickets + shopGoldSuppTickets + shopRainbowSuppTickets;
@@ -287,7 +252,7 @@ export default function JewelPlannerView({ onNotify }) {
 
         // Competitive (Circle & CM/LoH)
         const circleRate = CIRCLE_RANK_RATES[config.circle_rank] ?? 1500;
-        const circleCarats = circleRate * Math.max(1, circlePayoutCount);
+        const circleCarats = circleRate * monthTransitions;
         const cmData = CM_OPTIONS[config.champions_meeting_target] || CM_OPTIONS['final_a_2'];
         const cmCarats = cmData.carats * monthsCount;
         const cmTickets = cmData.tickets * monthsCount;
@@ -320,68 +285,54 @@ export default function JewelPlannerView({ onNotify }) {
         const grandProjectedCarats = totalF2pCarats + totalCompetitiveCarats + totalPveCarats + totalPassesCarats;
         const grandTotalCarats = currentCarats + grandProjectedCarats;
 
-        // Projected Tickets based on target banner
-        let grandProjectedTickets = 0;
-        let totalActiveTickets = 0;
-        if (targetBannerType === 'character') {
-            grandProjectedTickets = totalShopCharTickets + trainerPassCharTickets + cmCharTickets;
-            totalActiveTickets = characterTickets + grandProjectedTickets;
-        } else if (targetBannerType === 'support') {
-            grandProjectedTickets = totalShopSuppTickets + trainerPassSuppTickets + cmSuppTickets;
-            totalActiveTickets = supportTickets + grandProjectedTickets;
-        } else {
-            grandProjectedTickets = totalShopCharTickets + totalShopSuppTickets + trainerPassTickets + cmTickets;
-            totalActiveTickets = characterTickets + supportTickets + grandProjectedTickets;
-        }
-
-        const grandTotalTickets = totalActiveTickets;
-        const grandTotalAllTickets = characterTickets + supportTickets + totalShopCharTickets + totalShopSuppTickets + trainerPassTickets + cmTickets;
+        const grandProjectedTickets = getBannerTickets(
+            targetBannerType,
+            totalShopCharTickets + trainerPassCharTickets + cmCharTickets,
+            totalShopSuppTickets + trainerPassSuppTickets + cmSuppTickets,
+        ) + f2pPassTickets;
+        const grandTotalTickets = currentTicketsPulls + grandProjectedTickets;
 
         // Pulls exclusively from predictions
-        const projectedCaratsPulls = Math.floor(grandProjectedCarats / 150);
+        const projectedCaratsPulls = getPullCapacity(grandProjectedCarats);
         const projectedTicketsPulls = grandProjectedTickets;
         const projectedTotalPulls = projectedCaratsPulls + projectedTicketsPulls;
 
         // Grand total pull capacity (with predictions)
-        const totalPullCapacity = Math.floor(grandTotalCarats / 150) + grandTotalTickets;
+        const totalPullCapacity = getPullCapacity(grandTotalCarats, grandTotalTickets);
 
         // Target Spark Calculation
         const sparkMultiplier = parseFloat(config.spark_goal_multiplier) || 1.0;
         const targetPulls = Math.round(200 * sparkMultiplier);
-        const targetCarats = targetPulls * 150;
 
         // Status Tanpa Prediksi (Aset Saat Ini)
-        const currentReadinessPercent = Math.min(200, Math.round((currentTotalPulls / targetPulls) * 100));
         const currentPullDeficit = Math.max(0, targetPulls - currentTotalPulls);
         const currentPullSurplus = Math.max(0, currentTotalPulls - targetPulls);
         const currentCaratDeficit = currentPullDeficit * 150;
-        const isCurrentGuaranteed = currentPullDeficit === 0;
 
         // Status Dengan Prediksi (Proyeksi Target Tanggal)
-        const projectedReadinessPercent = Math.min(200, Math.round((totalPullCapacity / targetPulls) * 100));
         const projectedPullDeficit = Math.max(0, targetPulls - totalPullCapacity);
         const projectedPullSurplus = Math.max(0, totalPullCapacity - targetPulls);
         const projectedCaratDeficit = projectedPullDeficit * 150;
         const projectedDailyCaratDeficit = diffDays > 0 ? Math.ceil(projectedCaratDeficit / diffDays) : projectedCaratDeficit;
-        const isProjectedGuaranteed = projectedPullDeficit === 0;
 
         // Mode Evaluasi Aktif (include_predictions)
         const isPredictionsEnabled = config.include_predictions !== false;
         const activeTotalPulls = isPredictionsEnabled ? totalPullCapacity : currentTotalPulls;
         const activeTotalCarats = isPredictionsEnabled ? grandTotalCarats : currentCarats;
         const activeTotalTickets = isPredictionsEnabled ? grandTotalTickets : currentTicketsPulls;
-        const readinessPercent = isPredictionsEnabled ? projectedReadinessPercent : currentReadinessPercent;
+        const { percent: readinessPercent, status: targetStatus } =
+            calculateTargetReadiness(currentTotalPulls, totalPullCapacity, targetPulls, isPredictionsEnabled);
+        const isTargetMet = targetStatus !== 'unmet';
         const pullDeficit = isPredictionsEnabled ? projectedPullDeficit : currentPullDeficit;
         const pullSurplus = isPredictionsEnabled ? projectedPullSurplus : currentPullSurplus;
         const caratDeficit = isPredictionsEnabled ? projectedCaratDeficit : currentCaratDeficit;
         const dailyCaratDeficit = isPredictionsEnabled ? projectedDailyCaratDeficit : (diffDays > 0 ? Math.ceil(caratDeficit / diffDays) : caratDeficit);
-        const isGuaranteed = isPredictionsEnabled ? isProjectedGuaranteed : isCurrentGuaranteed;
 
         return {
             diffDays,
             diffWeeks,
             monthsCount,
-            shopResetCount,
+            monthTransitions,
             targetBannerType,
             freeCarats,
             paidCarats,
@@ -396,6 +347,7 @@ export default function JewelPlannerView({ onNotify }) {
             loginBonus,
             stadiumCarats,
             f2pPassCarats,
+            f2pPassTickets,
             totalF2pCarats,
             shopFriendshipCharTickets,
             shopFriendshipSuppTickets,
@@ -437,33 +389,33 @@ export default function JewelPlannerView({ onNotify }) {
             projectedTotalPulls,
             grandTotalCarats,
             grandTotalTickets,
-            grandTotalAllTickets,
             totalPullCapacity,
             targetPulls,
-            targetCarats,
-            currentReadinessPercent,
             currentPullDeficit,
             currentPullSurplus,
             currentCaratDeficit,
-            isCurrentGuaranteed,
-            projectedReadinessPercent,
             projectedPullDeficit,
             projectedPullSurplus,
             projectedCaratDeficit,
             projectedDailyCaratDeficit,
-            isProjectedGuaranteed,
             isPredictionsEnabled,
             activeTotalPulls,
             activeTotalCarats,
             activeTotalTickets,
             readinessPercent,
+            targetStatus,
+            isTargetMet,
             pullDeficit,
             pullSurplus,
             caratDeficit,
             dailyCaratDeficit,
-            isGuaranteed,
         };
-    }, [config]);
+    }, [config, today]);
+
+    const targetStatusLabel = {
+        current: 'Target Tercapai',
+        projected: 'Target Diproyeksikan Tercapai',
+    }[calculation.targetStatus];
 
     const toggleAccordion = (key) => {
         setExpandedAccordion(prev => ({ ...prev, [key]: !prev[key] }));
@@ -500,7 +452,7 @@ export default function JewelPlannerView({ onNotify }) {
                             <span>Advanced Jewel & Spark Planner</span>
                         </h1>
                         <p className="text-emerald-200/90 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
-                            Kalkulator budgeting gacha khusus <strong>Server Jepang</strong>. Proyeksikan akumulasi Carat, tiket gacha, dan kepastian spark target banner impian Anda tanpa risiko salah hitung.
+                            Kalkulator budgeting gacha khusus <strong>Server Jepang</strong>. Proyeksikan akumulasi Carat dan tiket gacha hingga tanggal target banner.
                         </p>
                     </div>
 
@@ -525,20 +477,18 @@ export default function JewelPlannerView({ onNotify }) {
                         <div className="flex flex-wrap items-center gap-2">
                             <Award className="w-5 h-5 text-amber-500" />
                             <h2 className="text-lg font-black text-slate-900 dark:text-white">
-                                Ringkasan Kesiapan Spark Banner
+                                Kesiapan Target Tarikan
                             </h2>
                             <span className={`px-3 py-1 rounded-full text-xs font-black border ${
-                                calculation.isGuaranteed
+                                calculation.isTargetMet
                                     ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
                                     : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-700'
                             }`}>
-                                {calculation.isGuaranteed 
-                                    ? (calculation.isPredictionsEnabled ? '✨ SPARK GUARANTEED!' : '✨ SPARK READY SEKARANG!') 
-                                    : `⚠️ DEFISIT ${calculation.pullDeficit} PULL`}
+                                {targetStatusLabel ?? `Kurang ${calculation.pullDeficit} tarikan`}
                             </span>
                         </div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                            Target Spark: <strong>{config.spark_goal_multiplier}x Spark ({calculation.targetPulls} Pulls / {calculation.targetCarats.toLocaleString()} Carat)</strong> hingga tanggal {config.target_date} ({calculation.diffDays} hari lagi)
+                            Target <strong>{calculation.targetPulls} tarikan</strong> hingga tanggal {config.target_date} ({calculation.diffDays} hari lagi)
                         </p>
                     </div>
 
@@ -589,13 +539,13 @@ export default function JewelPlannerView({ onNotify }) {
                 <div className="space-y-2">
                     <div className="flex justify-between text-xs font-bold">
                         <span className="text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                            <span>Kesiapan Spark ({calculation.readinessPercent}%)</span>
+                            <span>Kesiapan Target ({calculation.readinessPercent.toLocaleString('id-ID', { maximumFractionDigits: 1 })}%)</span>
                             <span className="text-[11px] font-normal text-slate-400">
                                 — Mode: {calculation.isPredictionsEnabled ? 'Proyeksi Hingga Target Tanggal' : 'Hanya Aset Saat Ini'}
                             </span>
                         </span>
-                        <span className={calculation.isGuaranteed ? 'text-emerald-600 font-mono' : 'text-rose-600 font-mono'}>
-                            {calculation.isGuaranteed 
+                        <span className={calculation.isTargetMet ? 'text-emerald-600 font-mono' : 'text-rose-600 font-mono'}>
+                            {calculation.isTargetMet
                                 ? `Surplus +${calculation.pullSurplus} Pulls (+${(calculation.pullSurplus * 150).toLocaleString()} Carat)` 
                                 : `Kurang ${calculation.pullDeficit} Pulls (${calculation.caratDeficit.toLocaleString()} Carat)`}
                         </span>
@@ -603,11 +553,11 @@ export default function JewelPlannerView({ onNotify }) {
                     <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-4 overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700">
                         <div
                             className={`h-full rounded-full transition-all duration-700 ${
-                                calculation.isGuaranteed
+                                calculation.isTargetMet
                                     ? 'bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-300'
                                     : 'bg-gradient-to-r from-amber-500 to-rose-500'
                             }`}
-                            style={{ width: `${Math.min(100, Math.max(2, calculation.readinessPercent))}%` }}
+                            style={{ width: `${Math.min(100, calculation.readinessPercent)}%` }}
                         ></div>
                     </div>
                 </div>
@@ -736,25 +686,22 @@ export default function JewelPlannerView({ onNotify }) {
                         <div className="mt-2 text-2xl font-black font-mono text-indigo-900 dark:text-indigo-100">
                             {calculation.activeTotalPulls} <span className="text-sm font-bold text-slate-500">Tarikan</span>
                         </div>
-                        <div className="mt-1 text-[11px] text-indigo-700/80 dark:text-indigo-300/70">
-                            {(calculation.activeTotalPulls / 200).toFixed(2)}x Spark Goal ({calculation.isPredictionsEnabled ? 'Dengan Prediksi' : 'Saldo Saat Ini'})
-                        </div>
                     </div>
 
                     {/* 4. Daily Grinding Target / Status Defisit */}
                     <div className={`p-4 rounded-2xl border ${
-                        calculation.isGuaranteed 
+                        calculation.isTargetMet
                             ? 'bg-slate-50 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800' 
                             : 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-200/80 dark:border-rose-800/50'
                     }`}>
                         <span className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
                             <Flame className="w-3.5 h-3.5 text-rose-500" />
-                            <span>{calculation.isPredictionsEnabled ? 'Beban Carat Harian' : 'Kekurangan Saldo Spark'}</span>
+                            <span>{calculation.isPredictionsEnabled ? 'Beban Carat Harian' : 'Kekurangan Saldo'}</span>
                         </span>
                         <div className={`mt-2 text-2xl font-black font-mono ${
-                            calculation.isGuaranteed ? 'text-emerald-600' : 'text-rose-600 dark:text-rose-400'
+                            calculation.isTargetMet ? 'text-emerald-600' : 'text-rose-600 dark:text-rose-400'
                         }`}>
-                            {calculation.isGuaranteed ? '0' : (
+                            {calculation.isTargetMet ? '0' : (
                                 calculation.isPredictionsEnabled 
                                     ? `${calculation.dailyCaratDeficit.toLocaleString()}` 
                                     : `${calculation.caratDeficit.toLocaleString()}`
@@ -764,8 +711,8 @@ export default function JewelPlannerView({ onNotify }) {
                             </span>
                         </div>
                         <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                            {calculation.isGuaranteed ? (
-                                calculation.isPredictionsEnabled ? 'Aman, target terjamin!' : 'Aman, saldo siap spark hari ini!'
+                            {calculation.isTargetMet ? (
+                                targetStatusLabel
                             ) : (
                                 calculation.isPredictionsEnabled ? `Harus dicari selama ${calculation.diffDays} hari` : 'Kekurangan dari saldo saat ini'
                             )}
@@ -949,7 +896,7 @@ export default function JewelPlannerView({ onNotify }) {
                                     <input
                                         type="date"
                                         value={config.target_date}
-                                        min={new Date().toISOString().split('T')[0]}
+                                        min={getPlannerDate()}
                                         onChange={(e) => setConfig({ ...config, target_date: e.target.value })}
                                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-bold text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                                     />
@@ -966,8 +913,7 @@ export default function JewelPlannerView({ onNotify }) {
                                                 key={item.days}
                                                 type="button"
                                                 onClick={() => {
-                                                    const d = new Date(Date.now() + item.days * 24 * 60 * 60 * 1000);
-                                                    setConfig({ ...config, target_date: d.toISOString().split('T')[0] });
+                                                    setConfig({ ...config, target_date: getPlannerDate(item.days) });
                                                 }}
                                                 className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
                                             >
@@ -989,11 +935,11 @@ export default function JewelPlannerView({ onNotify }) {
 
                             <div>
                                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                                    Pilihan Goal Spark
+                                    Target Jumlah Tarikan
                                 </label>
                                 <div className="grid grid-cols-3 gap-2">
                                     {[
-                                        { val: 0.5, label: '0.5x Spark', pulls: '100 Pulls', carat: '15k' },
+                                        { val: 0.5, label: 'Half Spark', pulls: '100 Pulls', carat: '15k' },
                                         { val: 1.0, label: '1x Spark', pulls: '200 Pulls', carat: '30k' },
                                         { val: 2.0, label: '2x Spark', pulls: '400 Pulls', carat: '60k' },
                                     ].map((opt) => (
@@ -1018,7 +964,13 @@ export default function JewelPlannerView({ onNotify }) {
                     </div>
 
                     {/* 3. Kalkulator Pengorbanan Jewel (Farming vs Gacha) */}
-                    <JewelSacrificeCalculator currentCarats={calculation.currentCarats} />
+                    <JewelSacrificeCalculator
+                        currentCarats={calculation.currentCarats}
+                        currentTickets={calculation.currentTicketsPulls}
+                        projectedCarats={calculation.grandTotalCarats}
+                        projectedTickets={calculation.grandTotalTickets}
+                        showProjection={calculation.isPredictionsEnabled}
+                    />
                 </div>
 
                 {/* Right Column (7 Cols): Income Accordions */}
@@ -1039,7 +991,7 @@ export default function JewelPlannerView({ onNotify }) {
                                         A. Rutinitas F2P Harian & Mingguan
                                     </div>
                                     <div className="text-xs text-slate-500 dark:text-slate-400">
-                                        Daily missions (30/hari), Login bonus siklus 8 hari, dan Team Stadium mingguan
+                                        Misi harian (50 Carat/hari), bonus login 7 hari, dan Team Stadium mingguan
                                     </div>
                                 </div>
                             </div>
@@ -1070,7 +1022,7 @@ export default function JewelPlannerView({ onNotify }) {
                                             onChange={(e) => setConfig({ ...config, f2p_daily_missions: e.target.checked })}
                                             className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
                                         />
-                                        <span>Daily Missions (50 Carats / Hari)</span>
+                                        <span>Misi Harian (50 Carat/hari)</span>
                                     </label>
                                     <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">
                                         +{calculation.dailyMissions.toLocaleString()}
@@ -1085,7 +1037,12 @@ export default function JewelPlannerView({ onNotify }) {
                                             onChange={(e) => setConfig({ ...config, f2p_login_bonus: e.target.checked })}
                                             className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
                                         />
-                                        <span>Login Bonus (110 Carats per 8 Hari = ~13,75/hari)</span>
+                                        <span>
+                                            Bonus Login Reguler (estimasi 110 Carat per 7 hari)
+                                            <span className="block text-[11px] font-normal text-slate-500 dark:text-slate-400">
+                                                Perolehan aktual bergantung pada posisi dalam siklus login.
+                                            </span>
+                                        </span>
                                     </label>
                                     <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">
                                         +{calculation.loginBonus.toLocaleString()}
@@ -1101,14 +1058,14 @@ export default function JewelPlannerView({ onNotify }) {
                                                 onChange={(e) => setConfig({ ...config, f2p_training_pass: e.target.checked })}
                                                 className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
                                             />
-                                            <span>Free Training Pass (500 Carat / Bulan)</span>
+                                            <span>Standard Training Pass Gratis (estimasi)</span>
                                         </label>
                                         <span className="text-[11px] text-slate-400 pl-6.5 block">
-                                            Reward pass gratis reguler untuk semua trainer (cair tiap periode)
+                                            500 Carat + 2 Tiket Karakter + 2 Tiket Support Card per periode.
                                         </span>
                                     </div>
                                     <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">
-                                        +{calculation.f2pPassCarats.toLocaleString()}
+                                        +{calculation.f2pPassCarats.toLocaleString('id-ID')} Carat · +{calculation.f2pPassTickets} tiket sesuai banner
                                     </span>
                                 </div>
 
@@ -1128,7 +1085,7 @@ export default function JewelPlannerView({ onNotify }) {
                                             className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-white"
                                         >
                                             <option value={6}>Class 6 (250 Carat/mgg)</option>
-                                            <option value={5}>Class 5 (200 Carat/mgg)</option>
+                                            <option value={5}>Class 5 ({STADIUM_RETENTION_CARATS[5]} Carat/mgg)</option>
                                             <option value={4}>Class 4 (150 Carat/mgg)</option>
                                             <option value={3}>Class 3 (100 Carat/mgg)</option>
                                             <option value={2}>Class 2 (70 Carat/mgg)</option>
@@ -1183,7 +1140,7 @@ export default function JewelPlannerView({ onNotify }) {
                                 <div className="p-3 rounded-2xl bg-teal-50/60 dark:bg-teal-950/30 border border-teal-200/60 dark:border-teal-800/40 text-xs text-teal-800 dark:text-teal-200 flex items-start gap-2.5">
                                     <Info className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
                                     <span>
-                                        Dihitung berdasarkan perkiraan <strong>{calculation.shopResetCount}x reset bulanan</strong> hingga tanggal target. Tiket Karakter dan Tiket Support Card dibeli secara terpisah di toko server JP.
+                                        Terdapat <strong>{calculation.monthTransitions} reset bulanan</strong> pada tanggal 1 hingga tanggal target. Tiket Karakter dan Tiket Support Card dibeli secara terpisah di toko server JP.
                                     </span>
                                 </div>
 
@@ -1314,7 +1271,7 @@ export default function JewelPlannerView({ onNotify }) {
                                             Circle Ranking Bulanan (Cair tgl 1)
                                         </label>
                                         <span className="text-[11px] text-slate-400">
-                                            Target tier rank circle Anda di server JP
+                                            {calculation.monthTransitions} jadwal pencairan hingga tanggal target
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -1348,7 +1305,7 @@ export default function JewelPlannerView({ onNotify }) {
                                             Champions Meeting / League of Heroes
                                         </label>
                                         <span className="text-[11px] text-slate-400">
-                                            Proyeksi hasil turnamen PvP bulanan (~{calculation.monthsCount} event)
+                                            Estimasi {calculation.monthsCount} event. Pilih hasil PvP yang hadiahnya bisa diklaim sebelum tanggal target, atau pilih 0 / Lewati jika belum ada klaim.
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -1373,7 +1330,7 @@ export default function JewelPlannerView({ onNotify }) {
                                                 ))}
                                             </optgroup>
                                             <optgroup label="Lainnya">
-                                                <option value="none">Tidak Mengikuti / Skip Hadiah (0 Carat)</option>
+                                                <option value="none">{CM_OPTIONS.none.label}</option>
                                             </optgroup>
                                         </select>
                                         <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400 min-w-[70px] text-right whitespace-nowrap">
@@ -1432,7 +1389,7 @@ export default function JewelPlannerView({ onNotify }) {
                                     <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
                                         <div>
                                             <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-                                                Story Event (1.000 Carat)
+                                                Story Event (estimasi 1.000 Carat)
                                             </label>
                                             <span className="text-[10px] text-slate-400">Cerita, misi & roulette</span>
                                         </div>
@@ -1468,7 +1425,7 @@ export default function JewelPlannerView({ onNotify }) {
                                     <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
                                         <div>
                                             <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-                                                PakaLive TV Gift (1.500 Carat)
+                                                PakaLive TV Gift (estimasi 1.500 Carat)
                                             </label>
                                             <span className="text-[10px] text-slate-400">Siaran resmi bulanan JP</span>
                                         </div>
@@ -1572,7 +1529,7 @@ export default function JewelPlannerView({ onNotify }) {
                                                 onChange={(e) => setConfig({ ...config, trainer_pass: e.target.checked })}
                                                 className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
                                             />
-                                            <span>Premium Training Pass (¥800 / Bulan)</span>
+                                            <span>Premium Training Pass (estimasi hadiah, ¥800/bulan)</span>
                                         </label>
                                         <span className="text-[11px] text-slate-400 pl-6.5 block">
                                             350 Paid + 1.350 Free Carats (Total 1.700) & 4 Tiket Gacha (2 Karakter + 2 Support)

@@ -16,6 +16,7 @@ import {
     Calendar,
     ArrowRight
 } from 'lucide-react';
+import { calculateFarmingImpact } from '../utils/jewelPlannerHelper';
 
 /**
  * Detailed Information Database for each Feature Popup
@@ -325,7 +326,13 @@ function InfoModal({ featureKey, onClose }) {
  * Provides text box inputs (NO sliders) for factor rerolls, spark selections, and Ability Pt,
  * with popups explaining each feature and real-time reactive calculations matching the design.
  */
-export default function JewelSacrificeCalculator({ currentCarats = 140000 }) {
+export default function JewelSacrificeCalculator({
+    currentCarats = 140000,
+    currentTickets = 0,
+    projectedCarats,
+    projectedTickets,
+    showProjection,
+}) {
     // Jewel yang tersedia auto-fill langsung dari Saldo Aset Saat Ini (Free + Paid Carats)
     const availableJewels = typeof currentCarats === 'number' ? currentCarats : 140000;
 
@@ -343,11 +350,14 @@ export default function JewelSacrificeCalculator({ currentCarats = 140000 }) {
     const costAbilityPt = abilityPtCount * 1;
 
     const totalFarmingCost = costReroll + costSparkSelection + costAbilityPt;
-    const remainingJewels = Math.max(0, availableJewels - totalFarmingCost);
-
-    // Pull equivalents (Official JP Server: 150 Carat / pull, 1.500 Carat / 10-pull)
-    const pullsLost = Math.floor(totalFarmingCost / 150);
-    const tenPullsLost = (totalFarmingCost / 1500).toFixed(1);
+    const currentImpact = calculateFarmingImpact(availableJewels, currentTickets, totalFarmingCost);
+    const farmingImpacts = [{ label: 'Aset Saat Ini', ...currentImpact }];
+    if (showProjection) {
+        farmingImpacts.push({
+            label: 'Proyeksi Target',
+            ...calculateFarmingImpact(projectedCarats, projectedTickets, totalFarmingCost),
+        });
+    }
 
     // Reset handler (kembalikan input simulasi ke 0)
     const handleReset = () => {
@@ -651,22 +661,21 @@ export default function JewelSacrificeCalculator({ currentCarats = 140000 }) {
                         Sisa Jewel untuk gacha
                     </span>
                     <span className="text-lg sm:text-xl font-mono font-black text-emerald-500 dark:text-emerald-400">
-                        {remainingJewels.toLocaleString()}
+                        {currentImpact.remainingCarats.toLocaleString('id-ID')}
                     </span>
                 </div>
 
-                {/* Official JP Server Note */}
-                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                    {totalFarmingCost > 0 ? (
-                        <p className="text-emerald-700 dark:text-emerald-400 font-medium">
-                            💡 Standar Resmi Server JP (150 Jewel/pull): Pengeluaran di atas setara dengan mengorbankan <strong>{pullsLost} Pull</strong> (~{tenPullsLost}x 10-Pull) dari modal tabungan gacha Anda.
-                        </p>
-                    ) : (
-                        <p>
-                            💡 Standar Resmi Server JP: 1x Pull = 150 Jewel, 10x Pull = 1.500 Jewel, 1x Spark (200 pulls) = 30.000 Jewel.
-                        </p>
-                    )}
-                </div>
+                <dl className="p-3 space-y-2 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 text-xs text-slate-600 dark:text-slate-300">
+                    {farmingImpacts.map(({ label, pulls, netPulls, pullsLost }) => (
+                        <div key={label} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                            <dt className="font-medium">{label}</dt>
+                            <dd className="font-mono font-semibold">
+                                {pulls.toLocaleString('id-ID')} → {netPulls.toLocaleString('id-ID')} tarikan
+                                {' '}({pullsLost.toLocaleString('id-ID')} berkurang)
+                            </dd>
+                        </div>
+                    ))}
+                </dl>
 
                 {/* Reset button */}
                 <button
