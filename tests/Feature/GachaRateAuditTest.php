@@ -140,6 +140,44 @@ class GachaRateAuditTest extends TestCase
     /**
      * Test default rate-up per item is strictly 0.75% across banners.
      */
+    public function test_gacha_stats_returns_the_exact_percentile_for_mixed_pool_rates(): void
+    {
+        $boostedBanner = GachaBanner::create([
+            'name' => 'Boosted Percentile Test',
+            'banner_type' => 'character',
+            'base_rate' => 4.5,
+            'start_date' => '2026-02-24',
+            'end_date' => '2026-03-10',
+        ]);
+
+        foreach ([[null, 1130, 36], [$boostedBanner->id, 200, 9]] as [$bannerId, $pullCount, $ssrCount]) {
+            $pulls = [];
+            for ($index = 0; $index < $pullCount; $index++) {
+                $pulls[] = [
+                    'banner_type' => 'character',
+                    'gacha_banner_id' => $bannerId,
+                    'pull_type' => 'single',
+                    'item_name' => 'Percentile Test',
+                    'rarity' => $index < $ssrCount ? 'SSR' : 'R',
+                    'pulled_at' => '2026-02-24 12:00:00',
+                ];
+            }
+
+            foreach (array_chunk($pulls, 100) as $batch) {
+                GachaPull::query()->insert($batch);
+            }
+        }
+
+        $this->getJson('/api/gacha/stats')
+            ->assertOk()
+            ->assertJsonPath('pools.standard.total_pulls', 1130)
+            ->assertJsonPath('pools.boosted.total_pulls', 200)
+            ->assertJsonPath('pools.all.ssr_count', 45)
+            ->assertJsonPath('pools.all.percentile', 66.42)
+            ->assertJsonPath('luck_analysis.overall.percentile', 66.42)
+            ->assertJsonPath('luck_percentile', 66.42);
+    }
+
     public function test_rate_up_per_item_defaults_to_0_point_75_percent(): void
     {
         $this->assertSame(0.75, GachaBanner::DEFAULT_RATE_UP_PER_ITEM);

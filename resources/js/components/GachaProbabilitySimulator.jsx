@@ -243,13 +243,6 @@ export default function GachaProbabilitySimulator({ stats, onNotify }) {
         const kAll = allPool.ssr_count || (kStd + kBst);
 
         const expSsr = (nStd * 0.03) + (nBst * 0.045);
-        const variance = (nStd * 0.03 * 0.97) + (nBst * 0.045 * 0.955);
-        let pct = 50.0;
-        if (nAll > 0 && variance > 0) {
-            const z = (kAll + 0.5 - expSsr) / Math.sqrt(variance);
-            pct = Math.round(Math.min(1.0, Math.max(0.0, 0.5 * (1.0 + erf(z / Math.SQRT2)))) * 10000) / 100;
-        }
-
         return {
             name: 'Semua Gacha Akun (Standar 3% + Boosted 4.5%)',
             total_pulls: nAll,
@@ -257,7 +250,7 @@ export default function GachaProbabilitySimulator({ stats, onNotify }) {
             base_rate: allPool.base_rate || 3.0,
             ssr_rate: allPool.ssr_rate || (nAll > 0 ? Math.round((kAll / nAll) * 10000) / 100 : 0.0),
             expected_ssr: Math.round(expSsr * 10) / 10,
-            percentile: pct,
+            percentile: allPool.percentile ?? 50.0,
         };
     }, [luckPool, customPulls, customSsr, customRate, stdPool, bstPool, allPool]);
 
@@ -347,7 +340,7 @@ export default function GachaProbabilitySimulator({ stats, onNotify }) {
                             </h2>
                         </div>
                         <p className="text-xs sm:text-sm text-emerald-200/80 max-w-2xl">
-                            Analisis matematis berbasis <strong>Distribusi Binomial Kumulatif P(X ≤ k)</strong> untuk mengukur persentil keberuntungan akun riil dan mensimulasikan peluang tarikan banner target.
+                            Persentil akun dihitung dari <strong>peluang kumulatif P(X ≤ k)</strong> dengan k sebagai jumlah SSR yang diperoleh. Gunakan simulator untuk menghitung peluang mendapatkan kartu target.
                         </p>
                     </div>
 
@@ -368,11 +361,11 @@ export default function GachaProbabilitySimulator({ stats, onNotify }) {
                         <div className="flex items-center gap-2">
                             <Percent className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                             <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                                Fitur 1: Account Luck Percentile (Distribusi Binomial)
+                                Fitur 1: Persentil Gacha Akun
                             </h3>
                         </div>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Mengukur seberapa hoki akun Anda dibandingkan seluruh pemain Uma Musume di seluruh dunia
+                            Mengukur keberuntungan akun dibandingkan distribusi peluang teoretis dari rate banner
                         </p>
                     </div>
 
@@ -483,7 +476,7 @@ export default function GachaProbabilitySimulator({ stats, onNotify }) {
                                 <span className="text-4xl sm:text-5xl font-black font-mono tracking-tight text-slate-900 dark:text-white">
                                     {activeLuckData.percentile}%
                                 </span>
-                                <span className="text-xs font-bold text-slate-400">Percentile</span>
+                                <span className="text-xs font-bold text-slate-400">Persentil</span>
                             </div>
 
                             {/* Tier Badge */}
@@ -766,7 +759,7 @@ export default function GachaProbabilitySimulator({ stats, onNotify }) {
                                     <span>0%</span>
                                     <span>50%</span>
                                     <span>75%</span>
-                                    <span>100% (Spark)</span>
+                                    <span>100%</span>
                                 </div>
                             </div>
 
@@ -794,6 +787,9 @@ export default function GachaProbabilitySimulator({ stats, onNotify }) {
                                     </div>
                                 ))}
                             </div>
+                            <p className="mt-2 rounded-xl border border-slate-200 dark:border-slate-800 p-2 text-xs text-slate-700 dark:text-slate-300">
+                                <strong>Jaminan Spark (Tukar Pity).</strong> Pada 200 tarikan dengan rate 0,75%, peluang tarik murni untuk mendapat minimal satu kartu target adalah 77,8%. Penukaran 200 Pity menjamin satu kartu yang memenuhi syarat pada banner.
+                            </p>
                         </div>
                     </div>
                 </div>

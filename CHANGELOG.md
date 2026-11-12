@@ -2,6 +2,12 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.3] - 12 November 2026
+
+- Persentil gacha gabungan memakai konvolusi binomial eksak untuk pool 3,0% dan 4,5%. Simulator menampilkan persentil teoretis dari rate banner dan menjelaskan jaminan penukaran Spark.
+- Kalkulator Afinitas memakai mode 3 arah secara bawaan dengan mode berpasangan sebagai pembanding. Tampilan menghitung kebutuhan poin ke ambang ○ dan ◎, serta menjelaskan simulasi kemenangan G1 bersama dan pengisian slot dari riwayat karier.
+- API Afinitas menolak ID balapan G1 di luar katalog. Service mengabaikan ID tersebut saat menghitung bonus.
+
 ## [Versi 3.3.2] - 12 November 2026
 
 - Skill Optimizer menghitung biaya seluruh prasyarat yang belum dimiliki untuk kandidat biasa dan terkunci. Skill yang melampaui anggaran diberi alasan, dan evaluasi setiap rantai memakai skor skill terakhir.

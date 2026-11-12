@@ -562,13 +562,7 @@ class GachaController extends Controller
         $bstTier = $this->resolveLuckTier($bstPercentile);
 
         $expectedSsr = ($stdTotal * 0.03) + ($bstTotal * 0.045);
-        $totalVariance = ($stdTotal * 0.03 * 0.97) + ($bstTotal * 0.045 * 0.955);
-        if ($allTotal > 0 && $totalVariance > 0) {
-            $zScore = ($allSsr + 0.5 - $expectedSsr) / sqrt($totalVariance);
-            $allPercentile = round(min(1.0, max(0.0, 0.5 * (1.0 + $this->erf($zScore / sqrt(2.0))))) * 100.0, 2);
-        } else {
-            $allPercentile = 50.0;
-        }
+        $allPercentile = $allTotal > 0 ? $this->computeCompositeBinomialCdf($stdTotal, $bstTotal, $allSsr) : 50.0;
         $allTier = $this->resolveLuckTier($allPercentile);
 
         $pools['all']['percentile'] = $allPercentile;
@@ -845,6 +839,60 @@ class GachaController extends Controller
         $result = $service->sync($force);
 
         return response()->json($result, $result['success'] ? 200 : 500);
+    }
+
+    /**
+     * Compute P(Standard SSR + Boosted SSR <= observed SSR) by convolving both binomials.
+     */
+    private function computeCompositeBinomialCdf(int $standardPulls, int $boostedPulls, int $observedSsr): float
+    {
+        if ($observedSsr >= $standardPulls + $boostedPulls) {
+            return 100.0;
+        }
+
+        $standardWeights = $this->binomialWeights($standardPulls, 0.03);
+        $boostedWeights = $this->binomialWeights($boostedPulls, 0.045);
+        $totalBoostedWeight = 0.0;
+        $boostedCumulativeWeights = [];
+
+        foreach ($boostedWeights as $count => $weight) {
+            $totalBoostedWeight += $weight;
+            $boostedCumulativeWeights[$count] = $totalBoostedWeight;
+        }
+
+        $cumulativeWeight = 0.0;
+        for ($count = 0; $count <= min($standardPulls, $observedSsr); $count++) {
+            $maxBoostedSsr = min($boostedPulls, $observedSsr - $count);
+            $cumulativeWeight += $standardWeights[$count] * $boostedCumulativeWeights[$maxBoostedSsr];
+        }
+
+        $totalWeight = array_sum($standardWeights) * $totalBoostedWeight;
+
+        return round(min(1.0, $cumulativeWeight / $totalWeight) * 100.0, 2);
+    }
+
+    /**
+     * Binomial probability masses relative to the mode. Starting at the mode keeps
+     * the recurrence stable even when the probability of zero SSR underflows.
+     *
+     * @return list<float>
+     */
+    private function binomialWeights(int $pulls, float $probability): array
+    {
+        $mode = (int) floor(($pulls + 1) * $probability);
+        $odds = $probability / (1.0 - $probability);
+        $weights = array_fill(0, $pulls + 1, 0.0);
+        $weights[$mode] = 1.0;
+
+        for ($count = $mode; $count > 0; $count--) {
+            $weights[$count - 1] = $weights[$count] * $count / (($pulls - $count + 1) * $odds);
+        }
+
+        for ($count = $mode; $count < $pulls; $count++) {
+            $weights[$count + 1] = $weights[$count] * ($pulls - $count) * $odds / ($count + 1);
+        }
+
+        return $weights;
     }
 
     /**

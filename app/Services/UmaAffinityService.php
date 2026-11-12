@@ -6,10 +6,19 @@ namespace App\Services;
 
 use App\Models\UmaCatalogItem;
 use App\Models\UserCharacter;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\File;
 
 class UmaAffinityService
 {
+    public const DEFAULT_METHOD = 'triple';
+
+    public const G1_WIN_FIELDS = [
+        'parent' => ['wins', 'g1_wins', 'parent.wins', 'parent.g1_wins'],
+        'gp1' => ['gp1_wins', 'gp1.wins', 'gp1.g1_wins'],
+        'gp2' => ['gp2_wins', 'gp2.wins', 'gp2.g1_wins'],
+    ];
+
     /**
      * In-memory cache for parsed affinity data.
      *
@@ -254,7 +263,7 @@ class UmaAffinityService
      * @param  array<string, mixed>|list<int>  $p2Tree  [parent => ..., gp1 => ..., gp2 => ..., wins => [...]]
      * @param  list<int>|array<string, mixed>  $sharedG1Races  List of shared G1 race IDs or configurations
      * @param  int  $pointsPerRace  Points added per shared G1 race (standard is 3)
-     * @param  string  $method  'pairwise' (default) or 'triple' (3-way for grandparents)
+     * @param  string  $method  'triple' (default, 3-way for grandparents) or 'pairwise'
      * @return array<string, mixed>
      */
     public function calculatePedigreeAffinity(
@@ -263,7 +272,7 @@ class UmaAffinityService
         array $p2Tree,
         array $sharedG1Races = [],
         int $pointsPerRace = 3,
-        string $method = 'pairwise'
+        string $method = self::DEFAULT_METHOD
     ): array {
         $targetCharId = $this->resolveCharId($targetId) ?? $targetId;
 
@@ -275,13 +284,16 @@ class UmaAffinityService
         $gp2aId = $this->extractSlotId($p2Tree, 'gp1');
         $gp2bId = $this->extractSlotId($p2Tree, 'gp2');
 
-        $p1Wins = $this->extractSlotWins($p1Tree, 'parent', $sharedG1Races);
-        $gp1aWins = $this->extractSlotWins($p1Tree, 'gp1', $sharedG1Races);
-        $gp1bWins = $this->extractSlotWins($p1Tree, 'gp2', $sharedG1Races);
+        $validRaceIds = array_flip($this->getG1RaceIds());
+        $extractWins = fn (array $tree, string $slot): array => $this->extractSlotWins($tree, $slot, $sharedG1Races, $validRaceIds);
 
-        $p2Wins = $this->extractSlotWins($p2Tree, 'parent', $sharedG1Races);
-        $gp2aWins = $this->extractSlotWins($p2Tree, 'gp1', $sharedG1Races);
-        $gp2bWins = $this->extractSlotWins($p2Tree, 'gp2', $sharedG1Races);
+        $p1Wins = $extractWins($p1Tree, 'parent');
+        $gp1aWins = $extractWins($p1Tree, 'gp1');
+        $gp1bWins = $extractWins($p1Tree, 'gp2');
+
+        $p2Wins = $extractWins($p2Tree, 'parent');
+        $gp2aWins = $extractWins($p2Tree, 'gp1');
+        $gp2bWins = $extractWins($p2Tree, 'gp2');
 
         $warnings = [];
         $lineageValid = true;
@@ -683,37 +695,51 @@ class UmaAffinityService
     }
 
     /**
-     * Extract won race IDs for a slot, falling back to shared list.
+     * @return list<int>
+     */
+    public function getG1RaceIds(): array
+    {
+        $ids = [];
+        foreach ($this->getG1Races() as $category) {
+            foreach ($category['races'] as $race) {
+                $ids[$race['id']] = true;
+            }
+        }
+
+        return array_keys($ids);
+    }
+
+    /**
+     * Extract catalogued race IDs for a slot, falling back to the shared list.
      *
      * @param  array<string, mixed>|list<int>  $tree
      * @param  list<int>|array<string, mixed>  $sharedG1Races
+     * @param  array<int, int>  $validRaceIds
      * @return list<int>
      */
-    protected function extractSlotWins(array $tree, string $key, array $sharedG1Races): array
+    protected function extractSlotWins(array $tree, string $key, array $sharedG1Races, array $validRaceIds): array
     {
         $slotWins = null;
-        if ($key === 'parent') {
-            $slotWins = $tree['wins'] ?? ($tree['parent']['wins'] ?? null);
-        } elseif ($key === 'gp1') {
-            $slotWins = $tree['gp1_wins'] ?? ($tree['gp1']['wins'] ?? null);
-        } elseif ($key === 'gp2') {
-            $slotWins = $tree['gp2_wins'] ?? ($tree['gp2']['wins'] ?? null);
+        foreach (self::G1_WIN_FIELDS[$key] as $field) {
+            $slotWins = Arr::get($tree, $field);
+            if ($slotWins !== null) {
+                break;
+            }
         }
 
-        if (is_array($slotWins) && ! empty($slotWins)) {
-            return array_values(array_unique(array_map('intval', $slotWins)));
+        $races = is_array($slotWins) && $slotWins !== []
+            ? $slotWins
+            : ($sharedG1Races['races'] ?? $sharedG1Races[$key] ?? (array_is_list($sharedG1Races) ? $sharedG1Races : []));
+
+        $wins = [];
+        foreach (is_array($races) ? $races : [] as $race) {
+            $raceId = filter_var($race, FILTER_VALIDATE_INT);
+            if ($raceId !== false && isset($validRaceIds[$raceId])) {
+                $wins[$raceId] = $raceId;
+            }
         }
 
-        if (array_is_list($sharedG1Races)) {
-            return array_values(array_unique(array_map('intval', $sharedG1Races)));
-        }
-
-        $racesList = $sharedG1Races['races'] ?? ($sharedG1Races[$key] ?? []);
-        if (is_array($racesList)) {
-            return array_values(array_unique(array_map('intval', $racesList)));
-        }
-
-        return [];
+        return array_values($wins);
     }
 
     /**

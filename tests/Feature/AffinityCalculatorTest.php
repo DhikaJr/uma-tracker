@@ -44,7 +44,8 @@ class AffinityCalculatorTest extends TestCase
 
         $this->assertIsArray($result);
         $this->assertGreaterThan(0, $result['total_score']);
-        $this->assertGreaterThan(0, $result['base_score']);
+        $this->assertSame('triple', $result['method']);
+        $this->assertSame(146, $result['base_score']);
         $this->assertSame(0, $result['g1_bonus_score']);
         $this->assertTrue($result['lineage_valid']);
         $this->assertEmpty($result['warnings']);
@@ -90,6 +91,19 @@ class AffinityCalculatorTest extends TestCase
         // 5 relations * 3 shared races * 3 points = 45 points
         $this->assertSame(45, $resultWithBonus['g1_bonus_score']);
         $this->assertSame($resultWithoutBonus['total_score'] + 45, $resultWithBonus['total_score']);
+    }
+
+    public function test_service_ignores_unknown_and_duplicate_g1_ids(): void
+    {
+        $result = $this->service->calculatePedigreeAffinity(
+            1003,
+            ['parent' => ['id' => 1001, 'g1_wins' => ['1005', 1005, '1010x', 999999]]],
+            ['parent_id' => 1002],
+            [1005, '1010x', 999999],
+        );
+
+        $this->assertSame(3, $result['g1_bonus_score']);
+        $this->assertSame(1, $result['breakdown']['p1_p2']['matches']);
     }
 
     public function test_badge_classification_thresholds(): void
@@ -238,6 +252,29 @@ class AffinityCalculatorTest extends TestCase
         }
     }
 
+    public function test_calculate_affinity_rejects_unknown_g1_ids_in_shared_and_slot_lists(): void
+    {
+        $this->postJson('/api/affinity/calculate', [
+            'target_id' => 1003,
+            'p1_tree' => [
+                'parent' => ['id' => 1001, 'g1_wins' => [999999]],
+                'gp1_wins' => [999999],
+            ],
+            'p2' => ['parent_id' => 1002, 'wins' => [999999]],
+            'shared_g1_races' => [1005, 999999],
+            'g1_wins' => ['races' => [999999]],
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'shared_g1_races.1',
+                'g1_wins.races.0',
+                'p1_tree.parent.g1_wins.0',
+                'p1_tree.gp1_wins.0',
+                'p2.wins.0',
+            ])
+            ->assertJsonFragment(['shared_g1_races.1' => ['ID balapan G1 tidak terdaftar di katalog.']]);
+    }
+
     public function test_affinity_api_endpoints(): void
     {
         // 1. Calculate Endpoint
@@ -260,6 +297,9 @@ class AffinityCalculatorTest extends TestCase
         $calcResponse = $this->postJson('/api/affinity/calculate', $calculatePayload);
         $calcResponse->assertStatus(200)
             ->assertJsonPath('lineage_valid', true)
+            ->assertJsonPath('method', 'triple')
+            ->assertJsonPath('base_score', 146)
+            ->assertJsonPath('g1_bonus_score', 30)
             ->assertJsonStructure([
                 'total_score',
                 'base_score',
@@ -269,6 +309,11 @@ class AffinityCalculatorTest extends TestCase
                 'breakdown',
                 'thresholds',
             ]);
+
+        $this->postJson('/api/affinity/calculate', [...$calculatePayload, 'method' => 'pairwise'])
+            ->assertOk()
+            ->assertJsonPath('method', 'pairwise')
+            ->assertJsonPath('base_score', 174);
 
         // 2. G1 Races Endpoint
         $racesResponse = $this->getJson('/api/affinity/races');

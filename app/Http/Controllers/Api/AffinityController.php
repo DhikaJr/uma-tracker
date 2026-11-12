@@ -9,6 +9,8 @@ use App\Models\CareerRun;
 use App\Services\UmaAffinityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class AffinityController extends Controller
 {
@@ -29,9 +31,15 @@ class AffinityController extends Controller
             'p2_tree' => ['nullable', 'array'],
             'p2' => ['nullable'],
             'shared_g1_races' => ['nullable', 'array'],
+            'g1_wins' => ['nullable', 'array'],
             'points_per_race' => ['nullable', 'integer', 'min:1', 'max:5'],
             'method' => ['nullable', 'string', 'in:pairwise,triple'],
+        ], [
+            'shared_g1_races.array' => 'Daftar balapan G1 bersama harus berupa array.',
+            'g1_wins.array' => 'Daftar kemenangan G1 harus berupa array.',
         ]);
+
+        $this->validateG1Wins($validated);
 
         $rawTarget = $validated['target_id'] ?? ($validated['target'] ?? null);
         $targetId = is_numeric($rawTarget) ? (int) $rawTarget : ($this->affinityService->resolveCharId($rawTarget) ?? 0);
@@ -43,9 +51,9 @@ class AffinityController extends Controller
         $p2Tree = $validated['p2_tree'] ?? (is_array($validated['p2'] ?? null) ? $validated['p2'] : ['parent' => $validated['p2'] ?? null]);
 
         /** @var list<int>|array<string, mixed> $sharedG1Races */
-        $sharedG1Races = $validated['shared_g1_races'] ?? [];
+        $sharedG1Races = $validated['shared_g1_races'] ?? $validated['g1_wins'] ?? [];
         $pointsPerRace = (int) ($validated['points_per_race'] ?? 3);
-        $method = (string) ($validated['method'] ?? 'pairwise');
+        $method = (string) ($validated['method'] ?? UmaAffinityService::DEFAULT_METHOD);
 
         $result = $this->affinityService->calculatePedigreeAffinity(
             $targetId,
@@ -57,6 +65,44 @@ class AffinityController extends Controller
         );
 
         return response()->json($result);
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    private function validateG1Wins(array $input): void
+    {
+        $raceIdRules = ['required', 'integer', Rule::in($this->affinityService->getG1RaceIds())];
+        $rules = [];
+
+        foreach (['shared_g1_races', 'g1_wins'] as $field) {
+            if (array_is_list($input[$field] ?? [])) {
+                $rules[$field.'.*'] = $raceIdRules;
+
+                continue;
+            }
+
+            $rules[$field] = ['array:races,parent,gp1,gp2'];
+            foreach (['races', ...array_keys(UmaAffinityService::G1_WIN_FIELDS)] as $key) {
+                $rules[$field.'.'.$key] = ['nullable', 'array'];
+                $rules[$field.'.'.$key.'.*'] = $raceIdRules;
+            }
+        }
+
+        $slotWinFields = array_merge(...array_values(UmaAffinityService::G1_WIN_FIELDS));
+        foreach (['p1_tree', 'p2_tree', 'p1', 'p2'] as $tree) {
+            foreach ($slotWinFields as $field) {
+                $rules[$tree.'.'.$field] = ['nullable', 'array'];
+                $rules[$tree.'.'.$field.'.*'] = $raceIdRules;
+            }
+        }
+
+        Validator::make($input, $rules, [
+            'in' => 'ID balapan G1 tidak terdaftar di katalog.',
+            'integer' => 'ID balapan G1 harus berupa bilangan bulat.',
+            'required' => 'ID balapan G1 wajib diisi.',
+            'array' => 'Format daftar kemenangan G1 tidak valid.',
+        ])->validate();
     }
 
     /**

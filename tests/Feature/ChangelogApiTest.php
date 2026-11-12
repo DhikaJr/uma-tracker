@@ -34,14 +34,14 @@ class ChangelogApiTest extends TestCase
         $data = $response->json();
 
         $this->assertTrue($data['success']);
-        $this->assertSame('3.3.2', $data['latest_version']);
+        $this->assertSame('3.3.3', $data['latest_version']);
         $this->assertGreaterThanOrEqual(30, $data['total_versions']);
         $this->assertNotEmpty($data['versions']);
 
         // Check latest version details
         $latest = $data['versions'][0];
-        $this->assertSame('3.3.2', $latest['version']);
-        $this->assertSame('Versi 3.3.2', $latest['title']);
+        $this->assertSame('3.3.3', $latest['version']);
+        $this->assertSame('Versi 3.3.3', $latest['title']);
         $this->assertNotEmpty($latest['date']);
         $this->assertNotEmpty($latest['html']);
         $this->assertIsArray($latest['highlights']);

@@ -45,7 +45,7 @@ export default function AffinityView({ onNotify, darkMode }) {
     // G1 shared races state
     const [selectedRaces, setSelectedRaces] = useState([1005, 1010, 1015]); // Default: Classic Triple Crown
     const [pointsPerRace, setPointsPerRace] = useState(3);
-    const [calculationMethod, setCalculationMethod] = useState('pairwise'); // 'pairwise' | 'triple'
+    const [calculationMethod, setCalculationMethod] = useState('triple'); // 'triple' | 'pairwise'
     const [raceCategories, setRaceCategories] = useState({});
     const [allRaces, setAllRaces] = useState([]);
     const [loadingRaces, setLoadingRaces] = useState(true);
@@ -509,8 +509,8 @@ export default function AffinityView({ onNotify, darkMode }) {
     const badgeInfo = calculationResult?.badge_info || { symbol: '△', label: 'Peluang Rendah', color: 'slate' };
     const warnings = calculationResult?.warnings || [];
     const breakdown = calculationResult?.breakdown || {};
-    const circleNeeded = calculationResult?.thresholds?.circle_needed || 0;
-    const doubleCircleNeeded = calculationResult?.thresholds?.double_circle_needed || 0;
+    const circleNeeded = Math.max(0, 51 - totalScore);
+    const doubleCircleNeeded = Math.max(0, 151 - totalScore);
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-12">
@@ -637,8 +637,8 @@ export default function AffinityView({ onNotify, darkMode }) {
                                     onChange={(e) => setCalculationMethod(e.target.value)}
                                     className="text-xs font-bold bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-slate-700 dark:text-slate-300 cursor-pointer"
                                 >
-                                    <option value="pairwise">Standar 7-Cabang Pairwise</option>
-                                    <option value="triple">GameTora 3-Way Overlap (T ∩ P ∩ GP)</option>
+                                    <option value="triple">Afinitas 3 Arah (Standar JP)</option>
+                                    <option value="pairwise">Afinitas Berpasangan (Pembanding)</option>
                                 </select>
                             </div>
                         </div>
@@ -775,20 +775,28 @@ export default function AffinityView({ onNotify, darkMode }) {
                         <button
                             type="button"
                             onClick={() => setShowRaceSelector(true)}
+                            aria-describedby="shared-g1-description"
                             className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                         >
                             <Trophy className="w-4 h-4" />
                             <span>Pilih Balapan G1 Bersama</span>
                         </button>
+                        <p id="shared-g1-description" className="text-xs text-slate-500 dark:text-slate-400">
+                            Simulasikan kemenangan G1 yang sama untuk seluruh slot leluhur yang terisi pada hingga 5 pasangan cabang.
+                        </p>
 
                         <button
                             type="button"
                             onClick={openCareerSync}
+                            aria-describedby="career-sync-description"
                             className="w-full py-2 px-3 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                         >
                             <Calendar className="w-3.5 h-3.5 text-slate-500" />
                             <span>Sinkronkan dari Karier Saya</span>
                         </button>
+                        <p id="career-sync-description" className="text-xs text-slate-500 dark:text-slate-400">
+                            Muat karakter dari riwayat karier ke slot silsilah pilihan.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -1200,7 +1208,7 @@ export default function AffinityView({ onNotify, darkMode }) {
                                     Pilih Balapan G1 yang Dimenangkan Bersama
                                 </h3>
                                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                                    Tiap balapan G1 yang sama antar parent & grandparent memberikan bonus poin kompatibilitas.
+                                    Daftar ini menyimulasikan kemenangan G1 yang sama untuk setiap leluhur yang terisi. Bonus dihitung pada hingga 5 pasangan, yaitu pasangan kedua parent dan empat pasangan parent–grandparent.
                                 </p>
                             </div>
                             <button
@@ -1469,7 +1477,7 @@ export default function AffinityView({ onNotify, darkMode }) {
                                     Pilih dari Riwayat Karier Anda
                                 </h3>
                                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                                    Gunakan data Uma dari log Career Runs Anda untuk mengisi slot silsilah secara otomatis.
+                                    Pilih karakter dari riwayat karier dan tentukan slot silsilah yang akan diisi.
                                 </p>
                             </div>
                             <button
