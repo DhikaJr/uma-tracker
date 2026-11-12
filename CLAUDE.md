@@ -175,9 +175,11 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Pertahankan ukuran seluruh chunk Vite di bawah `500 kB` (`build.emptyOutDir: true`). Gunakan `React.lazy()` + `<Suspense>` untuk komponen view/modal dan `manualChunks` di `vite.config.js` untuk dataset JSON statis berukuran besar.
 - Gunakan Bahasa Indonesia yang konsisten untuk seluruh label antarmuka pengguna (UI), pesan validasi, dan dokumentasi.
 
-## 4. Sinkronisasi Rilis & Dokumentasi (CHANGELOG.md & ChangelogApiTest.php)
+## 4. Sinkronisasi Rilis & Dokumentasi (CHANGELOG.md, README.md & ChangelogApiTest.php)
+- Tulis entri rilis di `CHANGELOG.md` secara ringkas (**umumnya 1–3 butir, maksimal 5 butir per rilis**) dengan tetap menyertakan header `## [Versi X.Y.Z] - Tanggal` dan satu sub-heading `### ...` untuk pratinjau sorotan UI.
+- Fokuskan isi pada fitur baru, perbaikan yang dirasakan pengguna, serta perubahan kompatibilitas/penyimpanan data (pertahankan nama perintah CLI, lokasi data, atau format backup bila diperlukan pengguna); **dilarang** mencantumkan daftar file internal, kelas CSS, hash SHA-256 SQLite, maupun angka tetap jumlah test/assertion.
 - Dilarang menyertakan tautan path lokal `file:///c:/...` di dalam `CHANGELOG.md` maupun `README.md` (gunakan inline code `` `NamaFile` ``).
-- Setiap kali menambahkan versi baru di `CHANGELOG.md`, wajib memperbarui assertion versi terbaru pada `tests/Feature/ChangelogApiTest.php`.
+- Saat menambahkan versi rilis baru di `CHANGELOG.md`, wajib memperbarui assertion versi terbaru pada `tests/Feature/ChangelogApiTest.php`.
 
 ## 5. Aktivasi Skill Domain & Engineering (.claude/skills)
 - Wajib membaca dan mengikuti aturan pada skill `uma-tracker-domain` (`.claude/skills/uma-tracker-domain/SKILL.md`) setiap kali bekerja pada fitur domain Uma Musume JP (Gacha, Karier, Kalkulator Proyeksi Rating, Skill Optimizer, Koleksi, Simulasi Deck 6 Kartu, Afinitas, Perencana Jewel, maupun Event Kompetisi CM & LoH).
