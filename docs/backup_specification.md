@@ -8,7 +8,7 @@ Dokumentasi resmi arsitektur pencadangan, format skema JSON, dan aturan kompatib
 
 Aplikasi menggunakan skema versioning semantik dua tingkat:
 - **Versi 2.0 (Aktif/Terkini)**:
-  - Format backup modern yang mendukung 9 entitas lengkap.
+  - Mencadangkan dan memulihkan sembilan entitas SQLite, yaitu `gacha_banners`, `gacha_pulls`, `gacha_pities`, `career_runs`, `circle_snapshots`, `app_settings`, `uma_catalog_items`, `user_characters`, dan `user_support_cards`.
   - Memulihkan seluruh atribut JSON terstruktur pada `uma_catalog_items` (`aptitudes`, `skills`, `objectives`, `details`, `raw_data`).
   - Mendukung skema aktif `circle_snapshots` (`circle_id`, `circle_name`, `rank`, `point`, `member_count`, `active_total`, `period`, `payload`, `last_refreshed_at`).
   - Menggunakan resolusi Foreign Key cerdas berbasis nama kartu/karakter untuk relasi katalog.
@@ -16,6 +16,14 @@ Aplikasi menggunakan skema versioning semantik dua tingkat:
   - Format backup awal tanpa field `aptitudes`/`skills`/`objectives`/`details` terpisah.
 - **Versi 0.9 (Legacy)**:
   - Format warisan fans club dengan `snapshot_date`, `total_fans`, dan `members_data`.
+
+Tabel jadwal resmi `competition_events` dilindungi secara terpisah sesuai aturan di [Bagian 7](#7-perlindungan-data-jadwal-resmi-competition_events).
+
+Data berikut tersimpan di luar berkas backup v2.0.
+
+- Preset Deck 6 Kartu di `storage/app/support_deck_presets.json`.
+- Cache Live Sync Event di `storage/app/competition_events_live_sync.json`.
+- Sesi Kalkulator Rating dan Skill Optimizer di `localStorage` peramban.
 
 > [!IMPORTANT]
 > Sistem memvalidasi atribut `version` menggunakan whitelist ketat `self::SUPPORTED_SCHEMA_VERSIONS = ['0.9', '1.0', '2.0']`. Versi yang hilang, tidak dikenal, malformed, atau tidak persis cocok akan ditolak secara eksplisit dengan `InvalidArgumentException` sebelum operasi data apa pun dijalankan.

@@ -289,7 +289,7 @@ class CygamesNewsSyncTest extends TestCase
     public function test_sync_retains_fallback_when_cygames_network_fails(): void
     {
         Http::fake([
-            'https://umamusume.jp/*' => Http::response(null, 500),
+            'https://umamusume.jp/api/ajax/pr_info_index?format=json' => Http::response(null, 500),
         ]);
 
         $banner = GachaBanner::create([
@@ -333,6 +333,10 @@ class CygamesNewsSyncTest extends TestCase
             'https://gametora.com/data/umamusume/characters.hash2.json' => Http::response([], 200),
             'https://gametora.com/data/umamusume/support-cards.hash3.json' => Http::response([], 200),
             'https://gametora.com/data/umamusume/skills.hash4.json' => Http::response([], 200),
+            'https://gametora.com/data/umamusume/gacha/char-standard.hash5.json' => Http::response([]),
+            'https://gametora.com/data/umamusume/gacha/support-standard.hash6.json' => Http::response([]),
+            'https://gametora.com/data/umamusume/gacha/special.hash7.json' => Http::response([]),
+            'https://umapyoi.net/api/v1/news/search/twinkle' => Http::response([]),
             'https://gametora.com/data/umamusume/gacha/support_banners.hash9.json' => Http::response([], 200),
             'https://gametora.com/data/umamusume/gacha/char_banners.hash8.json' => Http::response([], 200),
             'https://gametora.com/data/umamusume/racetracks.hash10.json' => Http::response([], 200),

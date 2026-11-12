@@ -2,6 +2,12 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.2] - 12 November 2026
+
+- Skill Optimizer menghitung biaya seluruh prasyarat yang belum dimiliki untuk kandidat biasa dan terkunci. Skill yang melampaui anggaran diberi alasan, dan evaluasi setiap rantai memakai skor skill terakhir.
+- Tes integrasi memakai respons HTTP palsu untuk sinkronisasi GameTora, Cygames, GameWith, Muxueuma, dan Umapyoi. Laravel memblokir permintaan tanpa respons palsu.
+- Dokumentasi merinci sembilan entitas Backup Schema v2.0 dan penyimpanan terpisah, serta menjelaskan pengali Aptitude untuk skor evaluasi skill dan performa balapan.
+
 ## [Versi 3.3.1] - 11 November 2026
 
 ### 🎨 Perbaikan Tampilan Modal Aturan Khusus No Debuff & Lokalisasi Penuh Bahasa Indonesia Menu Circle

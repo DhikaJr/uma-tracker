@@ -4,6 +4,9 @@
  */
 
 import { calculateSkillRating } from './ratingCalculatorHelper.js';
+import catalog from '../data/ratingSkillsCatalog.json' with { type: 'json' };
+
+const catalogBySkillId = new Map(catalog.map(skill => [String(skill.id), skill]));
 
 // Official JP server hint discount rates
 export const HINT_DISCOUNTS = {
@@ -128,6 +131,7 @@ export function optimizeSkillBuild({
         return {
             recommendedSkills: [],
             unselectedSkills: [],
+            replacedSkillIds: [],
             totalCostPt: 0,
             remainingPt: budget,
             totalRatingGain: 0,
@@ -136,168 +140,118 @@ export function optimizeSkillBuild({
         };
     }
 
-    // 1. Prepare candidates with costs, rating gains, and prerequisite links
-    const candidateMap = new Map();
-    const candidateBySkillId = new Map();
+    const preparedCandidates = candidates.map((candidate, candidateIndex) => {
+        const skillId = String(candidate.skillId || candidate.id);
+        const skill = { ...catalogBySkillId.get(skillId), ...candidate };
+        const baseCost = candidate.base_cost ?? candidate.cost ?? skill.base_cost ?? skill.cost ?? 160;
+        const hintLevel = Math.max(0, Math.min(5, parseInt(candidate.hintLevel, 10) || 0));
 
-    const preparedCandidates = candidates.map((cand, idx) => {
-        const skillId = cand.skillId || cand.id;
-        const baseCost = cand.base_cost ?? cand.cost ?? 160;
-        const hintLvl = Math.max(0, Math.min(5, parseInt(cand.hintLevel, 10) || 0));
-        const discountedCost = calculateDiscountedSkillCost(baseCost, hintLvl, isFastLearner);
-
-        // Effective rating score using trainee race configuration
-        const effectiveScore = calculateSkillRating(cand, raceConfig);
-
-        const item = {
-            ...cand,
-            candidateIndex: idx,
-            skillId: String(skillId),
-            prereqId: cand.prereq_id ? String(cand.prereq_id) : (cand.lower_id ? String(cand.lower_id) : null),
+        return {
+            ...skill,
+            candidateIndex,
+            skillId,
             baseCost,
-            hintLevel: hintLvl,
-            discountedCost,
-            effectiveScore,
-            isLocked: Boolean(cand.isLocked),
+            hintLevel,
+            discountedCost: calculateDiscountedSkillCost(baseCost, hintLevel, isFastLearner),
+            effectiveScore: calculateSkillRating(skill, raceConfig),
+            isLocked: Boolean(candidate.isLocked),
         };
-
-        candidateMap.set(String(item.id || idx), item);
-        candidateBySkillId.set(String(skillId), item);
-        return item;
     });
+    const candidateBySkillId = new Map(preparedCandidates.map(item => [item.skillId, item]));
+    const findSkill = id => candidateBySkillId.get(id) ?? catalogBySkillId.get(id);
+    const findPrerequisiteId = skill => String(skill?.prereq_id || skill?.lower_id || '');
 
-    // 2. Identify prerequisite chains and group exclusive options
-    // Group options: each group contains mutually exclusive choices
-    // e.g. Group A: [None, White Only, Gold Upgrade (includes White if unowned)]
-    const usedCandidateIndices = new Set();
-    const groups = [];
-
-    // Prioritize processing:
-    // 1. Evolution skills
-    // 2. Gold skills with prerequisites
-    // 3. Double Circle skills (◎)
-    // 4. Standalone skills
-    const sortedIndices = [...preparedCandidates.keys()].sort((a, b) => {
-        const itemA = preparedCandidates[a];
-        const itemB = preparedCandidates[b];
-        const pA = itemA.is_evo || itemA.rarity === 'Evolution' ? 0 : (itemA.rarity === 'Gold' ? 1 : (itemA.name_en?.includes('◎') ? 2 : 3));
-        const pB = itemB.is_evo || itemB.rarity === 'Evolution' ? 0 : (itemB.rarity === 'Gold' ? 1 : (itemB.name_en?.includes('◎') ? 2 : 3));
-        return pA - pB;
-    });
-
-    for (const idx of sortedIndices) {
-        if (usedCandidateIndices.has(idx)) continue;
-
-        const mainItem = preparedCandidates[idx];
-        const prereqId = mainItem.prereqId;
-        const prereqInCandidates = prereqId ? candidateBySkillId.get(prereqId) : null;
-        const isPrereqOwned = prereqId ? ownedSet.has(prereqId) : false;
-
-        // Case A: Skill with an unowned prerequisite that is also in candidate pool
-        if (prereqInCandidates && !isPrereqOwned && !usedCandidateIndices.has(prereqInCandidates.candidateIndex)) {
-            const lowerItem = prereqInCandidates;
-            usedCandidateIndices.add(idx);
-            usedCandidateIndices.add(lowerItem.candidateIndex);
-
-            const isMainLocked = mainItem.isLocked;
-            const isLowerLocked = lowerItem.isLocked;
-
-            const groupOptions = [];
-
-            // Option 0: None (only if neither is locked)
-            if (!isMainLocked && !isLowerLocked) {
-                groupOptions.push({
-                    type: 'none',
-                    items: [],
-                    totalCost: 0,
-                    totalScore: 0,
-                });
-            }
-
-            // Option 1: Lower / White only (only if main is not locked)
-            if (!isMainLocked) {
-                groupOptions.push({
-                    type: 'lower_only',
-                    items: [lowerItem],
-                    totalCost: lowerItem.discountedCost,
-                    totalScore: lowerItem.effectiveScore,
-                });
-            }
-
-            // Option 2: Full upgrade (Lower + Main Gold / Double Circle)
-            // In rating calculation, Gold replaces White rating
-            groupOptions.push({
-                type: 'full_upgrade',
-                items: [lowerItem, mainItem],
-                totalCost: lowerItem.discountedCost + mainItem.discountedCost,
-                totalScore: mainItem.effectiveScore, // Gold replaces White in rating!
-            });
-
-            groups.push(groupOptions);
-            continue;
+    const coveredPrerequisites = new Set();
+    for (const ownedId of ownedSet) {
+        let prerequisiteId = findPrerequisiteId(findSkill(ownedId));
+        while (prerequisiteId && !coveredPrerequisites.has(prerequisiteId)) {
+            coveredPrerequisites.add(prerequisiteId);
+            prerequisiteId = findPrerequisiteId(findSkill(prerequisiteId));
         }
-
-        // Case B: Skill with an unowned prerequisite NOT in candidate pool
-        // To buy this skill, prerequisite White skill must be purchased at base cost
-        if (prereqId && !isPrereqOwned && !prereqInCandidates) {
-            usedCandidateIndices.add(idx);
-            const lowerBaseCost = mainItem.rarity === 'Gold' ? 160 : 100;
-            const lowerCost = calculateDiscountedSkillCost(lowerBaseCost, 0, isFastLearner);
-            const totalCost = mainItem.discountedCost + lowerCost;
-
-            const groupOptions = [];
-            if (!mainItem.isLocked) {
-                groupOptions.push({
-                    type: 'none',
-                    items: [],
-                    totalCost: 0,
-                    totalScore: 0,
-                });
-            }
-            groupOptions.push({
-                type: 'with_external_prereq',
-                items: [mainItem],
-                totalCost,
-                totalScore: mainItem.effectiveScore,
-            });
-
-            groups.push(groupOptions);
-            continue;
-        }
-
-        // Case C: Standalone skill or prerequisite is ALREADY owned!
-        usedCandidateIndices.add(idx);
-        const netCost = mainItem.discountedCost;
-        // If prerequisite is already owned, net rating gain is main - lower
-        let netScore = mainItem.effectiveScore;
-        if (prereqId && isPrereqOwned) {
-            const lowerScore = mainItem.rarity === 'Gold' ? 217 : 129;
-            netScore = Math.max(0, mainItem.effectiveScore - lowerScore);
-        }
-
-        const groupOptions = [];
-        if (!mainItem.isLocked) {
-            groupOptions.push({
-                type: 'none',
-                items: [],
-                totalCost: 0,
-                totalScore: 0,
-            });
-        }
-        groupOptions.push({
-            type: 'single',
-            items: [mainItem],
-            totalCost: netCost,
-            totalScore: netScore,
-        });
-
-        groups.push(groupOptions);
     }
 
-    // 3. Dynamic Programming Solver for Grouped Knapsack
-    // Filter groups where mandatory items must be fulfilled
+    const reasons = new Map();
+    const optionsByCandidate = new Map();
+    const optionsByGroup = new Map();
+    const maxBudgetCap = Math.min(budget, 50000);
+
+    for (const item of preparedCandidates) {
+        if (ownedSet.has(item.skillId) || coveredPrerequisites.has(item.skillId)) {
+            reasons.set(item.candidateIndex, 'already_owned');
+            continue;
+        }
+
+        const chain = new Map([[item.skillId, item.discountedCost]]);
+        let groupId = item.skillId;
+        let prerequisiteId = findPrerequisiteId(item);
+        let ownedPrerequisiteId = null;
+        while (prerequisiteId && !chain.has(prerequisiteId)) {
+            const prerequisite = findSkill(prerequisiteId);
+            if (ownedSet.has(prerequisiteId)) {
+                ownedPrerequisiteId = prerequisiteId;
+                groupId = prerequisiteId;
+                prerequisiteId = '';
+                break;
+            }
+            if (coveredPrerequisites.has(prerequisiteId) || !prerequisite) break;
+
+            const cost = prerequisite.discountedCost ?? calculateDiscountedSkillCost(
+                prerequisite.base_cost ?? prerequisite.cost, 0, isFastLearner,
+            );
+            chain.set(prerequisiteId, cost);
+            groupId = prerequisiteId;
+            prerequisiteId = findPrerequisiteId(prerequisite);
+        }
+
+        if (prerequisiteId) {
+            reasons.set(item.candidateIndex, coveredPrerequisites.has(prerequisiteId) ? 'conflicting_upgrade' : 'missing_prerequisite');
+            continue;
+        }
+
+        const option = {
+            item,
+            groupId,
+            chain,
+            ownedPrerequisiteId,
+            totalCost: [...chain.values()].reduce((sum, cost) => sum + cost, 0),
+            totalScore: item.effectiveScore - calculateSkillRating(findSkill(ownedPrerequisiteId), raceConfig),
+        };
+        optionsByCandidate.set(item.candidateIndex, option);
+        if (!optionsByGroup.has(groupId)) {
+            optionsByGroup.set(groupId, [{ chain: new Map(), totalCost: 0, totalScore: 0 }]);
+        }
+        optionsByGroup.get(groupId).push(option);
+    }
+
+    // Accept locks in input order, reserving only the extra cost within a chain.
+    const reservedCostByGroup = new Map();
+    let reservedCost = 0;
+    for (const item of preparedCandidates) {
+        const option = optionsByCandidate.get(item.candidateIndex);
+        if (!item.isLocked || !option) continue;
+
+        const { groupId } = option;
+        const compatibleOptions = optionsByGroup.get(groupId).filter(choice => choice.chain.has(item.skillId));
+        if (compatibleOptions.length === 0) {
+            reasons.set(item.candidateIndex, 'conflicting_upgrade');
+            continue;
+        }
+
+        const minimumCost = Math.min(...compatibleOptions.map(choice => choice.totalCost));
+        const extraCost = minimumCost - (reservedCostByGroup.get(groupId) ?? 0);
+        if (reservedCost + extraCost > maxBudgetCap) {
+            reasons.set(item.candidateIndex, 'insufficient_budget');
+            continue;
+        }
+
+        reservedCost += extraCost;
+        reservedCostByGroup.set(groupId, minimumCost);
+        optionsByGroup.set(groupId, compatibleOptions);
+    }
+
+    // Solve the grouped knapsack, keeping one final skill per prerequisite chain.
+    const groups = [...optionsByGroup.values()];
     const G = groups.length;
-    const maxBudgetCap = Math.min(budget, 50000); // Safe budget limit
 
     // Table: dp[b] stores max score achievable with exact budget b
     const NEG_INF = -1e9;
@@ -342,73 +296,65 @@ export function optimizeSkillBuild({
         }
     }
 
-    // If no valid solution found (e.g. locked skills exceed budget)
-    if (bestScore <= NEG_INF / 2) {
-        // Fallback: take as many locked skills as possible within budget
-        const lockedItems = preparedCandidates.filter(c => c.isLocked);
-        let fallbackCost = 0;
-        let fallbackScore = 0;
-        const selected = [];
-
-        for (const item of lockedItems) {
-            if (fallbackCost + item.discountedCost <= budget) {
-                fallbackCost += item.discountedCost;
-                fallbackScore += item.effectiveScore;
-                selected.push(item);
-            }
-        }
-
-        const selectedIndices = new Set(selected.map(s => s.candidateIndex));
-        const unselected = preparedCandidates.filter(c => !selectedIndices.has(c.candidateIndex));
-
-        return {
-            recommendedSkills: selected,
-            unselectedSkills: unselected,
-            totalCostPt: fallbackCost,
-            remainingPt: budget - fallbackCost,
-            totalRatingGain: fallbackScore,
-            averageEfficiency: fallbackCost > 0 ? Number((fallbackScore / fallbackCost).toFixed(2)) : 0,
-            hasLockedUnaffordable: true,
-        };
-    }
-
-    // 4. Backtrack reconstruction to recover selected items
-    const chosenItems = [];
+    const recommendedSkills = [];
+    const selectedCandidateIndices = new Set();
+    const selectedChains = new Map();
+    const replacedSkillIds = new Set();
     let currB = bestBudget;
 
     for (let g = G - 1; g >= 0; g--) {
-        const optIdx = choice[g][currB];
-        if (optIdx >= 0) {
-            const opt = groups[g][optIdx];
-            for (const it of opt.items) {
-                chosenItems.push(it);
-            }
-            currB -= opt.totalCost;
+        const option = groups[g][choice[g][currB]];
+        currB -= option.totalCost;
+        if (!option.item) continue;
+
+        selectedChains.set(option.groupId, option.chain);
+        if (option.ownedPrerequisiteId) replacedSkillIds.add(option.ownedPrerequisiteId);
+
+        let purchaseCost = 0;
+        for (const [id, cost] of [...option.chain].reverse()) {
+            if (id !== option.item.skillId) replacedSkillIds.add(id);
+            purchaseCost += cost;
+            const candidate = candidateBySkillId.get(id);
+            if (!candidate) continue;
+
+            selectedCandidateIndices.add(candidate.candidateIndex);
+            recommendedSkills.push({
+                ...candidate,
+                purchaseCost,
+                ratingGain: id === option.item.skillId ? option.totalScore : 0,
+            });
+            purchaseCost = 0;
         }
     }
 
-    // Deduplicate chosen items by candidateIndex
-    const selectedMap = new Map();
-    for (const it of chosenItems) {
-        selectedMap.set(it.candidateIndex, it);
-    }
-    const recommendedSkills = Array.from(selectedMap.values());
-    const recommendedIndexSet = new Set(recommendedSkills.map(s => s.candidateIndex));
-
-    const unselectedSkills = preparedCandidates.filter(c => !recommendedIndexSet.has(c.candidateIndex));
-
     const totalCostPt = bestBudget;
-    const remainingPt = Math.max(0, budget - totalCostPt);
+    const remainingPt = budget - totalCostPt;
     const totalRatingGain = Math.round(bestScore);
     const averageEfficiency = totalCostPt > 0 ? Number((totalRatingGain / totalCostPt).toFixed(2)) : 0;
+
+    const unselectedSkills = preparedCandidates
+        .filter(item => !selectedCandidateIndices.has(item.candidateIndex))
+        .map(item => {
+            const option = optionsByCandidate.get(item.candidateIndex);
+            let reason = reasons.get(item.candidateIndex);
+            if (option && !reason) {
+                const selectedChain = selectedChains.get(option.groupId);
+                const additionalCost = [...option.chain].reduce(
+                    (sum, [id, cost]) => sum + (selectedChain?.has(id) ? 0 : cost), 0,
+                );
+                if (additionalCost > remainingPt) reason = 'insufficient_budget';
+            }
+            return { ...item, requiredCost: option?.totalCost ?? item.discountedCost, reason };
+        });
 
     return {
         recommendedSkills,
         unselectedSkills,
+        replacedSkillIds: [...replacedSkillIds],
         totalCostPt,
         remainingPt,
         totalRatingGain,
         averageEfficiency,
-        hasLockedUnaffordable: false,
+        hasLockedUnaffordable: unselectedSkills.some(item => item.isLocked && item.reason === 'insufficient_budget'),
     };
 }

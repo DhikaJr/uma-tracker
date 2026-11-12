@@ -48,10 +48,9 @@ Modul kalkulator rating (`RatingCalculatorView.jsx`) dan pembantu optimasi (`ski
 - **Skor Unique Skill**:
   - Karakter Bintang 1–2 (`★1–★2`): `120 * UniqueLevel` (maksimal Lv4).
   - Karakter Bintang 3–5 (`★3–★5`): `170 * UniqueLevel` (maksimal Lv6).
-- **Pengali Aptitude Skill**:
-  - Grade `A` & `S`: `1.0x`
-  - Grade `B` & `C`: `0.9x`
-  - Grade `D` s.d. `G`: `0.5x`
+- **Pengali Aptitude untuk Skor Evaluasi Skill** (`ratingCalculatorHelper.js`):
+  - Grade `S/A` memakai `1.1×`, `B/C` memakai `0.9×`, `D/E/F` memakai `0.8×`, dan `G` memakai `0.7×` untuk skill dengan syarat jarak atau gaya lari.
+  - Tabel Aptitude di `CharacterDetailModal.jsx` menjelaskan pengali performa saat balapan, termasuk akselerasi, kecepatan, dan Wisdom. [Hasil pengukuran skor skill server JP](https://lc06454.hatenablog.com/entry/2021/08/26/184345)
 - **Tingkat Diskon Biaya Skill (Skill Points / Pt)**:
   - Diskon Hint resmi server JP: `Lv0`: 0%, `Lv1`: 10%, `Lv2`: 20%, `Lv3`: 30%, `Lv4`: 35%, `Lv5`: 40%.
   - Diskon Fast Learner (`切れ者` / `isFastLearner`): Tambahan diskon 10% yang diakumulasikan.

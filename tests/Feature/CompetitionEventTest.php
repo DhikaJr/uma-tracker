@@ -11,6 +11,7 @@ use App\Support\CompetitionRacetrackHelper;
 use App\Support\CompetitionStatRecoveryRecommender;
 use Database\Seeders\CompetitionEventSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -1342,6 +1343,7 @@ class CompetitionEventTest extends TestCase
 
         $this->assertContains('loh-2027-02', $syncResponse->json('updated_events'));
         $this->assertFileExists($testSyncPath);
+        Http::assertSent(fn (Request $request): bool => $request->url() === 'https://gamewith.jp/uma-musume/article/show/586061');
 
         // Fetch GET /api/competition-events
         $listResponse = $this->getJson('/api/competition-events');

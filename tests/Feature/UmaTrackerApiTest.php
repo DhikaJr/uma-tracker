@@ -859,6 +859,8 @@ class UmaTrackerApiTest extends TestCase
 
     public function test_circle_tracker_track_player_updates_setting(): void
     {
+        $this->fakeCircleTrackerRequests();
+
         $response = $this->postJson('/api/circle-tracker/track-player', [
             'viewer_id' => '414486880',
         ]);
@@ -870,6 +872,7 @@ class UmaTrackerApiTest extends TestCase
             'key' => 'tracked_viewer_id',
             'value' => '414486880',
         ]);
+        Http::assertSentCount(2);
     }
 
     public function test_gacha_sync_status_returns_catalog_counts(): void
@@ -887,6 +890,8 @@ class UmaTrackerApiTest extends TestCase
     public function test_gacha_sync_catalog_endpoint_updates_database(): void
     {
         Http::fake([
+            'https://umamusume.jp/api/ajax/pr_info_index?format=json' => Http::response(['information_list' => []]),
+            'https://umapyoi.net/api/v1/news/search/twinkle' => Http::response([]),
             'https://gametora.com/data/manifests/umamusume.json*' => Http::response([
                 'characters' => 'abc111',
                 'character-cards' => 'def222',
@@ -928,6 +933,8 @@ class UmaTrackerApiTest extends TestCase
     public function test_artisan_sync_uma_catalog_command(): void
     {
         Http::fake([
+            'https://umamusume.jp/api/ajax/pr_info_index?format=json' => Http::response(['information_list' => []]),
+            'https://umapyoi.net/api/v1/news/search/twinkle' => Http::response([]),
             'https://gametora.com/data/manifests/umamusume.json*' => Http::response([
                 'characters' => 'c1',
                 'character-cards' => 'c2',
@@ -1766,20 +1773,7 @@ class UmaTrackerApiTest extends TestCase
 
     public function test_circle_tracker_set_and_clear_circle_endpoints(): void
     {
-        Http::fake([
-            'https://muxueuma.com/api/circles/441730573/contributions' => Http::response([
-                'circle' => ['name' => 'なんか適当', 'memberCount' => 30],
-                'rows' => [
-                    ['viewerId' => '886175385', 'playerName' => 'TestPlayer', 'contribution' => 15000000],
-                ],
-                'activeTotal' => 50000000,
-                'period' => '2026-09-01',
-            ], 200),
-            'https://muxueuma.com/api/circles/441730573/ranking-trend*' => Http::response([
-                'current' => ['rank' => 986, 'point' => 50000000, 'period' => '2026-09-01'],
-                'points' => [],
-            ], 200),
-        ]);
+        $this->fakeCircleTrackerRequests();
 
         // 1. Set Circle
         $setRes = $this->postJson('/api/circle-tracker/set-circle', [
@@ -2171,6 +2165,8 @@ class UmaTrackerApiTest extends TestCase
 
     public function test_circle_tracker_pace_estimator_calculations(): void
     {
+        $this->fakeCircleTrackerRequests();
+
         // 1. Initial pace endpoint check
         $res = $this->getJson('/api/circle-tracker/pace');
         $res->assertStatus(200)
@@ -2214,6 +2210,7 @@ class UmaTrackerApiTest extends TestCase
         $resStatus = $this->getJson('/api/circle-tracker/status');
         $resStatus->assertStatus(200);
         $this->assertArrayHasKey('pace_estimator', $resStatus->json());
+        Http::assertSentCount(2);
     }
 
     public function test_planner_get_and_save_config(): void
@@ -2559,5 +2556,23 @@ class UmaTrackerApiTest extends TestCase
         $charRes = $this->getJson('/api/career/character-detail?uma_name='.urlencode('Oguri Cap (Anime Collab)'));
         $charRes->assertStatus(200)
             ->assertJsonPath('image_url', 'https://gametora.com/images/umamusume/characters/thumb/chara_stand_1006_100601.png');
+    }
+
+    private function fakeCircleTrackerRequests(): void
+    {
+        Http::fake([
+            'https://muxueuma.com/api/circles/441730573/contributions' => Http::response([
+                'circle' => ['name' => 'なんか適当', 'memberCount' => 30],
+                'rows' => [
+                    ['viewerId' => '886175385', 'playerName' => 'TestPlayer', 'contribution' => 15000000],
+                ],
+                'activeTotal' => 50000000,
+                'period' => '2026-09-01',
+            ], 200),
+            'https://muxueuma.com/api/circles/441730573/ranking-trend?range=7d' => Http::response([
+                'current' => ['rank' => 986, 'point' => 50000000, 'period' => '2026-09-01'],
+                'points' => [],
+            ], 200),
+        ]);
     }
 }

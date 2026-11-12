@@ -6,8 +6,12 @@ namespace Tests\Feature;
 
 use App\Models\UmaCatalogItem;
 use App\Services\BackupService;
+use App\Services\GameToraSyncService;
 use App\Support\SkillConditionTranslator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class SkillConditionTranslatorTest extends TestCase
@@ -136,6 +140,10 @@ class SkillConditionTranslatorTest extends TestCase
      */
     public function test_enrich_skills_artisan_command(): void
     {
+        Http::fake([
+            GameToraSyncService::MANIFEST_URL => Http::response([]),
+        ]);
+
         $item = UmaCatalogItem::create([
             'type' => 'character',
             'name' => 'Test Uma',
@@ -256,24 +264,31 @@ class SkillConditionTranslatorTest extends TestCase
      */
     public function test_get_skill_detail_endpoint(): void
     {
-        // 1. Missing parameters returns 400
-        $res = $this->getJson('/api/collection/skill-detail');
-        $res->assertStatus(400);
+        $skillsHash = uniqid('test-skill-detail-');
+        $cachePath = storage_path("app/gametora_skills_{$skillsHash}.json");
+        Http::fake([
+            GameToraSyncService::MANIFEST_URL => Http::response(['skills' => $skillsHash]),
+            GameToraSyncService::DATA_BASE_URL."/skills.{$skillsHash}.json" => Http::response([
+                [
+                    'id' => 202131,
+                    'name_en' => 'Tail Nine',
+                    'condition_groups' => [['condition' => 'phase==2']],
+                ],
+            ]),
+        ]);
 
-        // 2. Fetch with skill name e.g. "Tail Nine"
-        $res2 = $this->getJson('/api/collection/skill-detail?name=Tail Nine');
-        if ($res2->status() === 200) {
-            $data = $res2->json();
-            $this->assertTrue($data['success']);
-            $this->assertArrayHasKey('skill', $data);
-            $this->assertArrayHasKey('condition_groups', $data['skill']);
-            if (! empty($data['skill']['condition_groups'])) {
-                $this->assertNotNull($data['skill']['condition_groups'][0]['condition_translated']);
-            }
-        } else {
-            // If local skill dataset is in test environment without skills cache, test with non-existent id
-            $res404 = $this->getJson('/api/collection/skill-detail?id=999999999');
-            $res404->assertStatus(404);
+        try {
+            $this->getJson('/api/collection/skill-detail')->assertBadRequest();
+            $this->getJson('/api/collection/skill-detail?name=Tail%20Nine')
+                ->assertOk()
+                ->assertJsonPath('success', true)
+                ->assertJsonPath('skill.condition_groups.0.condition', 'phase==2')
+                ->assertJsonStructure(['skill' => ['condition_groups' => [['condition_translated']]]]);
+            $this->getJson('/api/collection/skill-detail?id=999999999')->assertNotFound();
+
+            Http::assertSent(fn (Request $request): bool => $request->url() === GameToraSyncService::DATA_BASE_URL."/skills.{$skillsHash}.json");
+        } finally {
+            File::delete($cachePath);
         }
     }
 

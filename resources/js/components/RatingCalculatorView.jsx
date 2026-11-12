@@ -614,14 +614,12 @@ export default function RatingCalculatorView({ onApplyToCareerForm }) {
             return;
         }
 
-        setSkillRows(() => {
-            const rows = optimal.map((sk, idx) => ({
-                rowId: idx + 1,
-                skill: sk,
-            }));
-            rows.push({ rowId: optimal.length + 1, skill: null });
-            return rows;
-        });
+        const replacedIds = new Set(optimizationResult.replacedSkillIds);
+        const finalSkills = [...selectedSkills, ...optimal]
+            .filter(skill => !replacedIds.has(String(skill.skillId || skill.id)));
+        const rows = finalSkills.map((skill, index) => ({ rowId: index + 1, skill }));
+        rows.push({ rowId: finalSkills.length + 1, skill: null });
+        setSkillRows(rows);
 
         setActiveMode('manual');
         showCalculatorToast(`✅ Kombinasi ${optimal.length} skill optimal (+${optimizationResult.totalRatingGain} pts) berhasil diterapkan ke Kalkulator!`, 'success');
@@ -1522,8 +1520,7 @@ export default function RatingCalculatorView({ onApplyToCareerForm }) {
                             ) : (
                                 <div className="space-y-2">
                                     {optimizationResult.recommendedSkills.map(sk => {
-                                        const ratingGain = calculateSkillRating(sk, raceConfig);
-                                        const cost = calculateDiscountedSkillCost(sk.base_cost, sk.hintLevel, isFastLearner);
+                                        const { purchaseCost: cost, ratingGain } = sk;
                                         const eff = calculateSkillEfficiency(ratingGain, cost);
                                         const iconUrl = getSkillIconUrl(sk);
 
@@ -1558,11 +1555,11 @@ export default function RatingCalculatorView({ onApplyToCareerForm }) {
                                                                 </span>
                                                             )}
                                                             <span className={`text-[9px] font-black px-1.5 py-0.2 rounded border ${eff.badgeClass}`}>
-                                                                {eff.tier}
+                                                                {optimizationResult.replacedSkillIds.includes(sk.skillId) ? 'Prasyarat' : eff.tier}
                                                             </span>
                                                         </div>
                                                         <div className="text-[10px] text-slate-400 mt-0.5 truncate">
-                                                            Hint: <strong className="text-emerald-400">Lv.{sk.hintLevel ?? 0}</strong> • {sk.sourceLabel || 'Support/Character'}
+                                                            Hint: <strong className="text-emerald-400">Lv.{sk.hintLevel ?? 0}</strong> • {sk.sourceLabel || 'Support/Character'}{cost > sk.discountedCost && ' • Termasuk prasyarat'}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1572,7 +1569,7 @@ export default function RatingCalculatorView({ onApplyToCareerForm }) {
                                                         {cost} Pt
                                                     </span>
                                                     <span className="text-[11px] font-black text-emerald-400 block">
-                                                        +{ratingGain} pts
+                                                        {ratingGain > 0 ? '+' : ''}{ratingGain} pts
                                                     </span>
                                                 </div>
                                             </div>
@@ -1600,9 +1597,14 @@ export default function RatingCalculatorView({ onApplyToCareerForm }) {
                             ) : (
                                 <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
                                     {optimizationResult.unselectedSkills.map(sk => {
-                                        const ratingGain = calculateSkillRating(sk, raceConfig);
-                                        const cost = calculateDiscountedSkillCost(sk.base_cost, sk.hintLevel, isFastLearner);
+                                        const { requiredCost: cost, effectiveScore: ratingGain } = sk;
                                         const eff = calculateSkillEfficiency(ratingGain, cost);
+                                        const reason = {
+                                            insufficient_budget: 'Anggaran tidak mencukupi',
+                                            missing_prerequisite: 'Data prasyarat tidak tersedia',
+                                            conflicting_upgrade: 'Upgrade lain sudah dipilih',
+                                            already_owned: 'Sudah dimiliki',
+                                        }[sk.reason];
                                         const iconUrl = getSkillIconUrl(sk);
 
                                         return (
@@ -1631,7 +1633,7 @@ export default function RatingCalculatorView({ onApplyToCareerForm }) {
                                                         <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
                                                             <span>Hint Lv.{sk.hintLevel ?? 0}</span>
                                                             <span>•</span>
-                                                            <span>{eff.ratio} pts/Pt</span>
+                                                            <span>{reason || `${eff.ratio} pts/Pt`}</span>
                                                         </div>
                                                     </div>
                                                 </div>
