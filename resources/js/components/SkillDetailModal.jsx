@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { 
     X, 
@@ -26,7 +26,7 @@ import {
     UserCheck,
     TrendingUp
 } from 'lucide-react';
-import { translateConditionString, translateClause } from '../utils/skillConditionTranslator';
+import { getOrderRateThresholds, translateConditionString } from '../utils/skillConditionTranslator';
 import { enrichSkillEffect, formatSkillBaseDuration } from '../utils/skillEffectFormatter';
 
 /**
@@ -37,10 +37,8 @@ function formatConditionString(cond) {
     if (!cond || typeof cond !== 'string') return '';
 
     // Add CM & LoH position annotations for order_rate
-    let formatted = cond.replace(/order_rate\s*(<=|>=|<|>|==)\s*(\d+)/g, (match, op, valStr) => {
-        const val = parseInt(valStr, 10);
-        const cm = Math.ceil((9 * val) / 100);
-        const loh = Math.ceil((12 * val) / 100);
+    let formatted = cond.replace(/\border_rate\s*(<=|>=|!=|==|<|>)\s*(\d+(?:\.\d+)?)/g, (match, op, valStr) => {
+        const { cm, loh } = getOrderRateThresholds(valStr);
         return `${match} (CM [Champions Meetings] ${op} ${cm} | LoH [League of Heroes] ${op} ${loh})`;
     });
 
@@ -78,11 +76,27 @@ function ConditionCategoryIcon({ category, icon, className = "w-3.5 h-3.5" }) {
 }
 
 export default function SkillDetailModal({ skill: rawSkill, onClose, onFindSkillSources }) {
-    if (!rawSkill) return null;
-    const skill = rawSkill.skill || rawSkill;
-
     const [openScalings, setOpenScalings] = useState(() => ({ '0-0': true }));
     const [openRawFormulas, setOpenRawFormulas] = useState({});
+
+    useEffect(() => {
+        if (!rawSkill) return;
+
+        const handleKeyDown = (event) => {
+            if (event.key !== 'Escape') return;
+
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            if (!event.repeat) onClose?.();
+        };
+
+        // Handle Escape before the underlying modal's bubbling listener.
+        window.addEventListener('keydown', handleKeyDown, true);
+        return () => window.removeEventListener('keydown', handleKeyDown, true);
+    }, [rawSkill, onClose]);
+
+    if (!rawSkill) return null;
+    const skill = rawSkill.skill || rawSkill;
 
     const handleFindSkillSources = () => {
         const skillName = skill.name_en || skill.name_ja || skill.name || '';
@@ -158,6 +172,9 @@ export default function SkillDetailModal({ skill: rawSkill, onClose, onFindSkill
             onClick={onClose}
         >
             <div 
+                role="dialog"
+                aria-modal="true"
+                aria-label={nameEn}
                 className="relative w-full max-w-xl max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-800/80 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150"
                 onClick={(e) => e.stopPropagation()}
             >

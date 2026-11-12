@@ -119,8 +119,18 @@ class SkillConditionTranslatorTest extends TestCase
         $res = SkillConditionTranslator::translateClause('order_rate<=40');
         $this->assertSame('Peringkat di 40% pelari terdepan (CM [Champions Meetings] <= 4 | LoH [League of Heroes] <= 5)', $res['text']);
 
-        $res2 = SkillConditionTranslator::translateClause('order_rate>=50');
-        $this->assertSame('Peringkat di 50% pelari belakang (CM [Champions Meetings] >= 5 | LoH [League of Heroes] >= 6)', $res2['text']);
+        $seventyPercent = SkillConditionTranslator::translateClause('order_rate<=70');
+        $this->assertStringContainsString('CM [Champions Meetings] <= 6 | LoH [League of Heroes] <= 8', $seventyPercent['text']);
+
+        $inclusive = SkillConditionTranslator::translateClause('order_rate>=50');
+        $this->assertSame('Peringkat di 50% pelari belakang (CM [Champions Meetings] >= 5 | LoH [League of Heroes] >= 6)', $inclusive['text']);
+
+        $strict = SkillConditionTranslator::translateClause('order_rate>50');
+        $this->assertStringContainsString('CM [Champions Meetings] > 5, posisi ke-6 atau lebih belakang', $strict['text']);
+        $this->assertStringContainsString('LoH [League of Heroes] > 6, posisi ke-7 atau lebih belakang', $strict['text']);
+
+        $roundsToZero = SkillConditionTranslator::translateClause('order_rate<=1');
+        $this->assertStringContainsString('CM [Champions Meetings] <= 0 | LoH [League of Heroes] <= 0', $roundsToZero['text']);
     }
 
     /**

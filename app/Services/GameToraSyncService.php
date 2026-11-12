@@ -18,6 +18,10 @@ use Illuminate\Support\Facades\Log;
 
 class GameToraSyncService
 {
+    private const EVOLUTION_STATUS_EFFECTS = [
+        7 => 'Fast Learner (切れ者)',
+    ];
+
     public const MANIFEST_URL = 'https://gametora.com/data/manifests/umamusume.json';
 
     public const DATA_BASE_URL = 'https://gametora.com/data/umamusume';
@@ -1375,9 +1379,12 @@ class GameToraSyncService
 
             case 'cond_e':
             case 'cond':
-                $condName = $c[1] ?? 'status';
+                $statusId = $c[1] ?? 'status';
+                $statusName = self::EVOLUTION_STATUS_EFFECTS[$statusId] ?? null;
 
-                return "Have status effect {$condName} at end of training";
+                return $statusName === null
+                    ? "Have status effect {$statusId} at end of training"
+                    : "Have {$statusName} at the end of training";
 
             case 'out_c':
                 $count = (int) ($c[1] ?? 1);
@@ -1444,6 +1451,33 @@ class GameToraSyncService
             default:
                 return '';
         }
+    }
+
+    /**
+     * Refresh cached evolution requirements without changing their alternative groups.
+     *
+     * @param  array<array-key, mixed>  $requirements
+     * @return array<array-key, mixed>
+     */
+    public static function normalizeEvolutionRequirements(array $requirements): array
+    {
+        array_walk_recursive($requirements, static function (mixed &$text): void {
+            if (! is_string($text) || ! str_contains($text, 'status effect')) {
+                return;
+            }
+
+            $text = preg_replace_callback(
+                '/\\bHave status effect (\\d+) at (?:the )?end of training\\b/',
+                static function (array $match): string {
+                    $statusName = self::EVOLUTION_STATUS_EFFECTS[(int) $match[1]] ?? null;
+
+                    return $statusName === null ? $match[0] : "Have {$statusName} at the end of training";
+                },
+                $text,
+            ) ?? $text;
+        });
+
+        return $requirements;
     }
 
     /**

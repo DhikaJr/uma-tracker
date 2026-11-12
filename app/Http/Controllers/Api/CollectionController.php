@@ -10,6 +10,7 @@ use App\Models\UserCharacter;
 use App\Models\UserSupportCard;
 use App\Services\GameToraSyncService;
 use App\Services\UmaAffinityService;
+use App\Support\SkillConditionTranslator;
 use App\Support\SupportCardUniqueEffectFormatter;
 use App\Support\UmaCatalog;
 use Illuminate\Http\JsonResponse;
@@ -194,7 +195,7 @@ class CollectionController extends Controller
             }
         }
 
-        return $details;
+        return $this->normalizeCatalogSkillConditions($details);
     }
 
     /**
@@ -252,7 +253,34 @@ class CollectionController extends Controller
         }
         unset($val);
 
-        return $skills;
+        return $this->normalizeCatalogSkillConditions($skills);
+    }
+
+    /**
+     * Refresh derived text for cached catalogue skills at read time.
+     *
+     * @param  array<array-key, mixed>  $data
+     * @return array<array-key, mixed>
+     */
+    protected function normalizeCatalogSkillConditions(array $data): array
+    {
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $data[$key] = in_array($key, ['conditions', 'evolution_conditions'], true)
+                    ? GameToraSyncService::normalizeEvolutionRequirements($value)
+                    : $this->normalizeCatalogSkillConditions($value);
+            }
+        }
+
+        foreach (['condition', 'precondition'] as $field) {
+            $legacyCondition = $field === 'condition' && is_string($data['conditions'] ?? null) ? $data['conditions'] : null;
+            $formula = $data[$field] ?? $legacyCondition ?? $data['condition_groups'][0][$field] ?? null;
+            if (is_string($formula) && preg_match('/\\border_rate\\s*(?:<=|>=|==|!=|<|>)/i', $formula)) {
+                $data[$field.'_translated'] = SkillConditionTranslator::translate($formula)['summary'];
+            }
+        }
+
+        return $data;
     }
 
     /**
@@ -1500,7 +1528,7 @@ class CollectionController extends Controller
             $sk['desc_en'] = $sk['desc_jp'];
         }
 
-        return $sk;
+        return $this->normalizeCatalogSkillConditions($sk);
     }
 
     /**

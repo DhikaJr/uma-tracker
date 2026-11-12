@@ -762,6 +762,63 @@ class CollectionApiTest extends TestCase
             ->assertJsonPath('character.skills.unique.effects.0.special_scaling.tiers.4.total', 0.18);
     }
 
+    public function test_character_endpoints_refresh_cached_skill_conditions_without_changing_evolution_groups(): void
+    {
+        $legacyRequirements = [
+            ['Have status effect 7 at end of training', 'Get at least 3 skills for Leader/Pace Chaser'],
+            ['Have at least 800 Wit'],
+            ['Have status effect 17 at end of training'],
+        ];
+        $character = UmaCatalogItem::create([
+            'type' => 'character',
+            'name' => "Epiphaneia [Fate's Chosen Star]",
+            'rarity' => 'SSR',
+            'skills' => [
+                'evolve' => [[
+                    'name' => 'A Racing Star Lights the Heavens',
+                    'conditions' => $legacyRequirements,
+                    'evolution_conditions' => $legacyRequirements,
+                    'conditions_ja' => [['切れ者']],
+                    'condition' => 'order_rate<=70',
+                    'condition_translated' => 'Batas lama CM <= 7, LoH <= 9',
+                    'condition_groups' => [[
+                        'condition' => 'order_rate<=70',
+                        'condition_translated' => 'Batas lama CM <= 7, LoH <= 9',
+                        'precondition' => 'order_rate<=1',
+                        'precondition_translated' => 'Batas lama CM <= 1, LoH <= 1',
+                    ]],
+                ]],
+            ],
+        ]);
+
+        $expectedRequirements = $legacyRequirements;
+        $expectedRequirements[0][0] = 'Have Fast Learner (切れ者) at the end of training';
+
+        foreach ([
+            '/api/collection/characters' => 'characters.0.skills.evolve.0',
+            '/api/collection/characters/detail?name='.urlencode($character->name) => 'character.skills.evolve.0',
+        ] as $url => $path) {
+            $response = $this->getJson($url)
+                ->assertOk()
+                ->assertJsonPath($path.'.conditions', $expectedRequirements)
+                ->assertJsonPath($path.'.evolution_conditions', $expectedRequirements)
+                ->assertJsonPath($path.'.conditions_ja', [['切れ者']])
+                ->assertJsonPath($path.'.condition_groups.0.condition', 'order_rate<=70');
+
+            $skill = $response->json($path);
+            $this->assertStringContainsString('CM [Champions Meetings] <= 6 | LoH [League of Heroes] <= 8', $skill['condition_translated']);
+            $this->assertSame($skill['condition_translated'], $skill['condition_groups'][0]['condition_translated']);
+            $this->assertStringContainsString('CM [Champions Meetings] <= 0 | LoH [League of Heroes] <= 0', $skill['condition_groups'][0]['precondition_translated']);
+        }
+
+        $this->assertSame($legacyRequirements, $character->fresh()->skills['evolve'][0]['evolution_conditions']);
+        $this->assertSame('Batas lama CM <= 7, LoH <= 9', $character->fresh()->skills['evolve'][0]['condition_translated']);
+
+        $syncService = app(GameToraSyncService::class);
+        $this->assertSame($expectedRequirements[0][0], $syncService->formatEvolutionCondition(['cond_e', 7]));
+        $this->assertSame($legacyRequirements[2][0], $syncService->formatEvolutionCondition(['cond_e', 17]));
+    }
+
     public function test_can_search_global_skill_sources_with_filters_and_ownership(): void
     {
         $testSkill = [

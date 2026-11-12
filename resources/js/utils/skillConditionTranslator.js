@@ -22,6 +22,13 @@ const TRACK_NAMES = {
     10101: 'Longchamp',
 };
 
+export function getOrderRateThresholds(rate) {
+    return {
+        cm: Math.round((9 * Number(rate)) / 100),
+        loh: Math.round((12 * Number(rate)) / 100),
+    };
+}
+
 /**
  * Translates a single atomic clause like "phase==2" or "order<=2".
  */
@@ -253,15 +260,16 @@ export function translateClause(clause) {
         }
 
         case 'order_rate': {
-            const cm = Math.ceil((9 * Number(val)) / 100);
-            const loh = Math.ceil((12 * Number(val)) / 100);
+            const { cm, loh } = getOrderRateThresholds(val);
             if (op === '<=') {
                 return makeResult(trimmed, field, op, val, `Peringkat di ${val}% pelari terdepan (CM [Champions Meetings] <= ${cm} | LoH [League of Heroes] <= ${loh})`, 'position', 'percent');
             }
             if (op === '>=') {
                 return makeResult(trimmed, field, op, val, `Peringkat di ${val}% pelari belakang (CM [Champions Meetings] >= ${cm} | LoH [League of Heroes] >= ${loh})`, 'position', 'percent');
             }
-            return makeResult(trimmed, field, op, val, `Peringkat persentase ${op} ${val}% (CM [Champions Meetings]: ${cm} | LoH [League of Heroes]: ${loh})`, 'position', 'percent');
+            const cmPosition = op === '>' ? `, posisi ke-${cm + 1} atau lebih belakang` : '';
+            const lohPosition = op === '>' ? `, posisi ke-${loh + 1} atau lebih belakang` : '';
+            return makeResult(trimmed, field, op, val, `Peringkat persentase ${op} ${val}% (CM [Champions Meetings] ${op} ${cm}${cmPosition} | LoH [League of Heroes] ${op} ${loh}${lohPosition})`, 'position', 'percent');
         }
 
         case 'order_rate_in20_continue':

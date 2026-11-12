@@ -2,6 +2,12 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.4] - 12 November 2026
+
+- Modal detail karakter, detail kartu, komparator, dan katalog skill tampil di atas navbar. Saat detail skill terbuka, Escape menutupnya terlebih dahulu.
+- Terjemahan dan formula teknis `order_rate` memakai pembulatan ke bilangan bulat terdekat sebelum menerapkan operator. Koleksi memperbarui teks turunan dari katalog saat data dibaca.
+- Syarat evolusi untuk status 7 menampilkan Fast Learner (切れ者). Alternatif dan syarat wajib tetap berada di grup masing-masing.
+
 ## [Versi 3.3.3] - 12 November 2026
 
 - Persentil gacha gabungan memakai konvolusi binomial eksak untuk pool 3,0% dan 4,5%. Simulator menampilkan persentil teoretis dari rate banner dan menjelaskan jaminan penukaran Spark.

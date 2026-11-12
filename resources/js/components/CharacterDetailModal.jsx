@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import SkillDetailModal from './SkillDetailModal';
 import {
     X,
@@ -205,7 +206,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
 
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (e.key === 'Escape') onClose?.();
+            if (e.key === 'Escape' && !e.repeat) onClose?.();
         };
         if (isOpen) {
             document.body.style.overflow = 'hidden';
@@ -227,7 +228,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
         return () => window.removeEventListener('uma:find-skill-sources', handleFindSkillSources);
     }, [onClose]);
 
-    if (!isOpen || !character) return null;
+    if (!isOpen || !character || typeof document === 'undefined') return null;
 
     const name = character.name || 'Detail Karakter';
     const baseStars = character.base_stars || 3;
@@ -315,8 +316,8 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
         { key: 'chaser', label: 'Chaser (追込 / Oikomi)', grade: aptitudes.chaser || aptitudes.style?.chaser || '-' },
     ];
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6">
+    return createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 md:p-6">
             {/* Backdrop */}
             <div
                 className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity"
@@ -324,7 +325,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
             />
 
             {/* Modal Dialog Content */}
-            <div className="relative z-10 w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div role="dialog" aria-modal="true" aria-label={name} className="relative z-10 w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 {/* Header with Uma Musume Emerald/Gold styling */}
                 <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-green-900 text-white p-5 sm:p-6 relative shrink-0">
                     <button
@@ -1273,6 +1274,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                     }}
                 />
             )}
-        </div>
+        </div>,
+        document.body
     );
 }

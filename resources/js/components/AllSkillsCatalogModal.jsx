@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
     X,
     Search,
@@ -177,8 +178,8 @@ export default function AllSkillsCatalogModal({ isOpen, onClose, onSelectSkill }
         onClose();
     };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-xs animate-fadeIn">
+    return createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-xs animate-fadeIn">
             <div 
                 className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col max-h-[92vh]"
                 role="dialog"
@@ -543,6 +544,7 @@ export default function AllSkillsCatalogModal({ isOpen, onClose, onSelectSkill }
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

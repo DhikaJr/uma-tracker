@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { formatSupportUniqueEffect } from '../utils/supportUniqueEffectFormatter';
 import {
     X,
@@ -199,8 +200,8 @@ export default function SupportCardCompareModal({
     const hintSkillsB = detailsB?.hints?.skills || [];
     const eventSkillsB = detailsB?.event_skills || [];
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-xs animate-fadeIn">
+    return createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-xs animate-fadeIn">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-5xl w-full overflow-hidden flex flex-col max-h-[94vh]">
                 {/* Header */}
                 <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
@@ -874,6 +875,7 @@ export default function SupportCardCompareModal({
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

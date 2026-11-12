@@ -349,8 +349,8 @@ class SkillConditionTranslator
                 return self::makeClauseResult($raw, $field, $op, $val, "Peringkat balapan {$op} {$val}", 'position', 'trophy');
 
             case 'order_rate':
-                $cmVal = (int) ceil((9 * (float) $val) / 100);
-                $lohVal = (int) ceil((12 * (float) $val) / 100);
+                $cmVal = (int) round((9 * (float) $val) / 100);
+                $lohVal = (int) round((12 * (float) $val) / 100);
                 if ($op === '<=') {
                     return self::makeClauseResult($raw, $field, $op, $val, "Peringkat di {$val}% pelari terdepan (CM [Champions Meetings] <= {$cmVal} | LoH [League of Heroes] <= {$lohVal})", 'position', 'percent');
                 }
@@ -358,7 +358,10 @@ class SkillConditionTranslator
                     return self::makeClauseResult($raw, $field, $op, $val, "Peringkat di {$val}% pelari belakang (CM [Champions Meetings] >= {$cmVal} | LoH [League of Heroes] >= {$lohVal})", 'position', 'percent');
                 }
 
-                return self::makeClauseResult($raw, $field, $op, $val, "Peringkat persentase {$op} {$val}% (CM [Champions Meetings]: {$cmVal} | LoH [League of Heroes]: {$lohVal})", 'position', 'percent');
+                $cmPosition = $op === '>' ? ', posisi ke-'.($cmVal + 1).' atau lebih belakang' : '';
+                $lohPosition = $op === '>' ? ', posisi ke-'.($lohVal + 1).' atau lebih belakang' : '';
+
+                return self::makeClauseResult($raw, $field, $op, $val, "Peringkat persentase {$op} {$val}% (CM [Champions Meetings] {$op} {$cmVal}{$cmPosition} | LoH [League of Heroes] {$op} {$lohVal}{$lohPosition})", 'position', 'percent');
 
             case 'order_rate_in20_continue':
             case 'order_rate_in40_continue':

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import SkillDetailModal from './SkillDetailModal';
 import { formatSupportUniqueEffect } from '../utils/supportUniqueEffectFormatter';
 import {
@@ -398,8 +399,8 @@ export default function SupportCardDetailModal({ card, isOpen, onClose }) {
         { key: 'mlb', label: 'MLB', level: levelHeaders[4] },
     ];
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+    return createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-6 overflow-y-auto bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
             <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 
                 {/* ======================================================== */}
@@ -1024,6 +1025,7 @@ export default function SupportCardDetailModal({ card, isOpen, onClose }) {
                     }}
                 />
             )}
-        </div>
+        </div>,
+        document.body
     );
 }
