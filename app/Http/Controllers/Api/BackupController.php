@@ -55,7 +55,7 @@ class BackupController extends Controller
     public function import(Request $request): JsonResponse
     {
         $request->validate([
-            'file' => ['nullable', 'file', 'max:51200'], // max 50MB
+            'file' => ['nullable', 'file', 'max:102400'], // 100 MiB
             'mode' => ['nullable', 'string', 'in:merge,overwrite'],
             'data' => ['nullable', 'array'],
         ]);
@@ -64,9 +64,15 @@ class BackupController extends Controller
         $backupData = null;
 
         if ($request->hasFile('file')) {
+            $memoryLimit = ini_get('memory_limit');
+            if ($memoryLimit !== false && ini_parse_quantity($memoryLimit) >= 0 && ini_parse_quantity($memoryLimit) < 512 * 1024 * 1024) {
+                ini_set('memory_limit', '512M');
+            }
+
             $file = $request->file('file');
             $content = file_get_contents($file->getRealPath());
             $backupData = json_decode($content, true);
+            unset($content);
 
             if (json_last_error() !== JSON_ERROR_NONE || ! is_array($backupData)) {
                 return response()->json([

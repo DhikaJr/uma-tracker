@@ -734,6 +734,12 @@ class BackupVerificationTest extends TestCase
             'version' => '2.0',
             'app' => 'Uma Musume Companion',
             'data' => [
+                'gacha_pities' => [],
+                'gacha_pulls' => [],
+                'circle_snapshots' => [],
+                'uma_catalog_items' => [],
+                'user_characters' => [],
+                'user_support_cards' => [],
                 'app_settings' => [
                     ['key' => 'app_mode', 'value' => 'corrupted_overwritten'],
                 ],
@@ -1192,6 +1198,14 @@ class BackupVerificationTest extends TestCase
         $maliciousPayload = [
             'version' => '2.0',
             'data' => [
+                'gacha_banners' => [],
+                'gacha_pities' => [],
+                'gacha_pulls' => [],
+                'career_runs' => [],
+                'circle_snapshots' => [],
+                'uma_catalog_items' => [],
+                'user_characters' => [],
+                'user_support_cards' => [],
                 'app_settings' => [
                     ['key' => 'user_theme', 'value' => 'dark'],
                 ],
@@ -1240,6 +1254,14 @@ class BackupVerificationTest extends TestCase
         $cleanPayload = [
             'version' => '2.0',
             'data' => [
+                'gacha_banners' => [],
+                'gacha_pities' => [],
+                'gacha_pulls' => [],
+                'career_runs' => [],
+                'circle_snapshots' => [],
+                'uma_catalog_items' => [],
+                'user_characters' => [],
+                'user_support_cards' => [],
                 'app_settings' => [
                     ['key' => 'user_theme', 'value' => 'light'],
                 ],
@@ -1255,6 +1277,14 @@ class BackupVerificationTest extends TestCase
         $failPayload = [
             'version' => '2.0',
             'data' => [
+                'gacha_banners' => [],
+                'gacha_pities' => [],
+                'gacha_pulls' => [],
+                'career_runs' => [],
+                'circle_snapshots' => [],
+                'uma_catalog_items' => [],
+                'user_characters' => [],
+                'user_support_cards' => [],
                 'app_settings' => [
                     ['key' => 'canary_rollback_setting', 'value' => 'must_be_rolled_back'],
                 ],

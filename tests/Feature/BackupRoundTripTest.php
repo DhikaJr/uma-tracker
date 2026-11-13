@@ -688,6 +688,11 @@ class BackupRoundTripTest extends TestCase
         $payload = [
             'version' => '2.0',
             'data' => [
+                'app_settings' => [],
+                'gacha_banners' => [],
+                'career_runs' => [],
+                'circle_snapshots' => [],
+                'uma_catalog_items' => [],
                 'gacha_pulls' => [
                     [
                         'banner_type' => 'character',
@@ -761,6 +766,14 @@ class BackupRoundTripTest extends TestCase
         $payload = [
             'version' => '2.0',
             'data' => [
+                'app_settings' => [],
+                'gacha_pities' => [],
+                'gacha_pulls' => [],
+                'career_runs' => [],
+                'circle_snapshots' => [],
+                'uma_catalog_items' => [],
+                'user_characters' => [],
+                'user_support_cards' => [],
                 'gacha_banners' => [
                     [
                         'id' => 500,
@@ -921,6 +934,14 @@ class BackupRoundTripTest extends TestCase
         $newBackup = [
             'version' => '2.0',
             'data' => [
+                'app_settings' => [],
+                'gacha_banners' => [],
+                'gacha_pities' => [],
+                'gacha_pulls' => [],
+                'circle_snapshots' => [],
+                'uma_catalog_items' => [],
+                'user_characters' => [],
+                'user_support_cards' => [],
                 'career_runs' => [
                     [
                         'uma_name' => 'The Only Surviving Run',
@@ -1316,6 +1337,11 @@ class BackupRoundTripTest extends TestCase
         $payload = [
             'version' => '2.0',
             'data' => [
+                'gacha_pities' => [],
+                'circle_snapshots' => [],
+                'uma_catalog_items' => [],
+                'user_characters' => [],
+                'user_support_cards' => [],
                 'app_settings' => [
                     ['key' => 'uncommitted_key', 'value' => 'uncommitted_val'],
                 ],
@@ -1608,6 +1634,14 @@ class BackupRoundTripTest extends TestCase
         $payload = [
             'version' => '2.0',
             'data' => [
+                'app_settings' => [],
+                'gacha_pities' => [],
+                'gacha_pulls' => [],
+                'career_runs' => [],
+                'circle_snapshots' => [],
+                'uma_catalog_items' => [],
+                'user_characters' => [],
+                'user_support_cards' => [],
                 'gacha_banners' => [
                     [
                         'id' => 77701,

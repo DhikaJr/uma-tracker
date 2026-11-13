@@ -18,6 +18,9 @@ import {
     Trash2
 } from 'lucide-react';
 
+const MAX_BACKUP_BYTES = 100 * 1024 * 1024;
+const LARGE_BACKUP_HELP = 'Gunakan php artisan uma:restore <file> untuk arsip besar yang melebihi batas server HTTP.';
+
 export default function BackupRestoreModal({ isOpen, onClose, onRestoreSuccess, notify }) {
     const [activeTab, setActiveTab] = useState('backup'); // 'backup' or 'restore'
     const [stats, setStats] = useState(null);
@@ -67,24 +70,33 @@ export default function BackupRestoreModal({ isOpen, onClose, onRestoreSuccess, 
         const file = e.target.files?.[0];
         if (!file) return;
 
-        setSelectedFile(file);
+        setSelectedFile(null);
         setFileError(null);
         setFilePreview(null);
+        setConfirmOverwrite(false);
+
+        if (file.size > MAX_BACKUP_BYTES) {
+            setFileError(`Ukuran file melebihi batas 100 MiB. ${LARGE_BACKUP_HELP}`);
+            return;
+        }
 
         const reader = new FileReader();
         reader.onload = (event) => {
+            if (fileInputRef.current?.files?.[0] !== file) return;
             try {
                 const parsed = JSON.parse(event.target.result);
                 if (!parsed || !parsed.data || typeof parsed.data !== 'object') {
                     throw new Error('File JSON ini bukan cadangan data Uma Musume Companion yang valid (elemen "data" tidak ditemukan).');
                 }
                 setFilePreview(parsed);
+                setSelectedFile(file);
             } catch (err) {
                 setFileError(err.message || 'File bukan file JSON yang valid.');
                 setSelectedFile(null);
             }
         };
         reader.onerror = () => {
+            if (fileInputRef.current?.files?.[0] !== file) return;
             setFileError('Gagal membaca file.');
             setSelectedFile(null);
         };
@@ -147,6 +159,10 @@ export default function BackupRestoreModal({ isOpen, onClose, onRestoreSuccess, 
                 },
                 body: formData,
             });
+
+            if (res.status === 413) {
+                throw new Error(`Ukuran file melebihi batas server HTTP. ${LARGE_BACKUP_HELP}`);
+            }
 
             const result = await res.json();
             if (!res.ok || !result.success) {
@@ -465,14 +481,18 @@ export default function BackupRestoreModal({ isOpen, onClose, onRestoreSuccess, 
                                     ) : (
                                         <div>
                                             <p className="font-bold text-sm text-slate-700 dark:text-slate-200">
-                                                Pilih atau Seret File Backup JSON ke Sini
+                                                Pilih File Backup JSON
                                             </p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                                Hanya file .json hasil ekspor Uma Musume Companion
+                                                File .json hasil ekspor Uma Musume Companion, hingga 100 MiB
                                             </p>
                                         </div>
                                     )}
                                 </div>
+
+                                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                    Untuk arsip besar yang melebihi batas server HTTP, gunakan <code>php artisan uma:restore &lt;file&gt;</code>.
+                                </p>
 
                                 {fileError && (
                                     <div className="mt-2.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">

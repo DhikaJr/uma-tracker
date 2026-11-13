@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Api\CollectionController;
 use App\Models\AppSetting;
 use App\Models\CareerRun;
 use App\Models\GachaBanner;
@@ -11,6 +12,8 @@ use App\Models\UmaCatalogItem;
 use App\Services\BackupService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
@@ -209,7 +212,9 @@ class BackupApiTest extends TestCase
         $this->assertDatabaseHas('gacha_pulls', ['item_name' => 'Old Pull']);
         $this->assertDatabaseHas('gacha_pulls', ['item_name' => 'New Imported Pull']);
         $this->assertDatabaseHas('career_runs', ['uma_name' => 'Tokai Teio']);
-        $this->assertDatabaseHas('gacha_banners', ['id' => 99901]);
+        $banner = GachaBanner::where('name', 'Twinkle Banner Test')->sole();
+        $this->assertNotSame(99901, $banner->id);
+        $this->assertDatabaseHas('gacha_pulls', ['item_name' => 'New Imported Pull', 'gacha_banner_id' => $banner->id]);
         $this->assertEquals(35, GachaPity::forBanner('character')->current_pity);
     }
 
@@ -253,6 +258,114 @@ class BackupApiTest extends TestCase
         $this->assertDatabaseMissing('gacha_pulls', ['item_name' => 'Existing Should Be Deleted']);
         $this->assertDatabaseHas('gacha_pulls', ['item_name' => 'Only This Pull Left']);
         $this->assertEquals(1, GachaPull::count());
+    }
+
+    public function test_partial_v2_overwrite_preserves_every_backup_table(): void
+    {
+        $service = app(BackupService::class);
+        $service->import(['version' => '2.0', 'data' => [
+            'gacha_banners' => [['id' => 51, 'name' => 'Banner Lokal', 'base_rate' => 3.0]],
+            'gacha_pulls' => [['item_name' => 'Special Week', 'banner_type' => 'character', 'rarity' => 'SSR', 'gacha_banner_id' => 51]],
+            'gacha_pities' => [['banner_type' => 'character', 'gacha_banner_id' => 51, 'current_pity' => 20]],
+            'career_runs' => [['uma_name' => 'Special Week', 'scenario' => 'URA Finals']],
+            'circle_snapshots' => [['circle_id' => '123', 'point' => 1200, 'last_refreshed_at' => '2026-11-01']],
+            'app_settings' => [['key' => 'user_theme', 'value' => 'dark']],
+            'uma_catalog_items' => [
+                ['id' => 61, 'type' => 'character', 'name' => 'Special Week'],
+                ['id' => 62, 'type' => 'support_card', 'name' => 'Super Creek'],
+            ],
+            'user_characters' => [['name' => 'Special Week', 'uma_catalog_item_id' => 61]],
+            'user_support_cards' => [['name' => 'Super Creek', 'uma_catalog_item_id' => 62]],
+        ]], 'overwrite');
+
+        $snapshot = fn (array $tables): array => array_map(
+            fn (string $table): array => DB::table($table)->orderBy('id')->get()->toArray(),
+            $tables,
+        );
+        $payload = $service->export();
+        $tables = array_keys($payload['data']);
+        $before = $snapshot($tables);
+        $payload['data']['app_settings'] = [];
+        unset($payload['data']['user_support_cards']);
+
+        $this->postJson('/api/backup/import', ['data' => $payload, 'mode' => 'overwrite'])
+            ->assertUnprocessable()
+            ->assertJsonPath('success', false)
+            ->assertJsonFragment(['message' => "Validasi backup gagal: Mode overwrite untuk skema 2.0 mewajibkan 'user_support_cards' berupa array."]);
+
+        $this->assertEquals($before, $snapshot($tables));
+    }
+
+    public function test_merge_remaps_colliding_source_ids_and_is_idempotent(): void
+    {
+        $service = app(BackupService::class);
+        $snapshot = static fn (string $name, int $gameToraId): array => [
+            'version' => '2.0',
+            'data' => [
+                'gacha_banners' => [['id' => 501, 'name' => $name, 'gametora_id' => $gameToraId, 'base_rate' => 3.0, 'start_date' => '2026-11-01']],
+                'gacha_pities' => [['id' => 502, 'banner_type' => 'character', 'gacha_banner_id' => 501, 'current_pity' => 20]],
+                'gacha_pulls' => [['id' => 503, 'item_name' => 'Gold Ship', 'banner_type' => 'character', 'rarity' => 'SSR', 'gacha_banner_id' => 501, 'pulled_at' => '2026-11-01']],
+                'career_runs' => [['id' => 504, 'uma_name' => $name, 'scenario' => 'URA Finals', 'run_date' => '2026-11-01']],
+                'circle_snapshots' => [['id' => 505, 'circle_id' => (string) $gameToraId, 'circle_name' => $name, 'last_refreshed_at' => '2026-11-01']],
+                'app_settings' => [['key' => $name, 'value' => 'backup setting']],
+                'uma_catalog_items' => [
+                    ['id' => 506, 'name' => $name, 'type' => 'character', 'gametora_id' => $gameToraId],
+                    ['id' => 507, 'name' => $name, 'type' => 'support_card', 'gametora_id' => $gameToraId],
+                ],
+                'user_characters' => [['id' => 508, 'name' => $name, 'uma_catalog_item_id' => 506]],
+                'user_support_cards' => [['id' => 509, 'name' => $name, 'uma_catalog_item_id' => 507]],
+            ],
+        ];
+
+        $first = $snapshot('Snapshot A', 7001);
+        $second = $snapshot('Snapshot B', 7002);
+        Cache::put(CollectionController::ALL_SKILLS_CACHE_KEY, ['stale']);
+        Cache::put(CollectionController::INDEXED_SKILLS_CACHE_KEY, ['stale']);
+        $service->import($first, 'overwrite');
+        $this->assertNull(Cache::get(CollectionController::ALL_SKILLS_CACHE_KEY));
+        $this->assertNull(Cache::get(CollectionController::INDEXED_SKILLS_CACHE_KEY));
+        $before = $service->export()['data'];
+
+        Cache::put(CollectionController::ALL_SKILLS_CACHE_KEY, ['stale']);
+        Cache::put(CollectionController::INDEXED_SKILLS_CACHE_KEY, ['stale']);
+        $result = $service->import($second, 'merge');
+        $merged = $service->export()['data'];
+        $this->assertSame([], $result['unresolved_references']);
+        $this->assertNull(Cache::get(CollectionController::ALL_SKILLS_CACHE_KEY));
+        $this->assertNull(Cache::get(CollectionController::INDEXED_SKILLS_CACHE_KEY));
+
+        foreach ($before as $table => $rows) {
+            $this->assertCount(count($rows) * 2, $merged[$table], $table);
+            $mergedById = array_column($merged[$table], null, 'id');
+            foreach ($rows as $row) {
+                $this->assertSame($row, $mergedById[$row['id']], $table);
+            }
+        }
+        $banner = GachaBanner::where('name', 'Snapshot B')->sole();
+        $this->assertDatabaseHas('gacha_pulls', ['item_name' => 'Gold Ship', 'gacha_banner_id' => $banner->id]);
+        $this->assertDatabaseHas('gacha_pities', ['current_pity' => 20, 'gacha_banner_id' => $banner->id]);
+        foreach (['character' => 'user_characters', 'support_card' => 'user_support_cards'] as $type => $table) {
+            $item = UmaCatalogItem::where('type', $type)->where('name', 'Snapshot B')->sole();
+            $this->assertDatabaseHas($table, ['name' => 'Snapshot B', 'uma_catalog_item_id' => $item->id]);
+        }
+
+        $this->travel(1)->minute();
+        $service->import($second, 'merge');
+        $this->assertSame($merged, $service->export()['data']);
+    }
+
+    public function test_merge_reports_unmapped_banner_even_if_source_id_exists_locally(): void
+    {
+        $banner = GachaBanner::create(['name' => 'Banner Lokal', 'base_rate' => 3.0, 'start_date' => '2026-11-01']);
+        $payload = ['version' => '2.0', 'data' => ['gacha_pulls' => [[
+            'item_name' => 'Gold Ship', 'banner_type' => 'character', 'rarity' => 'SSR', 'gacha_banner_id' => $banner->id,
+        ]]]];
+
+        $this->postJson('/api/backup/import', ['data' => $payload, 'mode' => 'merge'])
+            ->assertOk()
+            ->assertJsonPath('unresolved_references.0.provided_id', $banner->id);
+
+        $this->assertDatabaseHas('gacha_pulls', ['item_name' => 'Gold Ship', 'gacha_banner_id' => null]);
     }
 
     public function test_import_rejects_invalid_json(): void

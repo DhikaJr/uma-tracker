@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Http\Controllers\Api\CollectionController;
 use App\Models\AppSetting;
 use App\Models\CareerRun;
 use App\Models\CircleSnapshot;
@@ -17,6 +18,7 @@ use App\Models\UserSupportCard;
 use App\Support\UmaCatalog;
 use Database\Seeders\CompetitionEventSeeder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use InvalidArgumentException;
@@ -26,6 +28,11 @@ class BackupService
     public const CURRENT_SCHEMA_VERSION = '2.0';
 
     public const SUPPORTED_SCHEMA_VERSIONS = ['0.9', '1.0', '2.0'];
+
+    private const OVERWRITE_V2_ENTITIES = [
+        'gacha_banners', 'gacha_pulls', 'gacha_pities', 'career_runs', 'circle_snapshots',
+        'app_settings', 'uma_catalog_items', 'user_characters', 'user_support_cards',
+    ];
 
     /**
      * Get live count statistics of all backup-able tables and local backup archives.
@@ -262,7 +269,7 @@ class BackupService
      *
      * @throws InvalidArgumentException
      */
-    public function validate(array $backupData): void
+    public function validate(array $backupData, string $mode = 'merge'): void
     {
         ini_set('memory_limit', '512M');
 
@@ -286,6 +293,14 @@ class BackupService
         }
 
         $data = $backupData['data'];
+
+        if ($mode === 'overwrite' && $version === '2.0') {
+            foreach (self::OVERWRITE_V2_ENTITIES as $entity) {
+                if (! is_array($data[$entity] ?? null)) {
+                    throw new InvalidArgumentException("Mode overwrite untuk skema 2.0 mewajibkan '{$entity}' berupa array.");
+                }
+            }
+        }
 
         // 1. app_settings
         if (isset($data['app_settings'])) {
@@ -592,8 +607,15 @@ class BackupService
         ?int $providedCatalogId,
         ?int $gametoraId,
         string $parentEntity,
+        array $catalogIds,
         array &$unresolvedReferences
     ): ?int {
+        $mapped = $catalogIds[$providedCatalogId] ?? null;
+        if ($mapped && $mapped->type === $type
+            && ($mapped->name === $entityName || ($gametoraId !== null && $mapped->gametora_id === $gametoraId))) {
+            return (int) $mapped->id;
+        }
+
         // 1. If gametora_id is provided, search by stable gametora_id first
         if ($gametoraId !== null && $gametoraId > 0) {
             $byGametora = UmaCatalogItem::where('type', $type)
@@ -612,15 +634,7 @@ class BackupService
             return (int) $byName->id;
         }
 
-        // 3. Check if providedCatalogId exists AND actually matches the same name
-        if ($providedCatalogId !== null && $providedCatalogId > 0) {
-            $byId = UmaCatalogItem::find($providedCatalogId);
-            if ($byId && $byId->type === $type && $byId->name === $entityName) {
-                return (int) $byId->id;
-            }
-        }
-
-        // 4. Identity cannot be established with certainty: DO NOT auto-match!
+        // Identity cannot be established with certainty.
         $unresolvedReferences[] = [
             'entity' => $parentEntity,
             'record_name' => $entityName,
@@ -628,6 +642,31 @@ class BackupService
             'provided_id' => $providedCatalogId,
             'gametora_id' => $gametoraId,
             'reason' => "Tidak dapat memverifikasi identitas katalog untuk '{$entityName}' (tipe: {$type}). Relasi diset null untuk mencegah cross-linking.",
+        ];
+
+        return null;
+    }
+
+    /**
+     * @param  array<int, int>  $bannerIds
+     * @param  array<int, array<string, mixed>>  $unresolvedReferences
+     */
+    private function resolveBannerId(?int $sourceId, array $bannerIds, string $entity, string $recordName, array &$unresolvedReferences): ?int
+    {
+        if (! $sourceId) {
+            return null;
+        }
+
+        if (isset($bannerIds[$sourceId])) {
+            return $bannerIds[$sourceId];
+        }
+
+        $unresolvedReferences[] = [
+            'entity' => $entity,
+            'record_name' => $recordName,
+            'field' => 'gacha_banner_id',
+            'provided_id' => $sourceId,
+            'reason' => "Gacha Banner ID {$sourceId} tidak dapat dipetakan dari backup.",
         ];
 
         return null;
@@ -651,7 +690,7 @@ class BackupService
         }
 
         // Explicit validation schema upfront to prevent silent skipping or partial corruptions
-        $this->validate($backupData);
+        $this->validate($backupData, $mode);
 
         $data = $backupData['data'];
         $results = [
@@ -691,22 +730,35 @@ class BackupService
                 $results['restored']['app_settings'] = $count;
             }
 
+            $bannerIds = [];
+            $catalogIds = [];
+
             // 2. Gacha Banners (must be imported before Gacha Pulls & Pities due to foreign keys)
             if (isset($data['gacha_banners']) && is_array($data['gacha_banners'])) {
                 $count = 0;
                 foreach ($data['gacha_banners'] as $row) {
                     $bannerId = isset($row['id']) ? (int) $row['id'] : null;
 
+                    $bannerType = $row['banner_type'] ?? 'character';
+                    $startDate = $row['start_date'] ?? (isset($row['created_at']) ? Carbon::parse($row['created_at'])->toDateString() : null);
                     $banner = null;
-                    if ($bannerId) {
-                        $banner = GachaBanner::find($bannerId);
+
+                    if ($mode === 'overwrite') {
+                        $banner = ($bannerId ? GachaBanner::find($bannerId) : null)
+                            ?? GachaBanner::where('name', $row['name'])->first();
+                    } elseif (! empty($row['gametora_id'])) {
+                        $banner = GachaBanner::where('banner_type', $bannerType)->where('gametora_id', $row['gametora_id'])->first();
+                    } else {
+                        $query = GachaBanner::where('banner_type', $bannerType)->where('name', $row['name']);
+                        if ($startDate !== null) {
+                            $query->whereDate('start_date', Carbon::parse($startDate)->toDateString());
+                        }
+                        $banner = $query->first();
                     }
-                    if (! $banner && ! empty($row['name'])) {
-                        $banner = GachaBanner::where('name', $row['name'])->first();
-                    }
+
                     if (! $banner) {
                         $banner = new GachaBanner;
-                        if ($bannerId) {
+                        if ($mode === 'overwrite' && $bannerId) {
                             $banner->id = $bannerId;
                         }
                     }
@@ -721,7 +773,7 @@ class BackupService
                         'banner_type' => $row['banner_type'] ?? 'character',
                         'category' => $row['category'] ?? 'standard',
                         'base_rate' => (float) $row['base_rate'],
-                        'start_date' => $row['start_date'] ?? (isset($row['created_at']) ? Carbon::parse($row['created_at'])->toDateString() : now()->toDateString()),
+                        'start_date' => $startDate ?? $banner->start_date ?? now()->toDateString(),
                         'end_date' => $row['end_date'] ?? null,
                         'featured_items' => $featuredItems,
                         'is_active' => (bool) ($row['is_active'] ?? true),
@@ -735,6 +787,9 @@ class BackupService
                     }
 
                     $banner->save();
+                    if ($bannerId !== null) {
+                        $bannerIds[$bannerId] = $banner->id;
+                    }
                     $count++;
                 }
                 $results['restored']['gacha_banners'] = $count;
@@ -745,30 +800,20 @@ class BackupService
                 $count = 0;
                 foreach ($data['gacha_pities'] as $row) {
                     $bannerType = (string) $row['banner_type'];
-                    $bannerId = null;
-
-                    if (! empty($row['gacha_banner_id'])) {
-                        $bannerExists = GachaBanner::where('id', $row['gacha_banner_id'])->exists();
-                        if ($bannerExists) {
-                            $bannerId = (int) $row['gacha_banner_id'];
-                        } else {
-                            $results['unresolved_references'][] = [
-                                'entity' => 'gacha_pities',
-                                'record_name' => $bannerType,
-                                'field' => 'gacha_banner_id',
-                                'provided_id' => $row['gacha_banner_id'],
-                                'reason' => "Gacha Banner ID {$row['gacha_banner_id']} tidak ditemukan. Relasi diset null.",
-                            ];
-                        }
-                    }
+                    $sourceBannerId = isset($row['gacha_banner_id']) ? (int) $row['gacha_banner_id'] : null;
+                    $bannerId = $this->resolveBannerId($sourceBannerId, $bannerIds, 'gacha_pities', $bannerType, $results['unresolved_references']);
 
                     $pity = GachaPity::where('banner_type', $bannerType)
                         ->where('gacha_banner_id', $bannerId)
                         ->first();
 
+                    if ($mode === 'merge' && $pity && $sourceBannerId && $bannerId === null) {
+                        continue;
+                    }
+
                     if (! $pity) {
                         $pity = new GachaPity;
-                        if (isset($row['id'])) {
+                        if ($mode === 'overwrite' && isset($row['id'])) {
                             $pity->id = (int) $row['id'];
                         }
                     }
@@ -798,38 +843,35 @@ class BackupService
             if (isset($data['gacha_pulls']) && is_array($data['gacha_pulls'])) {
                 $count = 0;
                 foreach ($data['gacha_pulls'] as $row) {
-                    $bannerId = null;
-                    if (! empty($row['gacha_banner_id'])) {
-                        $bannerExists = GachaBanner::where('id', $row['gacha_banner_id'])->exists();
-                        if ($bannerExists) {
-                            $bannerId = (int) $row['gacha_banner_id'];
-                        } else {
-                            $results['unresolved_references'][] = [
-                                'entity' => 'gacha_pulls',
-                                'record_name' => $row['item_name'],
-                                'field' => 'gacha_banner_id',
-                                'provided_id' => $row['gacha_banner_id'],
-                                'reason' => "Gacha Banner ID {$row['gacha_banner_id']} tidak ditemukan. Relasi diset null.",
-                            ];
-                        }
-                    }
+                    $sourceBannerId = isset($row['gacha_banner_id']) ? (int) $row['gacha_banner_id'] : null;
+                    $bannerId = $this->resolveBannerId($sourceBannerId, $bannerIds, 'gacha_pulls', $row['item_name'], $results['unresolved_references']);
 
                     $pull = null;
-                    if (isset($row['id'])) {
+                    if ($mode === 'overwrite' && isset($row['id'])) {
                         $pull = GachaPull::find($row['id']);
                     }
-                    if (! $pull && $mode === 'merge' && isset($row['pulled_at'])) {
-                        $pull = GachaPull::where('item_name', $row['item_name'])
+                    $pulledAt = $row['pulled_at'] ?? $row['created_at'] ?? null;
+                    if ($mode === 'merge') {
+                        $query = GachaPull::where('item_name', $row['item_name'])
                             ->where('banner_type', $row['banner_type'])
+                            ->where('gacha_banner_id', $bannerId)
                             ->where('rarity', $row['rarity'])
-                            ->where('pity_count_at_pull', (int) ($row['pity_count_at_pull'] ?? 0))
-                            ->where('pulled_at', Carbon::parse($row['pulled_at'])->toDateTimeString())
-                            ->first();
+                            ->where('pull_type', $row['pull_type'] ?? 'single')
+                            ->where('is_rate_up', (bool) ($row['is_rate_up'] ?? false))
+                            ->where('pity_count_at_pull', (int) ($row['pity_count_at_pull'] ?? 0));
+                        if ($pulledAt !== null) {
+                            $query->where('pulled_at', Carbon::parse($pulledAt)->toDateTimeString());
+                        }
+                        $pull = $query->first();
+
+                        if ($pull && $sourceBannerId && $bannerId === null) {
+                            continue;
+                        }
                     }
 
                     if (! $pull) {
                         $pull = new GachaPull;
-                        if (isset($row['id'])) {
+                        if ($mode === 'overwrite' && isset($row['id'])) {
                             $pull->id = (int) $row['id'];
                         }
                     }
@@ -842,7 +884,7 @@ class BackupService
                         'rarity' => $row['rarity'],
                         'is_rate_up' => (bool) ($row['is_rate_up'] ?? false),
                         'pity_count_at_pull' => (int) ($row['pity_count_at_pull'] ?? 0),
-                        'pulled_at' => isset($row['pulled_at']) ? Carbon::parse($row['pulled_at']) : now(),
+                        'pulled_at' => $pulledAt !== null ? Carbon::parse($pulledAt) : ($pull->pulled_at ?? now()),
                     ]);
 
                     if (isset($row['created_at'])) {
@@ -863,7 +905,9 @@ class BackupService
                 $count = 0;
                 foreach ($data['career_runs'] as $row) {
                     $umaName = (string) ($row['uma_name'] ?? $row['character_name'] ?? '');
-                    $runDate = $row['run_date'] ?? now()->toDateString();
+                    $runDate = isset($row['run_date']) || isset($row['created_at'])
+                        ? Carbon::parse($row['run_date'] ?? $row['created_at'])->toDateString()
+                        : null;
                     $scenario = (string) $row['scenario'];
                     $trainingType = (string) ($row['training_type'] ?? 'manual');
                     $startingFans = (int) ($row['starting_fans'] ?? 0);
@@ -875,18 +919,25 @@ class BackupService
                         : null;
 
                     $run = null;
-                    if (isset($row['id'])) {
+                    if ($mode === 'overwrite' && isset($row['id'])) {
                         $run = CareerRun::find($row['id']);
                     }
                     if (! $run && $mode === 'merge') {
                         $query = CareerRun::where('uma_name', $umaName)
-                            ->where('run_date', $runDate)
                             ->where('scenario', $scenario)
+                            ->where('training_type', $trainingType)
                             ->where('fans_gained', $fansGained)
-                            ->where('final_rank', $finalRank);
+                            ->where('final_rank', $finalRank)
+                            ->where('evaluation_score', $evalScore);
 
-                        if ($evalScore !== null) {
-                            $query->where('evaluation_score', $evalScore);
+                        if ($runDate !== null) {
+                            $query->whereDate('run_date', $runDate);
+                        }
+                        if (isset($row['starting_fans'])) {
+                            $query->where('starting_fans', $startingFans);
+                        }
+                        if (isset($row['ending_fans'])) {
+                            $query->where('ending_fans', $endingFans);
                         }
 
                         $run = $query->first();
@@ -894,14 +945,14 @@ class BackupService
 
                     if (! $run) {
                         $run = new CareerRun;
-                        if (isset($row['id'])) {
+                        if ($mode === 'overwrite' && isset($row['id'])) {
                             $run->id = (int) $row['id'];
                         }
                     }
 
                     $run->fill([
                         'uma_name' => $umaName,
-                        'run_date' => $runDate,
+                        'run_date' => $runDate ?? $run->run_date ?? now()->toDateString(),
                         'scenario' => $scenario,
                         'training_type' => $trainingType,
                         'starting_fans' => $startingFans,
@@ -965,7 +1016,7 @@ class BackupService
                     }
 
                     $snapshot = null;
-                    if (isset($row['id'])) {
+                    if ($mode === 'overwrite' && isset($row['id'])) {
                         $snapshot = CircleSnapshot::find($row['id']);
                     }
                     if (! $snapshot) {
@@ -976,7 +1027,7 @@ class BackupService
 
                     if (! $snapshot) {
                         $snapshot = new CircleSnapshot;
-                        if (isset($row['id'])) {
+                        if ($mode === 'overwrite' && isset($row['id'])) {
                             $snapshot->id = (int) $row['id'];
                         }
                     }
@@ -1011,7 +1062,7 @@ class BackupService
                 $count = 0;
                 foreach ($data['uma_catalog_items'] as $row) {
                     $catalogItem = null;
-                    if (isset($row['id'])) {
+                    if ($mode === 'overwrite' && isset($row['id'])) {
                         $catalogItem = UmaCatalogItem::find($row['id']);
                     }
                     if (! $catalogItem) {
@@ -1019,9 +1070,14 @@ class BackupService
                             ->where('name', $row['name'])
                             ->first();
                     }
+                    if (! $catalogItem && $mode === 'merge' && ! empty($row['gametora_id'])) {
+                        $catalogItem = UmaCatalogItem::where('type', $row['type'])
+                            ->where('gametora_id', $row['gametora_id'])
+                            ->first();
+                    }
                     if (! $catalogItem) {
                         $catalogItem = new UmaCatalogItem;
-                        if (isset($row['id'])) {
+                        if ($mode === 'overwrite' && isset($row['id'])) {
                             $catalogItem->id = (int) $row['id'];
                         }
                     }
@@ -1056,6 +1112,9 @@ class BackupService
                     }
 
                     $catalogItem->save();
+                    if (isset($row['id'])) {
+                        $catalogIds[(int) $row['id']] = $catalogItem;
+                    }
                     $count++;
                 }
                 $results['restored']['uma_catalog_items'] = $count;
@@ -1075,11 +1134,12 @@ class BackupService
                         $providedCatalogId,
                         $gametoraId,
                         'user_characters',
+                        $catalogIds,
                         $results['unresolved_references']
                     );
 
                     $userChar = null;
-                    if (isset($row['id'])) {
+                    if ($mode === 'overwrite' && isset($row['id'])) {
                         $userChar = UserCharacter::find($row['id']);
                     }
                     if (! $userChar) {
@@ -1087,7 +1147,7 @@ class BackupService
                     }
                     if (! $userChar) {
                         $userChar = new UserCharacter;
-                        if (isset($row['id'])) {
+                        if ($mode === 'overwrite' && isset($row['id'])) {
                             $userChar->id = (int) $row['id'];
                         }
                     }
@@ -1129,11 +1189,12 @@ class BackupService
                         $providedCatalogId,
                         $gametoraId,
                         'user_support_cards',
+                        $catalogIds,
                         $results['unresolved_references']
                     );
 
                     $userCard = null;
-                    if (isset($row['id'])) {
+                    if ($mode === 'overwrite' && isset($row['id'])) {
                         $userCard = UserSupportCard::find($row['id']);
                     }
                     if (! $userCard) {
@@ -1141,7 +1202,7 @@ class BackupService
                     }
                     if (! $userCard) {
                         $userCard = new UserSupportCard;
-                        if (isset($row['id'])) {
+                        if ($mode === 'overwrite' && isset($row['id'])) {
                             $userCard->id = (int) $row['id'];
                         }
                     }
@@ -1177,8 +1238,11 @@ class BackupService
             }
         });
 
-        // Invalidate in-memory cached character rosters & star ratings
-        UmaCatalog::clearCache();
+        DB::afterCommit(static function (): void {
+            UmaCatalog::clearCache();
+            Cache::forget(CollectionController::ALL_SKILLS_CACHE_KEY);
+            Cache::forget(CollectionController::INDEXED_SKILLS_CACHE_KEY);
+        });
 
         return $results;
     }

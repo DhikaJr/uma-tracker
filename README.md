@@ -61,7 +61,9 @@ php artisan uma:backup
 php artisan uma:restore storage/app/backups/nama-backup.json --mode=merge
 ```
 
-Cadangan secara bawaan tersimpan di `storage/app/backups/`. Mode `merge` menggabungkan data. Mode `overwrite` mengosongkan sembilan entitas sebelum memulihkan isinya. Lihat [spesifikasi backup](docs/backup_specification.md) untuk kompatibilitas format dan perilaku pemulihan.
+Cadangan secara bawaan tersimpan di `storage/app/backups/`. Mode `merge` menggabungkan data. Mode `overwrite` skema v2.0 mewajibkan kesembilan kelompok data, termasuk array kosong untuk tabel tanpa isi, sebelum mengganti isinya. Lihat [spesifikasi backup](docs/backup_specification.md) untuk kompatibilitas format dan perilaku pemulihan.
+
+Gunakan `php artisan uma:restore <file>` sebagai jalur utama untuk arsip besar jika batas server HTTP terlampaui. Aplikasi menerima unggahan hingga 100 MiB, dengan batas efektif mengikuti `upload_max_filesize` dan `post_max_size` pada server PHP.
 
 ## Pengujian
 
