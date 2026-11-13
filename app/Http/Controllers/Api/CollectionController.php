@@ -13,11 +13,14 @@ use App\Services\UmaAffinityService;
 use App\Support\SkillConditionTranslator;
 use App\Support\SupportCardUniqueEffectFormatter;
 use App\Support\UmaCatalog;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use JsonException;
+use RuntimeException;
 
 class CollectionController extends Controller
 {
@@ -1887,18 +1890,13 @@ class CollectionController extends Controller
      */
     public function getDeckPresets(): JsonResponse
     {
-        $filePath = $this->getDeckPresetsFilePath();
-        if (! File::exists($filePath)) {
-            return response()->json([]);
-        }
+        try {
+            return response()->json($this->readDeckPresets($this->getDeckPresetsFilePath()));
+        } catch (JsonException|RuntimeException $e) {
+            report($e);
 
-        $content = File::get($filePath);
-        $presets = json_decode($content, true);
-        if (! is_array($presets)) {
-            $presets = [];
+            return response()->json(['success' => false, 'message' => 'Gagal membaca berkas preset deck.'], 500);
         }
-
-        return response()->json($presets);
     }
 
     /**
@@ -1919,20 +1917,6 @@ class CollectionController extends Controller
             'slots.*.limit_break' => 'nullable|integer|min:0|max:4',
             'slots.*.is_friend' => 'nullable|boolean',
         ]);
-
-        $filePath = $this->getDeckPresetsFilePath();
-        $dir = dirname($filePath);
-        if (! File::isDirectory($dir)) {
-            File::makeDirectory($dir, 0755, true);
-        }
-
-        $presets = [];
-        if (File::exists($filePath)) {
-            $decoded = json_decode(File::get($filePath), true);
-            if (is_array($decoded)) {
-                $presets = $decoded;
-            }
-        }
 
         $presetId = ! empty($validated['id']) ? (string) $validated['id'] : (string) Str::uuid();
         $updatedAt = now()->toIso8601String();
@@ -1955,24 +1939,19 @@ class CollectionController extends Controller
             'updated_at' => $updatedAt,
         ];
 
-        // If preset already exists, update in-place; otherwise prepend
-        $existingIndex = null;
-        foreach ($presets as $idx => $p) {
-            if (isset($p['id']) && (string) $p['id'] === $presetId) {
-                $existingIndex = $idx;
-                break;
+        return $this->changeDeckPresets(function (array $presets) use ($presetId, $presetData): array {
+            foreach ($presets as $index => $preset) {
+                if ((string) $preset['id'] === $presetId) {
+                    $presets[$index] = $presetData;
+
+                    return $presets;
+                }
             }
-        }
 
-        if ($existingIndex !== null) {
-            $presets[$existingIndex] = $presetData;
-        } else {
             array_unshift($presets, $presetData);
-        }
 
-        File::put($filePath, json_encode($presets, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-
-        return response()->json([
+            return $presets;
+        }, [
             'success' => true,
             'preset' => $presetData,
             'message' => 'Preset deck berhasil disimpan.',
@@ -1984,42 +1963,79 @@ class CollectionController extends Controller
      */
     public function deleteDeckPreset(string $id): JsonResponse
     {
-        $filePath = $this->getDeckPresetsFilePath();
-        if (! File::exists($filePath)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Preset deck tidak ditemukan.',
-            ], 404);
-        }
+        return $this->changeDeckPresets(static function (array $presets) use ($id): ?array {
+            $filtered = array_values(array_filter($presets, fn (array $preset) => (string) $preset['id'] !== $id));
 
-        $presets = json_decode(File::get($filePath), true);
-        if (! is_array($presets)) {
-            $presets = [];
-        }
+            return count($filtered) === count($presets) ? null : $filtered;
+        }, ['success' => true, 'message' => 'Preset deck berhasil dihapus.']);
+    }
 
-        $found = false;
-        $filtered = [];
-        foreach ($presets as $p) {
-            if (isset($p['id']) && (string) $p['id'] === (string) $id) {
-                $found = true;
+    /**
+     * @param  Closure(list<array<string, mixed>>): (?array)  $change
+     * @param  array<string, mixed>  $response
+     */
+    private function changeDeckPresets(Closure $change, array $response): JsonResponse
+    {
+        $path = $this->getDeckPresetsFilePath();
+        $directory = dirname($path);
+        $lock = null;
+        $temporaryPath = null;
 
-                continue;
+        try {
+            if (! File::isDirectory($directory)) {
+                File::ensureDirectoryExists($directory);
             }
-            $filtered[] = $p;
+            $lock = @fopen($path.'.lock', 'c');
+            if ($lock === false || ! flock($lock, LOCK_EX)) {
+                throw new RuntimeException('Gagal mengunci berkas preset.');
+            }
+
+            $presets = $this->readDeckPresets($path);
+            $updated = $change($presets);
+            if ($updated === null) {
+                return response()->json(['success' => false, 'message' => 'Preset deck tidak ditemukan.'], 404);
+            }
+
+            $json = json_encode($updated, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            $temporaryPath = @tempnam($directory, 'deck-');
+            if ($temporaryPath === false || realpath(dirname($temporaryPath)) !== realpath($directory)
+                || File::put($temporaryPath, $json) !== strlen($json) || ! @rename($temporaryPath, $path)) {
+                throw new RuntimeException('Gagal mengganti berkas preset.');
+            }
+
+            return response()->json($response);
+        } catch (JsonException|RuntimeException $e) {
+            report($e);
+
+            return response()->json(['success' => false, 'message' => 'Gagal mengubah preset deck. Periksa berkas preset dan izin penyimpanan.'], 500);
+        } finally {
+            if (is_string($temporaryPath) && File::exists($temporaryPath)) {
+                File::delete($temporaryPath);
+            }
+            if (is_resource($lock)) {
+                fclose($lock);
+            }
+        }
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function readDeckPresets(string $path): array
+    {
+        if (! File::exists($path)) {
+            return [];
         }
 
-        if (! $found) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Preset deck tidak ditemukan.',
-            ], 404);
+        $content = File::get($path);
+        $presets = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
+        if (! str_starts_with(ltrim($content), '[') || ! is_array($presets) || ! array_is_list($presets)) {
+            throw new RuntimeException('Berkas preset harus berisi daftar JSON.');
+        }
+        foreach ($presets as $preset) {
+            if (! is_array($preset) || (! is_string($preset['id'] ?? null) && ! is_int($preset['id'] ?? null))) {
+                throw new RuntimeException('ID preset tidak valid.');
+            }
         }
 
-        File::put($filePath, json_encode($filtered, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Preset deck berhasil dihapus.',
-        ]);
+        return $presets;
     }
 }

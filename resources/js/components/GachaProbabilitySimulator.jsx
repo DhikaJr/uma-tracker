@@ -176,11 +176,7 @@ export default function GachaProbabilitySimulator({ stats, onNotify }) {
     const [customSsr, setCustomSsr] = useState(3);
     const [customRate, setCustomRate] = useState(3.0);
 
-    // Read live pool data from server stats
-    const pools = stats?.pools || {};
-    const stdPool = pools.standard || { total_pulls: 0, ssr_count: 0, base_rate: 3.0 };
-    const bstPool = pools.boosted || { total_pulls: 0, ssr_count: 0, base_rate: 4.5 };
-    const allPool = pools.all || { total_pulls: 0, ssr_count: 0, base_rate: 3.0 };
+    const accountLuck = stats?.luck_analysis?.[luckPool];
 
     // Active Luck data based on selected pool
     const activeLuckData = useMemo(() => {
@@ -204,55 +200,16 @@ export default function GachaProbabilitySimulator({ stats, onNotify }) {
             };
         }
 
-        if (luckPool === 'standard') {
-            const n = stdPool.total_pulls || 0;
-            const k = stdPool.ssr_count || 0;
-            const pct = n > 0 ? computeBinomialCdf(n, k, 0.03) : 50.0;
-            return {
-                name: 'Banner Standar (Base Rate 3.0%)',
-                total_pulls: n,
-                ssr_count: k,
-                base_rate: 3.0,
-                ssr_rate: stdPool.ssr_rate || 0.0,
-                expected_ssr: Math.round(n * 0.03 * 10) / 10,
-                percentile: pct,
-            };
-        }
-
-        if (luckPool === 'boosted') {
-            const n = bstPool.total_pulls || 0;
-            const k = bstPool.ssr_count || 0;
-            const pct = n > 0 ? computeBinomialCdf(n, k, 0.045) : 50.0;
-            return {
-                name: 'Banner Boosted (Special 4.5% Epiphaneia/Anniv)',
-                total_pulls: n,
-                ssr_count: k,
-                base_rate: 4.5,
-                ssr_rate: bstPool.ssr_rate || 0.0,
-                expected_ssr: Math.round(n * 0.045 * 10) / 10,
-                percentile: pct,
-            };
-        }
-
-        // Overall hybrid pool
-        const nStd = stdPool.total_pulls || 0;
-        const kStd = stdPool.ssr_count || 0;
-        const nBst = bstPool.total_pulls || 0;
-        const kBst = bstPool.ssr_count || 0;
-        const nAll = allPool.total_pulls || (nStd + nBst);
-        const kAll = allPool.ssr_count || (kStd + kBst);
-
-        const expSsr = (nStd * 0.03) + (nBst * 0.045);
         return {
-            name: 'Semua Gacha Akun (Standar 3% + Boosted 4.5%)',
-            total_pulls: nAll,
-            ssr_count: kAll,
-            base_rate: allPool.base_rate || 3.0,
-            ssr_rate: allPool.ssr_rate || (nAll > 0 ? Math.round((kAll / nAll) * 10000) / 100 : 0.0),
-            expected_ssr: Math.round(expSsr * 10) / 10,
-            percentile: allPool.percentile ?? 50.0,
+            name: accountLuck?.name ?? 'Riwayat Gacha',
+            total_pulls: accountLuck?.total_pulls ?? 0,
+            ssr_count: accountLuck?.ssr_count ?? 0,
+            base_rate: accountLuck?.base_rate ?? 3.0,
+            ssr_rate: accountLuck?.rate_percent ?? 0,
+            expected_ssr: accountLuck?.expected_ssr ?? 0,
+            percentile: accountLuck?.percentile ?? 50.0,
         };
-    }, [luckPool, customPulls, customSsr, customRate, stdPool, bstPool, allPool]);
+    }, [luckPool, customPulls, customSsr, customRate, accountLuck]);
 
     const activeTier = getLuckTier(activeLuckData.percentile);
     const TierIcon = activeTier.icon;
@@ -373,8 +330,8 @@ export default function GachaProbabilitySimulator({ stats, onNotify }) {
                     <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 dark:bg-slate-800/90 p-1.5 rounded-2xl shrink-0">
                         {[
                             { id: 'overall', label: 'Semua Banner' },
-                            { id: 'standard', label: 'Standar (3.0%)' },
-                            { id: 'boosted', label: 'Boosted (4.5%)' },
+                            { id: 'standard', label: 'Standar (≤ 3%)' },
+                            { id: 'boosted', label: 'Boosted (> 3%)' },
                             { id: 'custom', label: '🧪 Kustom' },
                         ].map((p) => (
                             <button

@@ -37,26 +37,6 @@ class UpdateGachaPullRequest extends FormRequest
     }
 
     /**
-     * Prepare the data for validation.
-     */
-    protected function prepareForValidation(): void
-    {
-        $bannerId = $this->input('gacha_banner_id');
-        if (! $bannerId) {
-            $pullId = $this->route('id') ?? $this->route('pull');
-            $pull = $pullId ? GachaPull::find($pullId) : null;
-            $bannerId = $pull?->gacha_banner_id;
-        }
-
-        if ($bannerId) {
-            $banner = GachaBanner::find($bannerId);
-            if ($banner && $banner->isTwinkle()) {
-                $this->merge(['is_rate_up' => false]);
-            }
-        }
-    }
-
-    /**
      * Configure the validator instance.
      */
     public function withValidator(Validator $validator): void
@@ -89,28 +69,16 @@ class UpdateGachaPullRequest extends FormRequest
                 }
             }
 
-            $isRateUp = $this->has('is_rate_up')
-                ? filter_var($this->input('is_rate_up'), FILTER_VALIDATE_BOOLEAN)
-                : (bool) ($pull?->is_rate_up);
-
-            if (! $isRateUp) {
+            // Changing the pull's identity normalizes its flag against the destination.
+            if ($this->hasAny(['gacha_banner_id', 'item_name', 'rarity']) || ! $this->boolean('is_rate_up')) {
                 return;
             }
 
-            $rarity = (string) ($this->input('rarity') ?? $pull?->rarity ?? '');
-            if ($rarity === 'R') {
-                $validator->errors()->add('is_rate_up', 'Kartu dengan rarity R tidak dapat dijadikan rate-up.');
-
-                return;
+            $banner = $bannerId ? GachaBanner::find($bannerId) : null;
+            if ($pull?->rarity === 'R' || ($banner && ! $banner->isTwinkle() && ! $banner->isItemRateUp($itemName))) {
+                $validator->errors()->add('is_rate_up', 'Tarikan ini tidak memenuhi syarat rate-up pada banner yang dipilih.');
             }
 
-            if ($bannerId) {
-                $banner = GachaBanner::find($bannerId);
-                if ($banner && ! $banner->isItemRateUp($itemName)) {
-                    $bannerName = $banner->name;
-                    $validator->errors()->add('is_rate_up', "Kartu '{$itemName}' bukan merupakan pilihan rate-up pada banner '{$bannerName}'.");
-                }
-            }
         });
     }
 }

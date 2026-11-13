@@ -221,7 +221,8 @@ export default function RatingCalculatorView({ onApplyToCareerForm }) {
             const saved = localStorage.getItem(STORAGE_KEY_OPTIMIZER);
             if (saved) {
                 const parsed = JSON.parse(saved);
-                if (parsed.budgetPt !== undefined) return parseInt(parsed.budgetPt, 10) || 1500;
+                const savedBudget = parseInt(parsed.budgetPt, 10);
+                if (Number.isFinite(savedBudget)) return savedBudget;
             }
         } catch {}
         return 1500;
@@ -400,6 +401,7 @@ export default function RatingCalculatorView({ onApplyToCareerForm }) {
 
     // Dynamic Knapsack Optimization Solver Execution
     const optimizationResult = useMemo(() => {
+        if (activeMode !== 'optimizer') return null;
         return optimizeSkillBuild({
             budgetPt,
             candidates: optimizerCandidates,
@@ -407,10 +409,10 @@ export default function RatingCalculatorView({ onApplyToCareerForm }) {
             isFastLearner,
             alreadyOwnedSkillIds: selectedSkills.map(s => s.id),
         });
-    }, [budgetPt, optimizerCandidates, raceConfig, isFastLearner, selectedSkills]);
+    }, [activeMode, budgetPt, optimizerCandidates, raceConfig, isFastLearner, selectedSkills]);
 
     // Rating projection after applying optimizer
-    const projectedTotalScoreAfterOptimizer = breakdown.totalScore + optimizationResult.totalRatingGain;
+    const projectedTotalScoreAfterOptimizer = breakdown.totalScore + (optimizationResult?.totalRatingGain ?? 0);
     const projectedRankAfterOptimizer = getRankFromScore(projectedTotalScoreAfterOptimizer);
 
     // Handle stat input change

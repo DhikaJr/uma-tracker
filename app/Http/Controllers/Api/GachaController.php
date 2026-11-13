@@ -14,6 +14,7 @@ use App\Models\GachaPull;
 use App\Services\GameToraSyncService;
 use App\Support\UmaCatalog;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -214,41 +215,34 @@ class GachaController extends Controller
      */
     public function update(UpdateGachaPullRequest $request, int $id): JsonResponse
     {
-        $pull = GachaPull::findOrFail($id);
-        $oldBannerType = $pull->banner_type;
-        $oldBannerId = $pull->gacha_banner_id;
+        return DB::transaction(function () use ($request, $id) {
+            $pull = GachaPull::findOrFail($id);
+            $oldBannerType = $pull->banner_type;
+            $oldBannerId = $pull->gacha_banner_id;
 
-        $data = $request->validated();
+            $data = $request->validated();
 
-        if (array_key_exists('is_rate_up', $data)) {
-            $bannerId = $data['gacha_banner_id'] ?? $pull->gacha_banner_id;
-            $itemName = $data['item_name'] ?? $pull->item_name;
-            if ($bannerId) {
-                $banner = GachaBanner::find($bannerId);
-                if ($banner && ! $banner->isItemRateUp($itemName)) {
-                    $data['is_rate_up'] = false;
-                }
+            $data['is_rate_up'] = $this->updatedRateUp($pull, $data);
+
+            $pull->update($data);
+
+            // Recalculate pity for the old banner
+            $oldPity = GachaPity::recalculate($oldBannerType, $oldBannerId);
+
+            // If banner type or banner ID changed, also recalculate for the new banner
+            $newPity = $oldPity;
+            if (($pull->banner_type !== $oldBannerType) || ($pull->gacha_banner_id !== $oldBannerId)) {
+                $newPity = GachaPity::recalculate($pull->banner_type, $pull->gacha_banner_id);
             }
-        }
 
-        $pull->update($data);
-
-        // Recalculate pity for the old banner
-        $oldPity = GachaPity::recalculate($oldBannerType, $oldBannerId);
-
-        // If banner type or banner ID changed, also recalculate for the new banner
-        $newPity = $oldPity;
-        if (($pull->banner_type !== $oldBannerType) || ($pull->gacha_banner_id !== $oldBannerId)) {
-            $newPity = GachaPity::recalculate($pull->banner_type, $pull->gacha_banner_id);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Data tarikan gacha berhasil diperbarui.',
-            'pull' => $pull->fresh(),
-            'data' => $pull->fresh(),
-            'active_pity' => $newPity,
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Data tarikan gacha berhasil diperbarui.',
+                'pull' => $pull->fresh(),
+                'data' => $pull->fresh(),
+                'active_pity' => $newPity,
+            ]);
+        });
     }
 
     /**
@@ -256,20 +250,22 @@ class GachaController extends Controller
      */
     public function destroy(int $id): JsonResponse
     {
-        $pull = GachaPull::findOrFail($id);
-        $bannerType = $pull->banner_type;
-        $gachaBannerId = $pull->gacha_banner_id;
+        return DB::transaction(function () use ($id) {
+            $pull = GachaPull::findOrFail($id);
+            $bannerType = $pull->banner_type;
+            $gachaBannerId = $pull->gacha_banner_id;
 
-        $pull->delete();
+            $pull->delete();
 
-        // Recalculate pity count for this banner immediately so it never desyncs
-        $newPity = GachaPity::recalculate($bannerType, $gachaBannerId);
+            // Recalculate pity count for this banner immediately so it never desyncs
+            $newPity = GachaPity::recalculate($bannerType, $gachaBannerId);
 
-        return response()->json([
-            'message' => 'Gacha pull deleted successfully.',
-            'active_pity' => $newPity,
-            'gacha_banner_id' => $gachaBannerId,
-        ]);
+            return response()->json([
+                'message' => 'Gacha pull deleted successfully.',
+                'active_pity' => $newPity,
+                'gacha_banner_id' => $gachaBannerId,
+            ]);
+        });
     }
 
     /**
@@ -277,29 +273,31 @@ class GachaController extends Controller
      */
     public function bulkDestroy(BulkDeleteRequest $request): JsonResponse
     {
-        $ids = $request->validated()['ids'];
-        $pulls = GachaPull::whereIn('id', $ids)->get(['id', 'banner_type', 'gacha_banner_id']);
+        return DB::transaction(function () use ($request) {
+            $ids = $request->validated()['ids'];
+            $pulls = GachaPull::whereIn('id', $ids)->get();
 
-        $affectedPairs = [];
-        foreach ($pulls as $pull) {
-            $key = $pull->banner_type.'_'.($pull->gacha_banner_id ?? 'null');
-            $affectedPairs[$key] = [
-                'banner_type' => $pull->banner_type,
-                'gacha_banner_id' => $pull->gacha_banner_id,
-            ];
-        }
+            $affectedPairs = [];
+            foreach ($pulls as $pull) {
+                $key = $pull->banner_type.'_'.($pull->gacha_banner_id ?? 'null');
+                $affectedPairs[$key] = [
+                    'banner_type' => $pull->banner_type,
+                    'gacha_banner_id' => $pull->gacha_banner_id,
+                ];
+            }
 
-        $deleted = GachaPull::whereIn('id', $ids)->delete();
+            $deleted = GachaPull::whereIn('id', $ids)->delete();
 
-        foreach ($affectedPairs as $pair) {
-            GachaPity::recalculate($pair['banner_type'], $pair['gacha_banner_id']);
-        }
+            foreach ($affectedPairs as $pair) {
+                GachaPity::recalculate($pair['banner_type'], $pair['gacha_banner_id']);
+            }
 
-        return response()->json([
-            'success' => true,
-            'message' => "{$deleted} data gacha pull berhasil dihapus.",
-            'deleted_count' => $deleted,
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => "{$deleted} data gacha pull berhasil dihapus.",
+                'deleted_count' => $deleted,
+            ]);
+        });
     }
 
     /**
@@ -307,70 +305,94 @@ class GachaController extends Controller
      */
     public function bulkUpdate(BulkUpdateGachaPullRequest $request): JsonResponse
     {
-        $validated = $request->validated();
-        $ids = $validated['ids'];
+        return DB::transaction(function () use ($request) {
+            $validated = $request->validated();
+            $ids = $validated['ids'];
 
-        $updateData = [];
-        if (! empty($validated['pull_type'])) {
-            $updateData['pull_type'] = $validated['pull_type'];
-        }
-        if (array_key_exists('gacha_banner_id', $validated) && $validated['gacha_banner_id'] !== null) {
-            $updateData['gacha_banner_id'] = $validated['gacha_banner_id'];
-            $banner = GachaBanner::find($validated['gacha_banner_id']);
-            if ($banner) {
-                $updateData['banner_type'] = $banner->banner_type;
-                if ($banner->isTwinkle()) {
-                    $updateData['is_rate_up'] = false;
+            $updateData = [];
+            if (! empty($validated['pull_type'])) {
+                $updateData['pull_type'] = $validated['pull_type'];
+            }
+            if (isset($validated['gacha_banner_id'])) {
+                $updateData['gacha_banner_id'] = $validated['gacha_banner_id'];
+                $banner = GachaBanner::find($validated['gacha_banner_id']);
+                if ($banner) {
+                    $updateData['banner_type'] = $banner->banner_type;
                 }
             }
-        }
-        if (! empty($validated['pulled_at'])) {
-            $updateData['pulled_at'] = $validated['pulled_at'];
-        }
+            if (! empty($validated['pulled_at'])) {
+                $updateData['pulled_at'] = $validated['pulled_at'];
+            }
 
-        if (empty($updateData)) {
+            if (empty($updateData)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak ada atribut perubahan yang dipilih.',
+                ], 422);
+            }
+
+            $pulls = GachaPull::whereIn('id', $ids)->get();
+            if ($pulls->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak ada data gacha pull yang cocok dengan ID terpilih.',
+                ], 404);
+            }
+
+            $affectedPairs = [];
+            foreach ($pulls as $pull) {
+                $key = $pull->banner_type.'_'.($pull->gacha_banner_id ?? 'null');
+                $affectedPairs[$key] = [
+                    'banner_type' => $pull->banner_type,
+                    'gacha_banner_id' => $pull->gacha_banner_id,
+                ];
+            }
+
+            if (isset($updateData['banner_type'])) {
+                $newKey = $updateData['banner_type'].'_'.($updateData['gacha_banner_id'] ?? 'null');
+                $affectedPairs[$newKey] = [
+                    'banner_type' => $updateData['banner_type'],
+                    'gacha_banner_id' => $updateData['gacha_banner_id'] ?? null,
+                ];
+            }
+
+            foreach ($pulls as $pull) {
+                $pull->update([...$updateData, 'is_rate_up' => $this->updatedRateUp($pull, $updateData)]);
+            }
+            $updated = $pulls->count();
+
+            foreach ($affectedPairs as $pair) {
+                GachaPity::recalculate($pair['banner_type'], $pair['gacha_banner_id']);
+            }
+
             return response()->json([
-                'success' => false,
-                'message' => 'Tidak ada atribut perubahan yang dipilih.',
-            ], 422);
+                'success' => true,
+                'message' => "{$updated} data gacha pull berhasil diperbarui secara massal.",
+                'updated_count' => $updated,
+            ]);
+        });
+    }
+
+    /** @param array<string, mixed> $changes */
+    private function updatedRateUp(GachaPull $pull, array $changes): bool
+    {
+        $bannerId = $changes['gacha_banner_id'] ?? $pull->gacha_banner_id;
+        $itemName = $changes['item_name'] ?? $pull->item_name;
+        $rarity = $changes['rarity'] ?? $pull->rarity;
+        $banner = $bannerId ? GachaBanner::find($bannerId) : null;
+        if ($rarity === 'R' || ($banner && ! $banner->isItemRateUp($itemName))) {
+            return false;
         }
 
-        $pulls = GachaPull::whereIn('id', $ids)->get(['id', 'banner_type', 'gacha_banner_id']);
-        if ($pulls->isEmpty()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Tidak ada data gacha pull yang cocok dengan ID terpilih.',
-            ], 404);
+        if (array_key_exists('is_rate_up', $changes)) {
+            return (bool) $changes['is_rate_up'];
         }
 
-        $affectedPairs = [];
-        foreach ($pulls as $pull) {
-            $key = $pull->banner_type.'_'.($pull->gacha_banner_id ?? 'null');
-            $affectedPairs[$key] = [
-                'banner_type' => $pull->banner_type,
-                'gacha_banner_id' => $pull->gacha_banner_id,
-            ];
+        if ($banner?->isSelectPickup() && ((int) $bannerId !== (int) $pull->gacha_banner_id || $itemName !== $pull->item_name)) {
+            return false;
         }
 
-        if (isset($updateData['banner_type'])) {
-            $newKey = $updateData['banner_type'].'_'.($updateData['gacha_banner_id'] ?? 'null');
-            $affectedPairs[$newKey] = [
-                'banner_type' => $updateData['banner_type'],
-                'gacha_banner_id' => $updateData['gacha_banner_id'] ?? null,
-            ];
-        }
-
-        $updated = GachaPull::whereIn('id', $ids)->update($updateData);
-
-        foreach ($affectedPairs as $pair) {
-            GachaPity::recalculate($pair['banner_type'], $pair['gacha_banner_id']);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => "{$updated} data gacha pull berhasil diperbarui secara massal.",
-            'updated_count' => $updated,
-        ]);
+        return (bool) $pull->is_rate_up;
     }
 
     /**
@@ -385,7 +407,7 @@ class GachaController extends Controller
 
         $baseQuery = GachaPull::query();
         if ($bannerType !== 'all') {
-            $baseQuery->where('banner_type', $bannerType);
+            $baseQuery->where('gacha_pulls.banner_type', $bannerType);
         }
         if ($gachaBannerId !== 'all' && is_numeric($gachaBannerId)) {
             $baseQuery->where('gacha_banner_id', (int) $gachaBannerId);
@@ -438,49 +460,51 @@ class GachaController extends Controller
         $allR = (clone $baseQuery)->where('rarity', 'R')->count();
         $allRate = $allTotal > 0 ? round(($allSsr / $allTotal) * 100, 2) : 0.0;
 
-        // Base rate determination
-        if ($gachaBannerId !== 'all' && is_numeric($gachaBannerId)) {
-            $selectedBanner = GachaBanner::find((int) $gachaBannerId);
-            $baseRate = (float) ($selectedBanner->base_rate ?? 3.00);
-        } elseif ($ratePool === 'boosted' || $ratePool === '4.5') {
-            $baseRate = 4.50;
-        } elseif ($ratePool === 'standard' || $ratePool === '3.0') {
-            $baseRate = 3.00;
-        } elseif ($request->has('base_rate') && (float) $request->input('base_rate') > 0) {
+        $allGroups = $this->pullRateGroups($baseQuery);
+        $stdGroups = array_filter($allGroups, fn ($group) => $group['rate'] <= 3.0);
+        $bstGroups = array_filter($allGroups, fn ($group) => $group['rate'] > 3.0);
+        $stdExpected = $this->expectedSsr($stdGroups);
+        $bstExpected = $this->expectedSsr($bstGroups);
+        $expectedSsr = $stdExpected + $bstExpected;
+        $stdBaseRate = $stdTotal ? round(100 * $stdExpected / $stdTotal, 2) : 3.0;
+        $bstBaseRate = $bstTotal ? round(100 * $bstExpected / $bstTotal, 2) : 4.5;
+        $allBaseRate = $allTotal ? round(100 * $expectedSsr / $allTotal, 2) : 3.0;
+        $baseRate = match ($ratePool) {
+            'standard', '3.0' => $stdBaseRate,
+            'boosted', '4.5' => $bstBaseRate,
+            default => $allBaseRate,
+        };
+        if ($totalPulls === 0 && is_numeric($gachaBannerId)) {
+            $baseRate = (float) (GachaBanner::find((int) $gachaBannerId)?->base_rate ?? $baseRate);
+        } elseif ($gachaBannerId === 'all' && $ratePool === 'all'
+            && is_numeric($request->input('base_rate')) && (float) $request->input('base_rate') > 0) {
+            // The optional benchmark applies to the headline comparison only.
             $baseRate = (float) $request->input('base_rate');
-        } else {
-            // Auto-detect based on banner composition in current query
-            if ($allTotal > 0 && $stdTotal === 0 && $bstTotal > 0) {
-                $baseRate = 4.50;
-            } elseif ($allTotal > 0 && $bstTotal === 0 && $stdTotal > 0) {
-                $baseRate = 3.00;
-            } else {
-                $baseRate = 3.00;
-            }
         }
-
         $luckDiff = round($ssrRate - $baseRate, 2);
 
         // Global Category Breakdown (all-time pulls per banner type)
-        $charQueryGlobal = GachaPull::where('banner_type', 'character');
+        $charQueryGlobal = GachaPull::where('gacha_pulls.banner_type', 'character');
         $charTotal = (clone $charQueryGlobal)->count();
         $charSsr = (clone $charQueryGlobal)->where('rarity', 'SSR')->count();
         $charSr = (clone $charQueryGlobal)->where('rarity', 'SR')->count();
         $charR = (clone $charQueryGlobal)->where('rarity', 'R')->count();
         $charRate = $charTotal > 0 ? round(($charSsr / $charTotal) * 100, 2) : 0.0;
-        $charBstCount = (clone $charQueryGlobal)->whereHas('banner', fn ($bq) => $bq->where('base_rate', '>', 3.0))->count();
-        $charStdCount = $charTotal - $charBstCount;
-        $charBaseRate = $charTotal > 0 ? ($charStdCount === 0 && $charBstCount > 0 ? 4.50 : ($charBstCount === 0 ? 3.00 : round((($charStdCount * 0.03 + $charBstCount * 0.045) / $charTotal) * 100, 2))) : 4.50;
+        $charExpected = $this->expectedSsr($this->pullRateGroups($charQueryGlobal));
+        $charBaseRate = $charTotal ? round(100 * $charExpected / $charTotal, 2) : 3.0;
 
-        $suppQueryGlobal = GachaPull::where('banner_type', 'support_card');
+        $suppQueryGlobal = GachaPull::where('gacha_pulls.banner_type', 'support_card');
         $suppTotal = (clone $suppQueryGlobal)->count();
         $suppSsr = (clone $suppQueryGlobal)->where('rarity', 'SSR')->count();
         $suppSr = (clone $suppQueryGlobal)->where('rarity', 'SR')->count();
         $suppR = (clone $suppQueryGlobal)->where('rarity', 'R')->count();
         $suppRate = $suppTotal > 0 ? round(($suppSsr / $suppTotal) * 100, 2) : 0.0;
-        $suppBstCount = (clone $suppQueryGlobal)->whereHas('banner', fn ($bq) => $bq->where('base_rate', '>', 3.0))->count();
-        $suppStdCount = $suppTotal - $suppBstCount;
-        $suppBaseRate = $suppTotal > 0 ? ($suppStdCount === 0 && $suppBstCount > 0 ? 4.50 : ($suppBstCount === 0 ? 3.00 : round((($suppStdCount * 0.03 + $suppBstCount * 0.045) / $suppTotal) * 100, 2))) : 3.00;
+        $suppExpected = $this->expectedSsr($this->pullRateGroups($suppQueryGlobal));
+        $suppBaseRate = $suppTotal ? round(100 * $suppExpected / $suppTotal, 2) : 3.0;
+
+        $globalExpected = $charExpected + $suppExpected;
+        $globalTotal = $charTotal + $suppTotal;
+        $globalBaseRate = $globalTotal ? round(100 * $globalExpected / $globalTotal, 2) : 3.0;
 
         $categories = [
             'character' => [
@@ -493,7 +517,7 @@ class GachaController extends Controller
                 'ssr_rate' => $charRate,
                 'base_rate' => $charBaseRate,
                 'luck_diff' => round($charRate - $charBaseRate, 2),
-                'expected_interval' => $charBaseRate > 3.0 ? 22.2 : 33.3,
+                'expected_interval' => $charBaseRate > 0 ? round(100 / $charBaseRate, 1) : null,
             ],
             'support_card' => [
                 'name' => 'Gacha Support Card',
@@ -505,7 +529,7 @@ class GachaController extends Controller
                 'ssr_rate' => $suppRate,
                 'base_rate' => $suppBaseRate,
                 'luck_diff' => round($suppRate - $suppBaseRate, 2),
-                'expected_interval' => $suppBaseRate > 3.0 ? 22.2 : 33.3,
+                'expected_interval' => $suppBaseRate > 0 ? round(100 / $suppBaseRate, 1) : null,
             ],
             'all' => [
                 'name' => 'Semua Gacha (Gabungan)',
@@ -515,54 +539,53 @@ class GachaController extends Controller
                 'sr_count' => $charSr + $suppSr,
                 'r_count' => $charR + $suppR,
                 'ssr_rate' => ($charTotal + $suppTotal) > 0 ? round((($charSsr + $suppSsr) / ($charTotal + $suppTotal)) * 100, 2) : 0.0,
-                'base_rate' => 3.00,
-                'luck_diff' => round((($charTotal + $suppTotal) > 0 ? round((($charSsr + $suppSsr) / ($charTotal + $suppTotal)) * 100, 2) : 0.0) - 3.00, 2),
-                'expected_interval' => 33.3,
+                'base_rate' => $globalBaseRate,
+                'luck_diff' => round((($charTotal + $suppTotal) > 0 ? round((($charSsr + $suppSsr) / ($charTotal + $suppTotal)) * 100, 2) : 0.0) - $globalBaseRate, 2),
+                'expected_interval' => $globalBaseRate > 0 ? round(100 / $globalBaseRate, 1) : null,
             ],
         ];
 
         $pools = [
             'all' => [
                 'name' => 'Semua Gacha (Gabungan)',
-                'base_rate' => $baseRate,
+                'base_rate' => $allBaseRate,
                 'total_pulls' => $allTotal,
                 'ssr_count' => $allSsr,
                 'sr_count' => $allSr,
                 'r_count' => $allR,
                 'ssr_rate' => $allRate,
-                'luck_diff' => round($allRate - $baseRate, 2),
+                'luck_diff' => round($allRate - $allBaseRate, 2),
             ],
             'standard' => [
-                'name' => 'Standar (3.0%)',
-                'base_rate' => 3.00,
+                'name' => 'Standar (≤ 3%)',
+                'base_rate' => $stdBaseRate,
                 'total_pulls' => $stdTotal,
                 'ssr_count' => $stdSsr,
                 'sr_count' => $stdSr,
                 'r_count' => $stdR,
                 'ssr_rate' => $stdRate,
-                'luck_diff' => round($stdRate - 3.00, 2),
+                'luck_diff' => round($stdRate - $stdBaseRate, 2),
             ],
             'boosted' => [
-                'name' => 'Boosted (4.5% Epiphaneia)',
-                'base_rate' => 4.50,
+                'name' => 'Boosted (> 3%)',
+                'base_rate' => $bstBaseRate,
                 'total_pulls' => $bstTotal,
                 'ssr_count' => $bstSsr,
                 'sr_count' => $bstSr,
                 'r_count' => $bstR,
                 'ssr_rate' => $bstRate,
-                'luck_diff' => round($bstRate - 4.50, 2),
+                'luck_diff' => round($bstRate - $bstBaseRate, 2),
             ],
         ];
 
         // Binomial Luck Analysis (Cumulative Binomial Distribution P(X <= k))
-        $stdPercentile = $stdTotal > 0 ? $this->computeBinomialCdf($stdTotal, $stdSsr, 0.03) : 50.0;
+        $stdPercentile = $this->computeCompositeBinomialCdf($stdGroups, $stdSsr);
         $stdTier = $this->resolveLuckTier($stdPercentile);
 
-        $bstPercentile = $bstTotal > 0 ? $this->computeBinomialCdf($bstTotal, $bstSsr, 0.045) : 50.0;
+        $bstPercentile = $this->computeCompositeBinomialCdf($bstGroups, $bstSsr);
         $bstTier = $this->resolveLuckTier($bstPercentile);
 
-        $expectedSsr = ($stdTotal * 0.03) + ($bstTotal * 0.045);
-        $allPercentile = $allTotal > 0 ? $this->computeCompositeBinomialCdf($stdTotal, $bstTotal, $allSsr) : 50.0;
+        $allPercentile = $this->computeCompositeBinomialCdf($allGroups, $allSsr);
         $allTier = $this->resolveLuckTier($allPercentile);
 
         $pools['all']['percentile'] = $allPercentile;
@@ -579,24 +602,24 @@ class GachaController extends Controller
 
         $luckAnalysis = [
             'standard' => [
-                'name' => 'Standar (3.0%)',
+                'name' => 'Standar (≤ 3%)',
                 'total_pulls' => $stdTotal,
                 'ssr_count' => $stdSsr,
-                'expected_ssr' => round($stdTotal * 0.03, 1),
+                'expected_ssr' => round($stdExpected, 2),
                 'rate_percent' => $stdRate,
-                'base_rate' => 3.0,
+                'base_rate' => $stdBaseRate,
                 'percentile' => $stdPercentile,
                 'tier' => $stdTier['tier'],
                 'tier_label' => $stdTier['label'],
                 'color' => $stdTier['color'],
             ],
             'boosted' => [
-                'name' => 'Boosted (4.5%)',
+                'name' => 'Boosted (> 3%)',
                 'total_pulls' => $bstTotal,
                 'ssr_count' => $bstSsr,
-                'expected_ssr' => round($bstTotal * 0.045, 1),
+                'expected_ssr' => round($bstExpected, 2),
                 'rate_percent' => $bstRate,
-                'base_rate' => 4.5,
+                'base_rate' => $bstBaseRate,
                 'percentile' => $bstPercentile,
                 'tier' => $bstTier['tier'],
                 'tier_label' => $bstTier['label'],
@@ -606,9 +629,9 @@ class GachaController extends Controller
                 'name' => 'Semua Gacha (Gabungan)',
                 'total_pulls' => $allTotal,
                 'ssr_count' => $allSsr,
-                'expected_ssr' => round($expectedSsr, 1),
+                'expected_ssr' => round($expectedSsr, 2),
                 'rate_percent' => $allRate,
-                'base_rate' => round($baseRate, 2),
+                'base_rate' => $allBaseRate,
                 'percentile' => $allPercentile,
                 'tier' => $allTier['tier'],
                 'tier_label' => $allTier['label'],
@@ -776,38 +799,40 @@ class GachaController extends Controller
      */
     public function resetPity(Request $request): JsonResponse
     {
-        $bannerType = $request->input('banner_type', 'character');
-        $gachaBannerId = $request->input('gacha_banner_id');
+        return DB::transaction(function () use ($request) {
+            $bannerType = $request->input('banner_type', 'character');
+            $gachaBannerId = $request->input('gacha_banner_id');
 
-        if ($gachaBannerId !== null && $gachaBannerId !== '' && $gachaBannerId !== 'all') {
-            $gachaBannerId = (int) $gachaBannerId;
-            $banner = GachaBanner::find($gachaBannerId);
-            if ($banner) {
-                $bannerType = $banner->banner_type;
+            if ($gachaBannerId !== null && $gachaBannerId !== '' && $gachaBannerId !== 'all') {
+                $gachaBannerId = (int) $gachaBannerId;
+                $banner = GachaBanner::find($gachaBannerId);
+                if ($banner) {
+                    $bannerType = $banner->banner_type;
+                }
+            } else {
+                $gachaBannerId = null;
             }
-        } else {
-            $gachaBannerId = null;
-        }
 
-        $pity = GachaPity::forBanner($bannerType, $gachaBannerId);
-        $previousPity = $pity->current_pity;
+            $pity = GachaPity::forBanner($bannerType, $gachaBannerId);
+            $previousPity = $pity->current_pity;
 
-        $pity->current_pity = 0;
-        $pity->total_sparks = ($pity->total_sparks ?? 0) + 1;
-        $pity->last_reset_at = now();
-        $pity->save();
+            $pity->current_pity = 0;
+            $pity->total_sparks = ($pity->total_sparks ?? 0) + 1;
+            $pity->last_reset_at = now();
+            $pity->save();
 
-        GachaPity::recalculate($bannerType, $gachaBannerId);
+            GachaPity::recalculate($bannerType, $gachaBannerId);
 
-        $targetName = isset($banner) ? $banner->name : ($bannerType === 'support_card' ? 'Support Card' : 'Character');
+            $targetName = isset($banner) ? $banner->name : ($bannerType === 'support_card' ? 'Support Card' : 'Character');
 
-        return response()->json([
-            'message' => "Pity counter for {$targetName} reset to 0 (was {$previousPity}).",
-            'banner_type' => $bannerType,
-            'gacha_banner_id' => $gachaBannerId,
-            'current_pity' => 0,
-            'total_sparks' => $pity->total_sparks,
-        ]);
+            return response()->json([
+                'message' => "Pity counter for {$targetName} reset to 0 (was {$previousPity}).",
+                'banner_type' => $bannerType,
+                'gacha_banner_id' => $gachaBannerId,
+                'current_pity' => 0,
+                'total_sparks' => $pity->total_sparks,
+            ]);
+        });
     }
 
     /**
@@ -841,34 +866,81 @@ class GachaController extends Controller
         return response()->json($result, $result['success'] ? 200 : 500);
     }
 
-    /**
-     * Compute P(Standard SSR + Boosted SSR <= observed SSR) by convolving both binomials.
-     */
-    private function computeCompositeBinomialCdf(int $standardPulls, int $boostedPulls, int $observedSsr): float
+    /** @return list<array{rate: float, pulls: int}> */
+    private function pullRateGroups(Builder $query): array
     {
-        if ($observedSsr >= $standardPulls + $boostedPulls) {
+        return (clone $query)
+            ->leftJoin('gacha_banners', 'gacha_banners.id', '=', 'gacha_pulls.gacha_banner_id')
+            ->selectRaw('COALESCE(gacha_banners.base_rate, 3.0) AS rate, COUNT(*) AS pulls')
+            ->groupByRaw('COALESCE(gacha_banners.base_rate, 3.0)')
+            ->toBase()->get()
+            ->map(fn ($row) => ['rate' => (float) $row->rate, 'pulls' => (int) $row->pulls])
+            ->all();
+    }
+
+    /** @param array<array{rate: float, pulls: int}> $groups */
+    private function expectedSsr(array $groups): float
+    {
+        return array_sum(array_map(fn ($group) => $group['pulls'] * $group['rate'] / 100.0, $groups));
+    }
+
+    /** @param array<array{rate: float, pulls: int}> $groups */
+    private function computeCompositeBinomialCdf(array $groups, int $observedSsr): float
+    {
+        if ($groups === []) {
+            return 50.0;
+        }
+
+        $randomGroups = [];
+        foreach ($groups as $group) {
+            if ($group['rate'] >= 100.0) {
+                $observedSsr -= $group['pulls'];
+            } elseif ($group['rate'] > 0.0) {
+                $randomGroups[] = $group;
+            }
+        }
+
+        if ($observedSsr < 0) {
+            return 0.0;
+        }
+        if ($observedSsr >= array_sum(array_column($randomGroups, 'pulls'))) {
             return 100.0;
         }
 
-        $standardWeights = $this->binomialWeights($standardPulls, 0.03);
-        $boostedWeights = $this->binomialWeights($boostedPulls, 0.045);
-        $totalBoostedWeight = 0.0;
-        $boostedCumulativeWeights = [];
-
-        foreach ($boostedWeights as $count => $weight) {
-            $totalBoostedWeight += $weight;
-            $boostedCumulativeWeights[$count] = $totalBoostedWeight;
+        $distribution = [1.0];
+        $lastGroup = array_pop($randomGroups);
+        foreach ($randomGroups as $group) {
+            $weights = $this->binomialWeights($group['pulls'], $group['rate'] / 100.0);
+            $total = array_sum($weights);
+            $limit = min($observedSsr, $group['pulls']);
+            $next = array_fill(0, min($observedSsr, count($distribution) - 1 + $limit) + 1, 0.0);
+            for ($successes = 0; $successes <= $limit; $successes++) {
+                $probability = $weights[$successes] / $total;
+                foreach ($distribution as $count => $mass) {
+                    if ($count + $successes > $observedSsr) {
+                        break;
+                    }
+                    $next[$count + $successes] += $mass * $probability;
+                }
+            }
+            $distribution = $next;
         }
 
-        $cumulativeWeight = 0.0;
-        for ($count = 0; $count <= min($standardPulls, $observedSsr); $count++) {
-            $maxBoostedSsr = min($boostedPulls, $observedSsr - $count);
-            $cumulativeWeight += $standardWeights[$count] * $boostedCumulativeWeights[$maxBoostedSsr];
+        $weights = $this->binomialWeights($lastGroup['pulls'], $lastGroup['rate'] / 100.0);
+        $total = array_sum($weights);
+        $cumulative = 0.0;
+        foreach ($weights as &$weight) {
+            $cumulative += $weight;
+            $weight = $cumulative / $total;
+        }
+        unset($weight);
+
+        $cdf = 0.0;
+        foreach ($distribution as $count => $mass) {
+            $cdf += $mass * $weights[min($lastGroup['pulls'], $observedSsr - $count)];
         }
 
-        $totalWeight = array_sum($standardWeights) * $totalBoostedWeight;
-
-        return round(min(1.0, $cumulativeWeight / $totalWeight) * 100.0, 2);
+        return round(min(1.0, $cdf) * 100.0, 2);
     }
 
     /**

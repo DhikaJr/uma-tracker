@@ -67,12 +67,13 @@ Gunakan `php artisan uma:restore <file>` sebagai jalur utama untuk arsip besar j
 
 ## Pengujian
 
-PHPUnit menggunakan SQLite `:memory:` melalui konfigurasi proyek.
+PHPUnit menggunakan SQLite `:memory:` melalui konfigurasi proyek. Jalankan build terlebih dahulu agar `PwaTest` dapat memeriksa aset yang dihasilkan.
 
 ```powershell
+npm run build
 php artisan test --compact
 php artisan test --filter=BackupVerificationTest
-node --test tests/Unit/skillOptimizerHelper.test.js
+node --test tests/Unit/*.test.js
 vendor/bin/pint
 ```
 

@@ -1174,7 +1174,57 @@ class CollectionApiTest extends TestCase
         if (File::exists($path)) {
             File::delete($path);
         }
+        File::delete($path.'.lock');
         CollectionController::$deckPresetsFilePath = null;
+    }
+
+    public function test_deck_preset_mutations_preserve_corrupt_json(): void
+    {
+        $path = $this->setUpTestDeckPresetPath();
+        $broken = '[{"id":"existing"},';
+        File::put($path, $broken);
+
+        try {
+            $this->getJson('/api/collection/deck-presets')->assertServerError();
+            $this->postJson('/api/collection/deck-presets', [
+                'name' => 'New', 'slots' => array_map(fn ($index) => ['slot_index' => $index], range(0, 5)),
+            ])->assertServerError();
+            $this->deleteJson('/api/collection/deck-presets/existing')->assertServerError();
+            $this->assertSame($broken, File::get($path));
+        } finally {
+            $this->tearDownTestDeckPresetPath($path);
+        }
+    }
+
+    public function test_deck_preset_write_failure_preserves_existing_bytes(): void
+    {
+        $path = $this->setUpTestDeckPresetPath();
+        $original = '[{"id":"existing","name":"Keep"}]';
+        File::put($path, $original);
+
+        try {
+            File::partialMock()->shouldReceive('put')->once()->andReturn(false);
+            $this->deleteJson('/api/collection/deck-presets/existing')->assertServerError();
+            $this->assertSame($original, File::get($path));
+        } finally {
+            $this->tearDownTestDeckPresetPath($path);
+        }
+    }
+
+    public function test_back_to_back_deck_preset_updates_keep_both_changes(): void
+    {
+        $path = $this->setUpTestDeckPresetPath();
+        $slots = array_map(fn ($index) => ['slot_index' => $index], range(0, 5));
+
+        try {
+            foreach (['First', 'Second'] as $name) {
+                $this->postJson('/api/collection/deck-presets', ['name' => $name, 'slots' => $slots])->assertOk();
+            }
+            $this->getJson('/api/collection/deck-presets')->assertOk()->assertJsonCount(2)
+                ->assertJsonPath('0.name', 'Second')->assertJsonPath('1.name', 'First');
+        } finally {
+            $this->tearDownTestDeckPresetPath($path);
+        }
     }
 
     public function test_can_get_empty_support_deck_presets(): void

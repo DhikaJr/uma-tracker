@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import Navbar from './components/Navbar';
 import MobileBottomNav from './components/MobileBottomNav';
 import Toast from './components/Toast';
@@ -197,36 +197,33 @@ export default function AppMain() {
         }
     };
 
-    const notify = (message, type = 'success') => {
+    const notify = useCallback((message, type = 'success') => {
         setToast({ message, type });
-    };
+    }, []);
 
-    // Load Dashboard Summary Data
-    const loadSummary = async () => {
-        setLoadingSummary(true);
-        try {
-            const res = await fetch(`/api/dashboard/summary?base_rate=${baseRate}`);
-            const data = await res.json();
-            setSummaryData(data);
-        } catch (err) {
-            console.error('Failed to load dashboard summary:', err);
-        } finally {
-            setLoadingSummary(false);
-        }
-    };
-
-    useEffect(() => {
-        loadSummary();
-    }, [baseRate]);
-
+    const [summaryRevision, setSummaryRevision] = useState(0);
+    const loadSummary = useCallback(() => setSummaryRevision(revision => revision + 1), []);
     const [liveMonthlyFans, setLiveMonthlyFans] = useState(null);
+    const isDashboard = activeTab === 'dashboard';
 
-    // Refresh summary when switching to dashboard
     useEffect(() => {
-        if (activeTab === 'dashboard') {
-            loadSummary();
-        }
-    }, [activeTab]);
+        const controller = new AbortController();
+        const fetchSummary = async () => {
+            setLoadingSummary(true);
+            try {
+                const res = await fetch(`/api/dashboard/summary?base_rate=${baseRate}`, { signal: controller.signal });
+                if (!res.ok) throw new Error('Gagal memuat ringkasan');
+                const data = await res.json();
+                if (!controller.signal.aborted) setSummaryData(data);
+            } catch (err) {
+                if (!controller.signal.aborted) console.error('Failed to load dashboard summary:', err);
+            } finally {
+                if (!controller.signal.aborted) setLoadingSummary(false);
+            }
+        };
+        fetchSummary();
+        return () => controller.abort();
+    }, [isDashboard, baseRate, summaryRevision]);
 
     const handleCareerStatsUpdate = (stats) => {
         if (stats && typeof stats.monthly_fans === 'number') {
@@ -277,7 +274,6 @@ export default function AppMain() {
                     {activeTab === 'gacha' && (
                         <GachaView 
                             onNotify={notify} 
-                            baseRate={baseRate}
                             setBaseRate={updateBaseRate}
                         />
                     )}

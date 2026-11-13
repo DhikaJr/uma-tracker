@@ -2,6 +2,14 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.7] - 13 November 2026
+
+### Riwayat Gacha dan penyimpanan preset dek
+
+- Perubahan riwayat Gacha memperbarui pity dalam satu transaksi dan menyesuaikan status rate-up saat tarikan berpindah banner.
+- Analisis Luck memakai rate SSR tiap banner. Pencarian riwayat kembali ke halaman pertama dan mengabaikan respons yang sudah usang.
+- Preset dek disimpan secara atomik. Kalkulator mempertahankan anggaran 0 Pt dan menjalankan optimasi saat mode Skill Optimizer aktif.
+
 ## [Versi 3.3.6] - 13 November 2026
 
 ### Pemulihan backup dan akurasi Perencana Jewel

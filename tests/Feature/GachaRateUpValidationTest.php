@@ -205,6 +205,29 @@ class GachaRateUpValidationTest extends TestCase
             ->assertJsonValidationErrors(['is_rate_up']);
     }
 
+    public function test_select_pickup_candidate_requires_explicit_rate_up_on_banner_change(): void
+    {
+        $item = $this->selectPickupBanner->featured_items[0];
+        $origin = GachaBanner::create([
+            'name' => 'Original Support', 'banner_type' => 'support_card',
+            'featured_items' => [$item], 'start_date' => '2026-01-01',
+        ]);
+        $pull = GachaPull::create([
+            'banner_type' => 'support_card', 'gacha_banner_id' => $origin->id, 'pull_type' => 'single',
+            'item_name' => $item, 'rarity' => 'SSR', 'is_rate_up' => true, 'pulled_at' => '2026-01-02',
+        ]);
+
+        $this->postJson('/api/gacha/pulls/bulk-update', [
+            'ids' => [$pull->id], 'gacha_banner_id' => $this->selectPickupBanner->id,
+        ])->assertOk();
+        $this->assertFalse($pull->fresh()->is_rate_up);
+
+        $this->putJson('/api/gacha/pulls/'.$pull->id, ['is_rate_up' => true])->assertOk()
+            ->assertJsonPath('pull.is_rate_up', true);
+        $this->putJson('/api/gacha/pulls/'.$pull->id, ['rarity' => 'R', 'is_rate_up' => true])->assertOk()
+            ->assertJsonPath('pull.is_rate_up', false);
+    }
+
     /**
      * Single pull should reject when banner_type mismatches the gacha_banner's banner_type.
      */

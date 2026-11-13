@@ -5,13 +5,77 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\GachaBanner;
+use App\Models\GachaPity;
 use App\Models\GachaPull;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use RuntimeException;
 use Tests\TestCase;
 
 class GachaBulkUpdateTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_moving_pulls_recalculates_both_banners_and_clears_invalid_rate_up(): void
+    {
+        $origin = GachaBanner::create(['name' => 'Origin', 'start_date' => '2026-01-01', 'featured_items' => ['Gold Ship']]);
+        $destination = GachaBanner::create(['name' => 'Destination', 'start_date' => '2026-01-01', 'featured_items' => ['Special Week']]);
+        $pulls = [];
+        foreach ([$origin, $origin, $destination] as $banner) {
+            $pulls[] = GachaPull::create([
+                'gacha_banner_id' => $banner->id, 'banner_type' => 'character', 'pull_type' => 'single',
+                'item_name' => 'Gold Ship', 'rarity' => 'SSR', 'is_rate_up' => $banner->is($origin), 'pulled_at' => '2026-01-01',
+            ]);
+        }
+
+        $this->putJson('/api/gacha/pulls/'.$pulls[0]->id, ['gacha_banner_id' => $destination->id])->assertOk();
+        $this->assertFalse($pulls[0]->fresh()->is_rate_up);
+        $this->assertSame(1, GachaPity::forBanner('character', $origin->id)->current_pity);
+        $this->assertSame(2, GachaPity::forBanner('character', $destination->id)->current_pity);
+
+        $this->postJson('/api/gacha/pulls/bulk-update', ['ids' => [$pulls[1]->id], 'gacha_banner_id' => $destination->id])->assertOk();
+        $this->assertFalse($pulls[1]->fresh()->is_rate_up);
+        $this->assertSame(0, GachaPity::forBanner('character', $origin->id)->current_pity);
+        $this->assertSame(3, GachaPity::forBanner('character', $destination->id)->current_pity);
+    }
+
+    #[DataProvider('pityMutations')]
+    public function test_mutation_rolls_back_when_pity_recalculation_fails(string $method, string $path): void
+    {
+        $pull = GachaPull::create([
+            'banner_type' => 'character', 'pull_type' => 'single', 'item_name' => 'Gold Ship',
+            'rarity' => 'SSR', 'pulled_at' => '2026-01-01',
+        ]);
+        GachaPity::recalculate('character');
+        $pity = GachaPity::forBanner('character');
+        $original = GachaPity::getEventDispatcher();
+        GachaPity::setEventDispatcher(clone $original);
+        GachaPity::saving(static function () use ($path): void {
+            static $saves = 0;
+            if (++$saves === ($path === '/reset-pity' ? 2 : 1)) {
+                throw new RuntimeException('Simulated pity recalculation failure');
+            }
+        });
+
+        try {
+            $this->json($method, '/api/gacha'.str_replace('{id}', (string) $pull->id, $path), [
+                'ids' => [$pull->id], 'pull_type' => 'ticket', 'banner_type' => 'character',
+            ])->assertServerError();
+        } finally {
+            GachaPity::setEventDispatcher($original);
+        }
+
+        $this->assertSame('single', $pull->fresh()->pull_type);
+        $this->assertSame($pity->getAttributes(), $pity->fresh()->getAttributes());
+    }
+
+    public static function pityMutations(): array
+    {
+        return [
+            ['PUT', '/pulls/{id}'], ['DELETE', '/pulls/{id}'], ['POST', '/pulls/bulk-update'],
+            ['POST', '/pulls/bulk-delete'], ['POST', '/reset-pity'],
+        ];
+    }
 
     public function test_can_bulk_update_pull_type_across_multiple_rows(): void
     {

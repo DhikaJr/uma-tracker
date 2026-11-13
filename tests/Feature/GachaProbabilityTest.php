@@ -13,6 +13,38 @@ class GachaProbabilityTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_luck_stats_use_custom_and_deterministic_banner_rates(): void
+    {
+        foreach ([3.0, 4.5, 20.0, 100.0, 0.0] as $rate) {
+            $banner = GachaBanner::create(['name' => "Rate {$rate}", 'base_rate' => $rate ?: 3.0, 'start_date' => '2026-01-01']);
+            if ($rate === 0.0) {
+                // The statistics also handle legacy rows outside the current model validation.
+                GachaBanner::whereKey($banner->id)->update(['base_rate' => 0.0]);
+            }
+            GachaPull::create([
+                'gacha_banner_id' => $banner->id, 'banner_type' => 'character', 'pull_type' => 'single',
+                'item_name' => 'Gold Ship', 'rarity' => $rate === 100.0 ? 'SSR' : 'R', 'pulled_at' => '2026-01-01',
+            ]);
+            if ($rate === 20.0) {
+                $customBannerId = $banner->id;
+            }
+            if ($rate === 100.0) {
+                $certainBannerId = $banner->id;
+            }
+        }
+
+        $this->getJson('/api/gacha/stats?banner_type=character')->assertOk()
+            ->assertJsonPath('luck_analysis.overall.expected_ssr', 1.28)
+            ->assertJsonPath('luck_analysis.overall.percentile', 74.11);
+        $this->getJson('/api/gacha/stats?gacha_banner_id='.$customBannerId)->assertOk()
+            ->assertJsonPath('luck_analysis.overall.total_pulls', 1)
+            ->assertJsonPath('luck_analysis.overall.expected_ssr', 0.2)
+            ->assertJsonPath('luck_analysis.overall.percentile', 80);
+        $this->getJson('/api/gacha/stats?gacha_banner_id='.$certainBannerId)->assertOk()
+            ->assertJsonPath('luck_analysis.overall.expected_ssr', 1)
+            ->assertJsonPath('luck_analysis.overall.percentile', 100);
+    }
+
     protected GachaBanner $standardBanner;
 
     protected GachaBanner $boostedBanner;

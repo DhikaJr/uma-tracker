@@ -27,7 +27,7 @@ const GachaProbabilitySimulator = lazy(() => import('./GachaProbabilitySimulator
 const EditGachaPullModal = lazy(() => import('./EditGachaPullModal'));
 const BulkEditGachaPullModal = lazy(() => import('./BulkEditGachaPullModal'));
 
-export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
+export default function GachaView({ onNotify, setBaseRate }) {
     // State
     const [activeMainTab, setActiveMainTab] = useState('history'); // 'history' | 'simulator'
     const [pulls, setPulls] = useState([]);
@@ -75,7 +75,11 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
     const [ratePoolFilter, setRatePoolFilter] = useState('all'); // 'all', 'standard', 'boosted'
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const [appliedSearch, setAppliedSearch] = useState('');
+    const [searchRevision, setSearchRevision] = useState(0);
+    const [refreshRevision, setRefreshRevision] = useState(0);
+    const refreshGacha = () => setRefreshRevision(revision => revision + 1);
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
 
@@ -110,47 +114,61 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
     const [multiPulls, setMultiPulls] = useState(makeDefaultPulls(10));
 
     // Fetch Stats & Pulls
-    const fetchStats = async () => {
-        try {
-            const res = await fetch(`/api/gacha/stats?banner_type=${bannerFilter}&gacha_banner_id=${gachaBannerFilter}&base_rate=${baseRate}&rate_pool=${ratePoolFilter}`);
-            const data = await res.json();
-            setStats(data);
-        } catch (err) {
-            console.error('Failed to fetch stats:', err);
-        }
-    };
+    useEffect(() => {
+        const controller = new AbortController();
+        const fetchStats = async () => {
+            try {
+                const res = await fetch(`/api/gacha/stats?banner_type=${bannerFilter}&gacha_banner_id=${gachaBannerFilter}&rate_pool=${ratePoolFilter}`, { signal: controller.signal });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message);
+                if (!controller.signal.aborted) setStats(data);
+            } catch (err) {
+                if (!controller.signal.aborted) console.error('Failed to fetch stats:', err);
+            }
+        };
+        fetchStats();
+        return () => controller.abort();
+    }, [bannerFilter, gachaBannerFilter, ratePoolFilter, refreshRevision]);
 
-    const fetchPulls = async () => {
-        setLoading(true);
-        try {
-            const query = new URLSearchParams({
-                banner_type: bannerFilter,
-                gacha_banner_id: gachaBannerFilter,
-                rarity: rarityFilter,
-                rate_pool: ratePoolFilter,
-                search: searchQuery,
-                page: String(page),
-                per_page: String(perPage),
-            });
-            if (dateFrom) query.append('date_from', dateFrom);
-            if (dateTo) query.append('date_to', dateTo);
-            if (isRateUpFilter !== 'all') query.append('is_rate_up', isRateUpFilter);
+    useEffect(() => {
+        const controller = new AbortController();
+        const fetchPulls = async () => {
+            setLoading(true);
+            try {
+                const query = new URLSearchParams({
+                    banner_type: bannerFilter,
+                    gacha_banner_id: gachaBannerFilter,
+                    rarity: rarityFilter,
+                    rate_pool: ratePoolFilter,
+                    search: appliedSearch,
+                    page: String(page),
+                    per_page: String(perPage),
+                });
+                if (dateFrom) query.append('date_from', dateFrom);
+                if (dateTo) query.append('date_to', dateTo);
+                if (isRateUpFilter !== 'all') query.append('is_rate_up', isRateUpFilter);
 
-            const res = await fetch(`/api/gacha/pulls?${query.toString()}`);
-            const data = await res.json();
-            setPulls(data.data || []);
-            setPagination({
-                current_page: data.current_page || 1,
-                last_page: data.last_page || 1,
-                total: data.total || 0,
-            });
-        } catch (err) {
-            console.error('Failed to fetch pulls:', err);
-            onNotify?.('Error loading gacha pulls', 'error');
-        } finally {
-            setLoading(false);
-        }
-    };
+                const res = await fetch(`/api/gacha/pulls?${query.toString()}`, { signal: controller.signal });
+                const data = await res.json();
+                if (controller.signal.aborted) return;
+                if (!res.ok) throw new Error(data.message);
+                setPulls(data.data || []);
+                setPagination({
+                    current_page: data.current_page || 1,
+                    last_page: data.last_page || 1,
+                    total: data.total || 0,
+                });
+            } catch (err) {
+                if (controller.signal.aborted) return;
+                console.error('Failed to fetch pulls:', err);
+                onNotify?.('Gagal memuat riwayat Gacha', 'error');
+            } finally {
+                if (!controller.signal.aborted) setLoading(false);
+            }
+        };
+        fetchPulls();
+        return () => controller.abort();
+    }, [bannerFilter, gachaBannerFilter, rarityFilter, isRateUpFilter, dateFrom, dateTo, page, perPage, ratePoolFilter, appliedSearch, searchRevision, refreshRevision, onNotify]);
 
     const handleResetFilters = () => {
         setDateFrom('');
@@ -160,7 +178,8 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
         setRarityFilter('all');
         setIsRateUpFilter('all');
         setRatePoolFilter('all');
-        setSearchQuery('');
+        setSearchInput('');
+        setAppliedSearch('');
         setPage(1);
     };
 
@@ -203,8 +222,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                 }
             }
             setDeleteModal({ isOpen: false, mode: 'single', id: null, count: 1, loading: false });
-            fetchStats();
-            fetchPulls();
+            refreshGacha();
         } catch (err) {
             onNotify?.(err.message || 'Terjadi kesalahan saat menghapus data.', 'error');
             setDeleteModal(prev => ({ ...prev, loading: false }));
@@ -232,8 +250,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
             }
             onNotify?.(data.message || `${data.updated_count} data pull berhasil diubah.`, 'success');
             setSelectedPullIds([]);
-            fetchPulls();
-            fetchStats();
+            refreshGacha();
         } catch (err) {
             console.error('Error during quick bulk pull type update:', err);
             onNotify?.(err.message || 'Gagal memperbarui tipe pull.', 'error');
@@ -241,11 +258,6 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
             setBulkUpdating(false);
         }
     };
-
-    useEffect(() => {
-        fetchStats();
-        fetchPulls();
-    }, [bannerFilter, gachaBannerFilter, rarityFilter, isRateUpFilter, dateFrom, dateTo, page, perPage, baseRate, ratePoolFilter]);
 
     // Fetch Gacha Banners (2026 JP)
     const fetchBanners = async () => {
@@ -672,7 +684,8 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
     const handleSearch = (e) => {
         e.preventDefault();
         setPage(1);
-        fetchPulls();
+        setAppliedSearch(searchInput.trim());
+        setSearchRevision(revision => revision + 1);
     };
 
     // Single Pull Submit
@@ -739,8 +752,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
             onNotify?.(`Pull recorded! Current pity: ${result.data.pity_count_at_pull}`, 'success');
             setSingleForm(prev => ({ ...prev, item_name: '' }));
             setSingleBannerError(false);
-            fetchStats();
-            fetchPulls();
+            refreshGacha();
         } catch (err) {
             onNotify?.(err.message, 'error');
         } finally {
@@ -868,8 +880,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
             setMultiPulls(makeDefaultPulls(pullMode === 'multi_10' ? 10 : ticketCount));
             setValidationErrors([]);
             setBannerError(false);
-            fetchStats();
-            fetchPulls();
+            refreshGacha();
         } catch (err) {
             onNotify?.(err.message, 'error');
         } finally {
@@ -887,8 +898,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
             });
             if (res.ok) {
                 onNotify?.('Pull record removed', 'info');
-                fetchStats();
-                fetchPulls();
+                refreshGacha();
             }
         } catch (err) {
             onNotify?.('Failed to delete pull', 'error');
@@ -1149,7 +1159,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                                 }`}
                             >
-                                <span>Standar (3.0%)</span>
+                                <span>Standar (≤ 3%)</span>
                                 {stats.pools?.standard && (
                                     <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
                                         ratePoolFilter === 'standard' ? 'bg-emerald-700 text-white' : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
@@ -1171,7 +1181,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                                 }`}
                             >
-                                <span className="flex items-center gap-1">🔥 Premium (4.5%)</span>
+                                <span className="flex items-center gap-1">🔥 Premium (&gt; 3%)</span>
                                 {stats.pools?.boosted && (
                                     <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
                                         ratePoolFilter === 'boosted' ? 'bg-amber-700 text-white' : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'
@@ -1184,7 +1194,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
 
                         {ratePoolFilter !== 'all' && (
                             <span className="text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 px-2.5 py-1 rounded-xl border border-amber-200 dark:border-amber-800">
-                                Pool aktif: {ratePoolFilter === 'standard' ? 'Tarikan banner Standar (Base 3.0%)' : 'Tarikan banner Premium (Base 4.5% Anniv, Movie & Special Debut)'}
+                                Pool aktif: {ratePoolFilter === 'standard' ? 'Tarikan banner standar (≤ 3%)' : 'Tarikan banner premium (> 3%)'}
                             </span>
                         )}
                     </div>
@@ -1197,7 +1207,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                 {stats.total_pulls}
                             </div>
                             <span className="text-[10px] font-semibold text-slate-400 mt-1 block">
-                                {ratePoolFilter === 'all' ? 'Semua pool gabungan' : (ratePoolFilter === 'standard' ? 'Khusus pool 3.0%' : 'Khusus pool 4.5%')}
+                                {ratePoolFilter === 'all' ? 'Semua pool gabungan' : (ratePoolFilter === 'standard' ? 'Pool ≤ 3%' : 'Pool > 3%')}
                             </span>
                         </div>
                         <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs">
@@ -1280,11 +1290,11 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                         </span>
                                         {bb.is_boosted ? (
                                             <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-500 text-white shadow-2xs">
-                                                Rate: 4.5% Boost
+                                                Rate: {bb.base_rate}%
                                             </span>
                                         ) : (
                                             <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                                                Base: 3.0%
+                                                Rate: {bb.base_rate}%
                                             </span>
                                         )}
                                     </div>
@@ -2415,8 +2425,8 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                             <form onSubmit={handleSearch} className="relative w-full sm:w-56">
                                 <input
                                     type="text"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    value={searchInput}
+                                    onChange={(e) => setSearchInput(e.target.value)}
                                     placeholder="Cari kartu / uma..."
                                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none"
                                 />
@@ -2648,12 +2658,12 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                                                                 {getCategoryBadge(p.banner?.category, p.banner).label}
                                                             </span>
                                                             {p.banner.base_rate > 3.0 ? (
-                                                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-500 text-white shadow-2xs shrink-0" title="Banner Rate SSR Boosted 4.5%">
-                                                                    4.5% Boost
+                                                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-500 text-white shadow-2xs shrink-0" title="Rate SSR banner">
+                                                                    {p.banner.base_rate}%
                                                                 </span>
                                                             ) : (
                                                                 <span className="px-1 py-0.5 rounded text-[9px] font-semibold text-slate-400 dark:text-slate-500 shrink-0">
-                                                                    3.0%
+                                                                    {p.banner.base_rate}%
                                                                 </span>
                                                             )}
                                                             <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[160px]" title={p.banner.name}>
@@ -2951,8 +2961,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                         isOpen={showQuick10Modal}
                         onClose={() => setShowQuick10Modal(false)}
                         onSuccess={() => {
-                            fetchStats();
-                            fetchPulls();
+                            refreshGacha();
                         }}
                         banners={banners}
                         gachaMeta={gachaMeta}
@@ -2990,8 +2999,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                         onClose={() => setEditingPull(null)}
                         onSuccess={(updatedPull, msg) => {
                             onNotify?.(msg || 'Data pull berhasil diperbarui.', 'success');
-                            fetchStats();
-                            fetchPulls();
+                            refreshGacha();
                         }}
                         banners={banners}
                         gachaMeta={gachaMeta}
@@ -3010,8 +3018,7 @@ export default function GachaView({ onNotify, baseRate = 3.0, setBaseRate }) {
                         onSuccess={(count, msg) => {
                             onNotify?.(msg || `${count} data pull gacha berhasil diperbarui.`, 'success');
                             setSelectedPullIds([]);
-                            fetchStats();
-                            fetchPulls();
+                            refreshGacha();
                         }}
                         onNotify={onNotify}
                     />

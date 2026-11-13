@@ -25,7 +25,7 @@
         })();
     </script>
     @viteReactRefresh
-    @vite(['resources/css/app.css', 'resources/js/app.jsx'])
+    @vite(['resources/css/app.css', 'resources/js/App.jsx'])
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen font-['Figtree',sans-serif] antialiased selection:bg-emerald-500 selection:text-white">
     <div id="root"></div>

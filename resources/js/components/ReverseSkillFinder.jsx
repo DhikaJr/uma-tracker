@@ -72,7 +72,7 @@ export default function ReverseSkillFinder({
     }, [query]);
 
     // Fetch skill sources
-    const fetchSkillSources = useCallback(async () => {
+    const fetchSkillSources = useCallback(async (signal) => {
         setLoading(true);
         try {
             const params = new URLSearchParams();
@@ -90,24 +90,30 @@ export default function ReverseSkillFinder({
             }
             params.set('limit', '50');
 
-            const res = await fetch(`/api/collection/skill-sources?${params.toString()}`);
+            const res = await fetch(`/api/collection/skill-sources?${params.toString()}`, { signal });
             const data = await res.json();
-            if (data.success) {
+            if (signal.aborted) return;
+            if (res.ok && data.success) {
                 setSkills(data.skills || []);
             } else {
                 onNotify?.(data.message || 'Gagal memuat sumber skill', 'error');
             }
         } catch (err) {
+            if (signal.aborted) return;
             console.error('Failed to search skill sources:', err);
             onNotify?.('Terjadi kesalahan saat memuat pencarian skill', 'error');
         } finally {
-            setLoading(false);
-            setHasSearched(true);
+            if (!signal.aborted) {
+                setLoading(false);
+                setHasSearched(true);
+            }
         }
     }, [debouncedQuery, rarityFilter, sourceTypeFilter, ownedOnly, onNotify]);
 
     useEffect(() => {
-        fetchSkillSources();
+        const controller = new AbortController();
+        fetchSkillSources(controller.signal);
+        return () => controller.abort();
     }, [fetchSkillSources]);
 
     const toggleExpandSources = (skillId) => {
