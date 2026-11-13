@@ -11,6 +11,7 @@ use App\Services\CircleTrackerService;
 use App\Services\CygamesNewsService;
 use App\Services\GameToraSyncService;
 use App\Support\CompetitionRacetrackHelper;
+use App\Support\VerifiedHttp;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\File;
@@ -25,12 +26,14 @@ class CygamesNewsSyncTest extends TestCase
 
     public function test_gametora_and_circle_verify_tls_and_explain_ca_failure(): void
     {
-        $assertTls = function ($request, array $options): never {
+        $attempts = [];
+        $assertTls = function ($request, array $options) use (&$attempts): never {
             $this->assertTrue($options['verify']);
+            $attempts[] = $request->url();
 
             throw new ConnectionException('cURL error 60: SSL certificate problem');
         };
-        config(['services.uma_http.ca_bundle' => null]);
+        config(['services.uma_http.ca_bundle' => '']);
         Http::fake([
             GameToraSyncService::MANIFEST_URL => $assertTls,
             CircleTrackerService::BASE_URL.'/api/circles/123/contributions' => $assertTls,
@@ -42,6 +45,58 @@ class CygamesNewsSyncTest extends TestCase
         $this->assertFalse($circle['success']);
         $this->assertStringContainsString('UMA_HTTP_CA_BUNDLE', $gameTora['message']);
         $this->assertStringContainsString('UMA_HTTP_CA_BUNDLE', $circle['message']);
+        $this->assertSame([
+            GameToraSyncService::MANIFEST_URL,
+            CircleTrackerService::BASE_URL.'/api/circles/123/contributions',
+        ], $attempts);
+        $this->assertStringContainsString('curl.cainfo', VerifiedHttp::errorMessage(
+            new ConnectionException('cURL error 60: SSL certificate problem'),
+        ));
+    }
+
+    public function test_verified_http_passes_configured_ca_bundle_to_guzzle(): void
+    {
+        $opensslConfig = tmpfile();
+        $this->assertIsResource($opensslConfig);
+        $bundle = tmpfile();
+        try {
+            $this->assertIsResource($bundle);
+            fwrite($opensslConfig, "[req]\ndistinguished_name=dn\n[dn]\n[ca]\nbasicConstraints=critical,CA:TRUE\n");
+            fflush($opensslConfig);
+            $options = [
+                'config' => stream_get_meta_data($opensslConfig)['uri'],
+                'digest_alg' => 'sha256',
+                'private_key_bits' => 2048,
+                'private_key_type' => OPENSSL_KEYTYPE_RSA,
+            ];
+            $key = openssl_pkey_new($options);
+            $this->assertNotFalse($key);
+            $request = openssl_csr_new(['commonName' => 'VerifiedHttp test CA'], $key, $options);
+            $this->assertNotFalse($request);
+            $certificate = openssl_csr_sign($request, null, $key, 1, [...$options, 'x509_extensions' => 'ca']);
+            $this->assertNotFalse($certificate);
+            $this->assertTrue(openssl_x509_export($certificate, $pem));
+
+            $this->assertSame(strlen($pem), fwrite($bundle, $pem));
+            $path = stream_get_meta_data($bundle)['uri'];
+            config(['services.uma_http.ca_bundle' => $path]);
+            Http::fake([
+                GameToraSyncService::MANIFEST_URL => function ($request, array $options) use ($path) {
+                    $this->assertSame($path, $options['verify']);
+
+                    return Http::response(['skills' => 'test-hash']);
+                },
+            ]);
+
+            $response = VerifiedHttp::request()->get(GameToraSyncService::MANIFEST_URL);
+
+            $this->assertSame('test-hash', $response->json('skills'));
+        } finally {
+            if (is_resource($bundle)) {
+                fclose($bundle);
+            }
+            fclose($opensslConfig);
+        }
     }
 
     public function test_unchanged_manifest_rebuilds_missing_runtime_racetrack_snapshot(): void
