@@ -8,12 +8,14 @@ use App\Http\Controllers\Api\CollectionController;
 use App\Models\AppSetting;
 use App\Models\GachaBanner;
 use App\Models\UmaCatalogItem;
+use App\Support\AtomicJsonFile;
+use App\Support\CompetitionRacetrackHelper;
 use App\Support\SkillConditionTranslator;
 use App\Support\SupportCardUniqueEffectFormatter;
 use App\Support\UmaCatalog;
+use App\Support\VerifiedHttp;
 use Exception;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class GameToraSyncService
@@ -59,7 +61,7 @@ class GameToraSyncService
     {
         try {
             // 1. Fetch manifest
-            $manifestRes = Http::withoutVerifying()
+            $manifestRes = VerifiedHttp::request()
                 ->timeout(20)
                 ->get(self::MANIFEST_URL);
 
@@ -90,12 +92,15 @@ class GameToraSyncService
             $savedHash = (string) AppSetting::getValue('gametora_manifest_hash', '');
 
             if (! $force && $savedHash === $combinedHash && UmaCatalogItem::count() > 0 && GachaBanner::count() > 0) {
+                if (CompetitionRacetrackHelper::readRuntimeCatalog("{$racetracksHash}|{$racetracksExtHash}") === []) {
+                    $this->syncRacetracks($manifest);
+                }
                 UmaCatalog::syncCanonical2026SelectPickupBanners();
                 try {
                     $this->cygamesNewsService->syncSelectPickupBanners($force);
                 } catch (\Throwable $e) {
                     Log::warning('Cygames news sync failed during cached GameTora sync', [
-                        'error' => $e->getMessage(),
+                        'error' => VerifiedHttp::errorMessage($e),
                     ]);
                 }
 
@@ -109,7 +114,7 @@ class GameToraSyncService
 
             // 2. Fetch Playable Character Cards (Variants & Costumes)
             $charCardsUrl = self::DATA_BASE_URL."/character-cards.{$charCardHash}.json";
-            $charCardsRes = Http::withoutVerifying()->timeout(30)->get($charCardsUrl);
+            $charCardsRes = VerifiedHttp::request()->timeout(30)->get($charCardsUrl);
             if (! $charCardsRes->successful()) {
                 throw new Exception("Gagal mengunduh kartu karakter: HTTP {$charCardsRes->status()}");
             }
@@ -117,19 +122,19 @@ class GameToraSyncService
 
             // 3. Fetch Base Characters
             $baseCharsUrl = self::DATA_BASE_URL."/characters.{$charBaseHash}.json";
-            $baseCharsRes = Http::withoutVerifying()->timeout(30)->get($baseCharsUrl);
+            $baseCharsRes = VerifiedHttp::request()->timeout(30)->get($baseCharsUrl);
             $rawBaseChars = $baseCharsRes->successful() ? ($baseCharsRes->json() ?? []) : [];
 
             // 4. Fetch Support Cards
             $supportCardsUrl = self::DATA_BASE_URL."/support-cards.{$supportHash}.json";
-            $supportCardsRes = Http::withoutVerifying()->timeout(30)->get($supportCardsUrl);
+            $supportCardsRes = VerifiedHttp::request()->timeout(30)->get($supportCardsUrl);
             if (! $supportCardsRes->successful()) {
                 throw new Exception("Gagal mengunduh support cards: HTTP {$supportCardsRes->status()}");
             }
             $rawSupportCards = $supportCardsRes->json() ?? [];
 
             // 5. Fetch Skills, Evo Strings, Races, Objectives & Support Effects Datasets
-            $skillsById = $this->loadSkillsLookup($skillsHash);
+            $skillsById = $skillsHash ? $this->loadSkillsLookup($skillsHash) : [];
             $objectivesLookup = $this->loadObjectivesLookup($objHash);
             $evoHash = $manifest['static/evo_strings'] ?? null;
             $evoLookup = $this->loadEvoStringsLookup($evoHash);
@@ -297,6 +302,10 @@ class GameToraSyncService
             // 6. Synchronize Racetracks & Courses Catalog
             $this->syncRacetracks($manifest);
 
+            if ($skillsById !== []) {
+                AtomicJsonFile::write(storage_path('app/gametora_skills_latest.json'), array_values($skillsById));
+            }
+
             // Save sync hashes and timestamp
             AppSetting::setValue('gametora_manifest_hash', $combinedHash);
             AppSetting::setValue('gametora_last_synced_at', now()->toIso8601String());
@@ -304,10 +313,7 @@ class GameToraSyncService
             // Reset in-memory cache in UmaCatalog
             UmaCatalog::clearCache();
 
-            // Invalidate collection skills and indexed lookup caches
-            Cache::forget(CollectionController::ALL_SKILLS_CACHE_KEY);
-            Cache::forget('collection_all_skills_list_v2');
-            Cache::forget(CollectionController::INDEXED_SKILLS_CACHE_KEY);
+            CollectionController::clearSkillCatalogCache();
 
             return [
                 'success' => true,
@@ -316,12 +322,12 @@ class GameToraSyncService
                 'stats' => $this->getStatus(),
             ];
         } catch (Exception $e) {
-            Log::error('GameTora catalog sync error: '.$e->getMessage());
+            Log::error('GameTora catalog sync error: '.VerifiedHttp::errorMessage($e));
 
             return [
                 'success' => false,
                 'is_up_to_date' => false,
-                'message' => 'Gagal menyinkronkan data dari GameTora: '.$e->getMessage(),
+                'message' => 'Gagal menyinkronkan data dari GameTora: '.VerifiedHttp::errorMessage($e),
                 'stats' => $this->getStatus(),
             ];
         }
@@ -344,8 +350,8 @@ class GameToraSyncService
             $tracksUrl = self::DATA_BASE_URL."/racetracks.{$tracksHash}.json";
             $tracksExtUrl = self::DATA_BASE_URL."/racetracks_extended.{$tracksExtHash}.json";
 
-            $tracksRes = Http::withoutVerifying()->timeout(25)->get($tracksUrl);
-            $tracksExtRes = Http::withoutVerifying()->timeout(25)->get($tracksExtUrl);
+            $tracksRes = VerifiedHttp::request()->timeout(25)->get($tracksUrl);
+            $tracksExtRes = VerifiedHttp::request()->timeout(25)->get($tracksExtUrl);
 
             if (! $tracksRes->successful() || ! $tracksExtRes->successful()) {
                 return;
@@ -428,11 +434,14 @@ class GameToraSyncService
             }
 
             if (! empty($catalog)) {
-                $outPath = resource_path('js/data/racetracksCatalog.json');
-                file_put_contents($outPath, json_encode($catalog, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                AtomicJsonFile::write(CompetitionRacetrackHelper::runtimePath(), [
+                    'revision' => "{$tracksHash}|{$tracksExtHash}",
+                    'tracks' => $catalog,
+                ]);
+                CompetitionRacetrackHelper::clearCache();
             }
         } catch (Exception $e) {
-            Log::warning('Gagal menyinkronkan racetracks GameTora: '.$e->getMessage());
+            Log::warning('Gagal menyinkronkan racetracks GameTora: '.VerifiedHttp::errorMessage($e));
         }
     }
 
@@ -482,7 +491,7 @@ class GameToraSyncService
         $charBannersHash = $manifest['gacha/char_banners'] ?? null;
         if ($charBannersHash) {
             $url = self::DATA_BASE_URL."/gacha/char_banners.{$charBannersHash}.json";
-            $res = Http::withoutVerifying()->timeout(25)->get($url);
+            $res = VerifiedHttp::request()->timeout(25)->get($url);
             if ($res->successful()) {
                 foreach ($res->json() ?? [] as $cb) {
                     $cardId = $cb['card_id'] ?? null;
@@ -500,7 +509,7 @@ class GameToraSyncService
         $suppBannersHash = $manifest['gacha/support_banners'] ?? null;
         if ($suppBannersHash) {
             $url = self::DATA_BASE_URL."/gacha/support_banners.{$suppBannersHash}.json";
-            $res = Http::withoutVerifying()->timeout(25)->get($url);
+            $res = VerifiedHttp::request()->timeout(25)->get($url);
             if ($res->successful()) {
                 foreach ($res->json() ?? [] as $sb) {
                     $suppId = $sb['support_id'] ?? null;
@@ -520,7 +529,7 @@ class GameToraSyncService
         $charStdHash = $manifest['gacha/char-standard'] ?? null;
         if ($charStdHash) {
             $url = self::DATA_BASE_URL."/gacha/char-standard.{$charStdHash}.json";
-            $res = Http::withoutVerifying()->timeout(25)->get($url);
+            $res = VerifiedHttp::request()->timeout(25)->get($url);
             if ($res->successful()) {
                 foreach ($res->json() ?? [] as $b) {
                     $start = $b['start'] ?? 0;
@@ -619,7 +628,7 @@ class GameToraSyncService
         $suppStdHash = $manifest['gacha/support-standard'] ?? null;
         if ($suppStdHash) {
             $url = self::DATA_BASE_URL."/gacha/support-standard.{$suppStdHash}.json";
-            $res = Http::withoutVerifying()->timeout(25)->get($url);
+            $res = VerifiedHttp::request()->timeout(25)->get($url);
             if ($res->successful()) {
                 foreach ($res->json() ?? [] as $b) {
                     $start = $b['start'] ?? 0;
@@ -696,7 +705,7 @@ class GameToraSyncService
         $specialHash = $manifest['gacha/special'] ?? null;
         if ($specialHash) {
             $url = self::DATA_BASE_URL."/gacha/special.{$specialHash}.json";
-            $res = Http::withoutVerifying()->timeout(25)->get($url);
+            $res = VerifiedHttp::request()->timeout(25)->get($url);
             if ($res->successful()) {
                 foreach ($res->json() ?? [] as $b) {
                     $start = $b['start'] ?? 0;
@@ -850,7 +859,7 @@ class GameToraSyncService
             $this->cygamesNewsService->syncSelectPickupBanners($force);
         } catch (\Throwable $e) {
             Log::warning('Cygames news sync failed during banner sync, retained canonical fallbacks', [
-                'error' => $e->getMessage(),
+                'error' => VerifiedHttp::errorMessage($e),
             ]);
         }
 
@@ -878,7 +887,7 @@ class GameToraSyncService
     {
         $lineups = [];
         try {
-            $searchRes = Http::withoutVerifying()->timeout(8)->get('https://umapyoi.net/api/v1/news/search/twinkle');
+            $searchRes = VerifiedHttp::request()->timeout(8)->get('https://umapyoi.net/api/v1/news/search/twinkle');
             if (! $searchRes->successful()) {
                 return [];
             }
@@ -899,7 +908,7 @@ class GameToraSyncService
                     continue;
                 }
 
-                $detailRes = Http::withoutVerifying()->timeout(6)->get("https://umapyoi.net/api/v1/news/{$announceId}");
+                $detailRes = VerifiedHttp::request()->timeout(6)->get("https://umapyoi.net/api/v1/news/{$announceId}");
                 if (! $detailRes->successful()) {
                     continue;
                 }
@@ -928,7 +937,7 @@ class GameToraSyncService
                 }
             }
         } catch (\Throwable $e) {
-            Log::warning('Gagal mengambil data Twinkle Collection dari Umapyoi: '.$e->getMessage());
+            Log::warning('Gagal mengambil data Twinkle Collection dari Umapyoi: '.VerifiedHttp::errorMessage($e));
         }
 
         return $lineups;
@@ -939,60 +948,87 @@ class GameToraSyncService
      *
      * @return array<int, array<string, mixed>>
      */
-    public function loadSkillsLookup(?string $skillsHash = null): array
+    public function loadSkillsLookup(?string $skillsHash = null, bool $reportFailure = false): array
     {
         try {
-            if (! $skillsHash) {
-                $manifestRes = Http::withoutVerifying()->timeout(15)->get(self::MANIFEST_URL);
-                if ($manifestRes->successful()) {
-                    $manifest = $manifestRes->json() ?? [];
-                    $skillsHash = $manifest['skills'] ?? null;
+            if ($skillsHash === null) {
+                $local = $this->readSkillSnapshot(storage_path('app/gametora_skills_latest.json'));
+                if ($local !== []) {
+                    return $local;
                 }
+
+                // Installations synced before the local snapshot was introduced retain the manifest hash.
+                $savedManifest = (string) AppSetting::getValue('gametora_manifest_hash', '');
+                $savedHash = explode('|', $savedManifest)[3] ?? '';
+                if ($savedHash !== '' && preg_match('/^[a-zA-Z0-9_-]+$/D', $savedHash)) {
+                    $local = $this->readSkillSnapshot(storage_path("app/gametora_skills_{$savedHash}.json"));
+                    if ($local !== []) {
+                        return $local;
+                    }
+                }
+
+                $manifest = VerifiedHttp::request()->timeout(15)->get(self::MANIFEST_URL);
+                $skillsHash = $manifest->successful() ? $manifest->json('skills') : null;
             }
 
-            if (! $skillsHash) {
+            if (! is_string($skillsHash) || ! preg_match('/^[a-zA-Z0-9_-]+$/D', $skillsHash)) {
                 return [];
             }
 
             $cacheFile = storage_path("app/gametora_skills_{$skillsHash}.json");
-            if (file_exists($cacheFile)) {
-                $raw = json_decode((string) file_get_contents($cacheFile), true);
-                if (is_array($raw)) {
-                    $lookup = [];
-                    foreach ($raw as $s) {
-                        if (isset($s['id'])) {
-                            $lookup[(int) $s['id']] = $s;
-                        }
-                    }
-
-                    return $lookup;
-                }
+            $cached = $this->readSkillSnapshot($cacheFile);
+            if ($cached !== []) {
+                return $cached;
             }
 
-            $skillsUrl = self::DATA_BASE_URL."/skills.{$skillsHash}.json";
-            $res = Http::withoutVerifying()->timeout(45)->get($skillsUrl);
-            if (! $res->successful()) {
-                return [];
-            }
-
-            $skillsData = $res->json() ?? [];
-            if (! empty($skillsData)) {
-                @file_put_contents($cacheFile, json_encode($skillsData));
-            }
-
-            $lookup = [];
-            foreach ($skillsData as $s) {
-                if (isset($s['id'])) {
-                    $lookup[(int) $s['id']] = $s;
+            $response = VerifiedHttp::request()->timeout(45)->get(self::DATA_BASE_URL."/skills.{$skillsHash}.json");
+            $lookup = $response->successful() ? $this->indexSkillSnapshot($response->json()) : [];
+            if ($lookup !== []) {
+                try {
+                    AtomicJsonFile::write($cacheFile, array_values($lookup));
+                } catch (\Throwable $e) {
+                    Log::warning('Gagal menyimpan cache skills GameTora', ['error' => $e->getMessage()]);
                 }
             }
 
             return $lookup;
         } catch (\Throwable $e) {
-            Log::warning('Gagal memuat dataset skills GameTora: '.$e->getMessage());
+            $message = VerifiedHttp::errorMessage($e);
+            Log::warning('Gagal memuat dataset skills GameTora: '.$message);
+            if ($reportFailure && ($message !== $e->getMessage() || str_contains($message, 'UMA_HTTP_CA_BUNDLE'))) {
+                throw new \RuntimeException($message, previous: $e);
+            }
 
             return [];
         }
+    }
+
+    private function readSkillSnapshot(string $path): array
+    {
+        if (! is_file($path)) {
+            return [];
+        }
+
+        $contents = @file_get_contents($path);
+
+        return is_string($contents) ? $this->indexSkillSnapshot(json_decode($contents, true)) : [];
+    }
+
+    private function indexSkillSnapshot(mixed $rows): array
+    {
+        if (! is_array($rows) || ! array_is_list($rows)) {
+            return [];
+        }
+
+        $lookup = [];
+        foreach ($rows as $row) {
+            if (! is_array($row) || ! is_numeric($row['id'] ?? null) || (int) $row['id'] <= 0) {
+                return [];
+            }
+            $lookup[(int) $row['id']] = $row;
+        }
+
+        return $lookup;
     }
 
     /**
@@ -1004,7 +1040,7 @@ class GameToraSyncService
     {
         try {
             if (! $evoHash) {
-                $manifestRes = Http::withoutVerifying()->timeout(15)->get(self::MANIFEST_URL);
+                $manifestRes = VerifiedHttp::request()->timeout(15)->get(self::MANIFEST_URL);
                 if ($manifestRes->successful()) {
                     $manifest = $manifestRes->json() ?? [];
                     $evoHash = $manifest['static/evo_strings'] ?? null;
@@ -1032,7 +1068,7 @@ class GameToraSyncService
             }
 
             $evoUrl = self::DATA_BASE_URL."/static/evo_strings.{$evoHash}.json";
-            $res = Http::withoutVerifying()->timeout(30)->get($evoUrl);
+            $res = VerifiedHttp::request()->timeout(30)->get($evoUrl);
             if (! $res->successful()) {
                 return [];
             }
@@ -1052,7 +1088,7 @@ class GameToraSyncService
 
             return $lookup;
         } catch (\Throwable $e) {
-            Log::warning('Gagal memuat dataset evo_strings GameTora: '.$e->getMessage());
+            Log::warning('Gagal memuat dataset evo_strings GameTora: '.VerifiedHttp::errorMessage($e));
 
             return [];
         }
@@ -1067,7 +1103,7 @@ class GameToraSyncService
     {
         try {
             if (! $racesHash) {
-                $manifestRes = Http::withoutVerifying()->timeout(15)->get(self::MANIFEST_URL);
+                $manifestRes = VerifiedHttp::request()->timeout(15)->get(self::MANIFEST_URL);
                 if ($manifestRes->successful()) {
                     $manifest = $manifestRes->json() ?? [];
                     $racesHash = $manifest['races'] ?? null;
@@ -1097,7 +1133,7 @@ class GameToraSyncService
             }
 
             $racesUrl = self::DATA_BASE_URL."/races.{$racesHash}.json";
-            $res = Http::withoutVerifying()->timeout(30)->get($racesUrl);
+            $res = VerifiedHttp::request()->timeout(30)->get($racesUrl);
             if (! $res->successful()) {
                 return [];
             }
@@ -1119,7 +1155,7 @@ class GameToraSyncService
 
             return $lookup;
         } catch (\Throwable $e) {
-            Log::warning('Gagal memuat dataset races GameTora: '.$e->getMessage());
+            Log::warning('Gagal memuat dataset races GameTora: '.VerifiedHttp::errorMessage($e));
 
             return [];
         }
@@ -1531,7 +1567,7 @@ class GameToraSyncService
     {
         try {
             if (! $effHash) {
-                $manifestRes = Http::withoutVerifying()->timeout(15)->get(self::MANIFEST_URL);
+                $manifestRes = VerifiedHttp::request()->timeout(15)->get(self::MANIFEST_URL);
                 if ($manifestRes->successful()) {
                     $manifest = $manifestRes->json() ?? [];
                     $effHash = $manifest['support_effects'] ?? null;
@@ -1563,7 +1599,7 @@ class GameToraSyncService
             }
 
             $effUrl = self::DATA_BASE_URL."/support_effects.{$effHash}.json";
-            $res = Http::withoutVerifying()->timeout(30)->get($effUrl);
+            $res = VerifiedHttp::request()->timeout(30)->get($effUrl);
             if (! $res->successful()) {
                 return [];
             }
@@ -1587,7 +1623,7 @@ class GameToraSyncService
 
             return $lookup;
         } catch (\Throwable $e) {
-            Log::warning('Gagal memuat dataset support_effects GameTora: '.$e->getMessage());
+            Log::warning('Gagal memuat dataset support_effects GameTora: '.VerifiedHttp::errorMessage($e));
 
             return [];
         }
@@ -1602,7 +1638,7 @@ class GameToraSyncService
     {
         try {
             if (! $objHash) {
-                $manifestRes = Http::withoutVerifying()->timeout(15)->get(self::MANIFEST_URL);
+                $manifestRes = VerifiedHttp::request()->timeout(15)->get(self::MANIFEST_URL);
                 if ($manifestRes->successful()) {
                     $manifest = $manifestRes->json() ?? [];
                     $objHash = $manifest['ura-objectives'] ?? null;
@@ -1630,7 +1666,7 @@ class GameToraSyncService
             }
 
             $objUrl = self::DATA_BASE_URL."/ura-objectives.{$objHash}.json";
-            $res = Http::withoutVerifying()->timeout(30)->get($objUrl);
+            $res = VerifiedHttp::request()->timeout(30)->get($objUrl);
             if (! $res->successful()) {
                 return [];
             }
@@ -1650,7 +1686,7 @@ class GameToraSyncService
 
             return $lookup;
         } catch (\Throwable $e) {
-            Log::warning('Gagal memuat dataset ura-objectives GameTora: '.$e->getMessage());
+            Log::warning('Gagal memuat dataset ura-objectives GameTora: '.VerifiedHttp::errorMessage($e));
 
             return [];
         }
@@ -2600,7 +2636,7 @@ class GameToraSyncService
 
             // Get Next.js buildId from GameTora homepage/supports
             $buildId = cache()->remember('gametora_next_build_id', 3600, function () {
-                $htmlRes = Http::withoutVerifying()->timeout(15)->get('https://gametora.com/umamusume/supports');
+                $htmlRes = VerifiedHttp::request()->timeout(15)->get('https://gametora.com/umamusume/supports');
                 if ($htmlRes->successful() && preg_match('/"buildId":"([^"]+)"/', $htmlRes->body(), $m)) {
                     return $m[1];
                 }
@@ -2609,17 +2645,17 @@ class GameToraSyncService
             });
 
             $pageUrl = "https://gametora.com/_next/data/{$buildId}/umamusume/supports/{$urlName}.json";
-            $res = Http::withoutVerifying()->timeout(20)->get($pageUrl);
+            $res = VerifiedHttp::request()->timeout(20)->get($pageUrl);
 
             // If 404, bust cache once and retry with fresh buildId
             if ($res->status() === 404) {
                 cache()->forget('gametora_next_build_id');
-                $htmlRes = Http::withoutVerifying()->timeout(15)->get('https://gametora.com/umamusume/supports');
+                $htmlRes = VerifiedHttp::request()->timeout(15)->get('https://gametora.com/umamusume/supports');
                 if ($htmlRes->successful() && preg_match('/"buildId":"([^"]+)"/', $htmlRes->body(), $m)) {
                     $buildId = $m[1];
                     cache()->put('gametora_next_build_id', $buildId, 3600);
                     $pageUrl = "https://gametora.com/_next/data/{$buildId}/umamusume/supports/{$urlName}.json";
-                    $res = Http::withoutVerifying()->timeout(20)->get($pageUrl);
+                    $res = VerifiedHttp::request()->timeout(20)->get($pageUrl);
                 }
             }
 
@@ -2715,7 +2751,7 @@ class GameToraSyncService
 
             return $formattedEvents;
         } catch (\Throwable $e) {
-            Log::warning("Gagal mengambil training events support {$urlName}: ".$e->getMessage());
+            Log::warning("Gagal mengambil training events support {$urlName}: ".VerifiedHttp::errorMessage($e));
 
             return null;
         }

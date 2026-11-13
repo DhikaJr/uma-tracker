@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\UmaCatalogItem;
 use App\Services\BackupService;
 use App\Services\GameToraSyncService;
+use App\Support\AtomicJsonFile;
 use App\Support\SkillConditionTranslator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -274,8 +275,10 @@ class SkillConditionTranslatorTest extends TestCase
      */
     public function test_get_skill_detail_endpoint(): void
     {
+        $originalStorage = storage_path();
+        $isolatedStorage = storage_path('framework/testing/'.uniqid('skills-'));
+        $this->app->useStoragePath($isolatedStorage);
         $skillsHash = uniqid('test-skill-detail-');
-        $cachePath = storage_path("app/gametora_skills_{$skillsHash}.json");
         Http::fake([
             GameToraSyncService::MANIFEST_URL => Http::response(['skills' => $skillsHash]),
             GameToraSyncService::DATA_BASE_URL."/skills.{$skillsHash}.json" => Http::response([
@@ -298,7 +301,31 @@ class SkillConditionTranslatorTest extends TestCase
 
             Http::assertSent(fn (Request $request): bool => $request->url() === GameToraSyncService::DATA_BASE_URL."/skills.{$skillsHash}.json");
         } finally {
-            File::delete($cachePath);
+            $this->app->useStoragePath($originalStorage);
+            File::deleteDirectory($isolatedStorage);
+        }
+    }
+
+    public function test_skill_detail_prefers_saved_snapshot_and_distinguishes_outage(): void
+    {
+        $originalStorage = storage_path();
+        $isolatedStorage = storage_path('framework/testing/'.uniqid('skills-'));
+        $this->app->useStoragePath($isolatedStorage);
+        Http::fake([GameToraSyncService::MANIFEST_URL => Http::response([], 503)]);
+        $snapshot = storage_path('app/gametora_skills_latest.json');
+
+        try {
+            AtomicJsonFile::write($snapshot, [['id' => 202131, 'name_en' => 'Tail Nine']]);
+            $this->getJson('/api/collection/skill-detail?id=202131')->assertOk()->assertJsonPath('skill.id', 202131);
+            $this->getJson('/api/collection/skill-detail?id=99')->assertNotFound();
+            Http::assertNothingSent();
+
+            File::put($snapshot, '[corrupt]');
+            $this->getJson('/api/collection/skill-detail?id=202131')->assertServiceUnavailable();
+            Http::assertSentCount(1);
+        } finally {
+            $this->app->useStoragePath($originalStorage);
+            File::deleteDirectory($isolatedStorage);
         }
     }
 

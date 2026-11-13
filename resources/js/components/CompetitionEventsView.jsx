@@ -209,24 +209,19 @@ export default function CompetitionEventsView({ onNotify }) {
                 },
             });
             const json = await res.json();
+            setSyncMeta({ last_synced_at: json.last_synced_at ?? null, status: json.status ?? 'error' });
             if (!res.ok || !json.success) {
                 throw new Error(json.message || 'Gagal menyinkronkan data kompetisi resmi.');
             }
             const list = Array.isArray(json.data) ? json.data : [];
             setEvents(list);
-            if (json.last_synced_at) {
-                setSyncMeta({
-                    last_synced_at: json.last_synced_at,
-                    status: 'success',
-                });
-            }
             if (selectedEvent) {
                 const updated = list.find(e => e.id === selectedEvent.id || e.event_key === selectedEvent.event_key);
                 if (updated) {
                     setSelectedEvent(updated);
                 }
             }
-            onNotify?.(json.message || 'Berhasil menyinkronkan data turnamen dari Cygames JP & GameWith JP.', 'success');
+            onNotify?.(json.message, json.status === 'partial' ? 'info' : 'success');
         } catch (err) {
             console.error('Failed to sync competition events:', err);
             onNotify?.(err.message || 'Terjadi kesalahan saat menyinkronkan jadwal kompetisi resmi.', 'error');
@@ -347,9 +342,11 @@ export default function CompetitionEventsView({ onNotify }) {
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    {syncMeta?.status === 'partial' && <span role="status">Sinkronisasi sebagian</span>}
+                    {syncMeta?.status === 'error' && <span role="status">Sinkronisasi gagal</span>}
                     {syncMeta?.last_synced_at && (
                         <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 self-end sm:self-center">
-                            Terakhir disinkronkan: {formatIndonesianDate(syncMeta.last_synced_at, 'short')}{' '}
+                            Sinkronisasi penuh terakhir: {formatIndonesianDate(syncMeta.last_synced_at, 'short')}{' '}
                             <span className="font-mono text-[10px]">
                                 ({new Date(syncMeta.last_synced_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })})
                             </span>

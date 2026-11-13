@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import SkillDetailModal from './SkillDetailModal';
+import { useModalDialog } from '../utils/useModalDialog';
 import {
     X,
     Star,
@@ -187,7 +188,7 @@ function translateTrackCondition(cond) {
         .replace(/\bLong\b/g, 'Jarak Jauh');
 }
 
-export default function CharacterDetailModal({ character, isOpen, onClose }) {
+export default function CharacterDetailModal({ character, isOpen, onClose, trigger }) {
     const [activeTab, setActiveTab] = useState('skills'); // 'skills' | 'stats' | 'aptitude' | 'objectives'
     const [selectedSkillModal, setSelectedSkillModal] = useState(null);
     const [openAlternatives, setOpenAlternatives] = useState({});
@@ -204,29 +205,25 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
         }));
     };
 
-    useEffect(() => {
-        const handleKeyDown = (e) => {
-            if (e.key === 'Escape' && !e.repeat) onClose?.();
-        };
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-            window.addEventListener('keydown', handleKeyDown);
-        }
-        return () => {
-            document.body.style.overflow = '';
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [isOpen, onClose]);
+    const skillTriggerProps = (skill) => ({
+        role: 'button',
+        tabIndex: 0,
+        onClick: (event) => setSelectedSkillModal({ skill, trigger: event.currentTarget }),
+        onKeyDown: (event) => {
+            if (event.target !== event.currentTarget || !['Enter', ' '].includes(event.key)) return;
+            event.preventDefault();
+            setSelectedSkillModal({ skill, trigger: event.currentTarget });
+        },
+    });
 
-    // Close modal when reverse skill search is triggered from inside SkillDetailModal
+    const dialogRef = useModalDialog(Boolean(isOpen && character), onClose, trigger);
+
     useEffect(() => {
-        const handleFindSkillSources = () => {
-            setSelectedSkillModal(null);
-            onClose?.();
-        };
-        window.addEventListener('uma:find-skill-sources', handleFindSkillSources);
-        return () => window.removeEventListener('uma:find-skill-sources', handleFindSkillSources);
-    }, [onClose]);
+        if (!isOpen) return;
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = previousOverflow; };
+    }, [isOpen]);
 
     if (!isOpen || !character || typeof document === 'undefined') return null;
 
@@ -325,7 +322,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
             />
 
             {/* Modal Dialog Content */}
-            <div role="dialog" aria-modal="true" aria-label={name} className="relative z-10 w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={name} className="relative z-10 w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 {/* Header with Uma Musume Emerald/Gold styling */}
                 <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-green-900 text-white p-5 sm:p-6 relative shrink-0">
                     <button
@@ -468,7 +465,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                                             return (
                                                 <div
                                                     key={uSkill.id || uIdx}
-                                                    onClick={() => setSelectedSkillModal(uSkill)}
+                                                    {...skillTriggerProps(uSkill)}
                                                     className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs cursor-pointer hover:border-amber-400 dark:hover:border-amber-500 transition-colors group"
                                                     title="Klik untuk melihat detail skill lengkap"
                                                 >
@@ -543,7 +540,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                                         {innateSkills.map((sk) => (
                                             <div
                                                 key={sk.id}
-                                                onClick={() => setSelectedSkillModal(sk)}
+                                                {...skillTriggerProps(sk)}
                                                 className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-start gap-3 cursor-pointer hover:border-emerald-400 dark:hover:border-emerald-500 transition-colors group shadow-2xs"
                                                 title="Klik untuk melihat detail skill lengkap"
                                             >
@@ -595,7 +592,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                                             return (
                                                 <div
                                                     key={sk.id}
-                                                    onClick={() => setSelectedSkillModal(sk)}
+                                                    {...skillTriggerProps(sk)}
                                                     className={`p-3.5 rounded-2xl border flex items-start gap-3.5 transition-all cursor-pointer hover:border-amber-400 dark:hover:border-amber-500 group shadow-2xs ${
                                                         isGold
                                                             ? 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-300/80 dark:border-amber-800/60'
@@ -656,7 +653,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
                                         {evolveSkills.map((sk) => (
                                             <div
                                                 key={sk.id}
-                                                onClick={() => setSelectedSkillModal(sk)}
+                                                {...skillTriggerProps(sk)}
                                                 className="p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-transparent border border-purple-300/80 dark:border-purple-800/60 flex items-start gap-3.5 cursor-pointer hover:border-purple-500 dark:hover:border-purple-400 transition-colors group shadow-2xs"
                                                 title="Klik untuk melihat detail skill lengkap"
                                             >
@@ -1266,7 +1263,8 @@ export default function CharacterDetailModal({ character, isOpen, onClose }) {
             {/* Skill Detail Modal */}
             {selectedSkillModal && (
                 <SkillDetailModal
-                    skill={selectedSkillModal}
+                    skill={selectedSkillModal.skill}
+                    trigger={selectedSkillModal.trigger}
                     onClose={() => setSelectedSkillModal(null)}
                     onFindSkillSources={() => {
                         setSelectedSkillModal(null);

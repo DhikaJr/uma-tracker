@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useModalDialog } from '../utils/useModalDialog';
 import { 
     X, 
     Search,
@@ -75,25 +76,11 @@ function ConditionCategoryIcon({ category, icon, className = "w-3.5 h-3.5" }) {
     }
 }
 
-export default function SkillDetailModal({ skill: rawSkill, onClose, onFindSkillSources }) {
+export default function SkillDetailModal({ skill: rawSkill, onClose, onFindSkillSources, trigger }) {
     const [openScalings, setOpenScalings] = useState(() => ({ '0-0': true }));
     const [openRawFormulas, setOpenRawFormulas] = useState({});
 
-    useEffect(() => {
-        if (!rawSkill) return;
-
-        const handleKeyDown = (event) => {
-            if (event.key !== 'Escape') return;
-
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            if (!event.repeat) onClose?.();
-        };
-
-        // Handle Escape before the underlying modal's bubbling listener.
-        window.addEventListener('keydown', handleKeyDown, true);
-        return () => window.removeEventListener('keydown', handleKeyDown, true);
-    }, [rawSkill, onClose]);
+    const dialogRef = useModalDialog(Boolean(rawSkill), onClose, trigger);
 
     if (!rawSkill) return null;
     const skill = rawSkill.skill || rawSkill;
@@ -172,6 +159,8 @@ export default function SkillDetailModal({ skill: rawSkill, onClose, onFindSkill
             onClick={onClose}
         >
             <div 
+                ref={dialogRef}
+                tabIndex={-1}
                 role="dialog"
                 aria-modal="true"
                 aria-label={nameEn}

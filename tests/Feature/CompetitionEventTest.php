@@ -12,12 +12,79 @@ use App\Support\CompetitionStatRecoveryRecommender;
 use Database\Seeders\CompetitionEventSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class CompetitionEventTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_sync_reports_unchanged_partial_and_failure_through_api_and_cli(): void
+    {
+        $path = storage_path('framework/testing/test_competition_live_sync.json');
+        CompetitionSyncService::setStoragePath($path);
+        $this->seed(CompetitionEventSeeder::class);
+        $this->freezeTime();
+
+        $article = static fn (int $id): array => [
+            'announce_id' => $id, 'title' => '対戦レースイベント', 'post_at' => '2026-10-30',
+        ];
+        $status = 'unchanged';
+        Http::fake([
+            CompetitionSyncService::CYGAMES_INDEX_URL.'*' => function () use (&$status, $article) {
+                return match ($status) {
+                    'error' => Http::response([], 503),
+                    'partial' => Http::response(['information_list' => [$article(1), $article(2)]]),
+                    default => Http::response(['information_list' => []]),
+                };
+            },
+            CompetitionSyncService::CYGAMES_DETAIL_URL.'*' => fn (Request $request) => str_contains($request->url(), 'announce_id=1')
+                ? Http::response([], 503)
+                : Http::response(['detail' => ['message' => '<p>■2027年1月下旬：チャンピオンズミーティングCLASSIC</p><p>東京 芝 2400m 左 冬</p>']]),
+            CompetitionSyncService::GAMEWITH_SUMMARY_URL.'*' => function () use (&$status) {
+                return Http::response('<html></html>', $status === 'error' ? 503 : 200);
+            },
+        ]);
+
+        $service = app(CompetitionSyncService::class);
+        $this->assertSame('unchanged', $service->syncAll()['status']);
+        $stamp = CompetitionSyncService::getLiveSyncData()['last_synced_at'];
+        $this->assertNotNull($stamp);
+        $this->postJson('/api/competition-events/sync')->assertOk()->assertJsonPath('status', 'unchanged');
+        $this->artisan('uma:sync-competitions')->expectsOutputToContain('Data sudah mutakhir')->assertSuccessful();
+
+        $this->travel(1)->hour();
+        $status = 'partial';
+        $this->postJson('/api/competition-events/sync')->assertOk()
+            ->assertJsonPath('status', 'partial')->assertJsonPath('last_synced_at', $stamp)
+            ->assertJsonPath('updated_events.0', 'cm-2027-01');
+        $this->assertSame('partial', $service->syncAll()['status']);
+        $this->artisan('uma:sync-competitions')->expectsOutputToContain('sebagian berhasil')->assertFailed();
+        $this->getJson('/api/competition-events')->assertJsonPath('sync_meta.status', 'partial');
+        $events = CompetitionSyncService::getLiveSyncData()['events'];
+
+        $status = 'error';
+        $this->assertSame('error', $service->syncAll()['status']);
+        $this->postJson('/api/competition-events/sync')->assertServiceUnavailable()
+            ->assertJsonPath('status', 'error')->assertJsonPath('last_synced_at', $stamp);
+        $this->artisan('uma:sync-competitions')->expectsOutputToContain('Gagal memuat sumber')->assertFailed();
+        $this->assertSame($events, CompetitionSyncService::getLiveSyncData()['events']);
+    }
+
+    public function test_failed_snapshot_write_keeps_previous_competition_snapshot(): void
+    {
+        $path = storage_path('framework/testing/test_competition_live_sync.json');
+        CompetitionSyncService::setStoragePath($path);
+        $snapshot = ['last_synced_at' => '2026-11-12T12:00:00+07:00', 'status' => 'success', 'events' => [], 'guides' => []];
+        $this->assertTrue(CompetitionSyncService::saveLiveSyncData($snapshot));
+        $original = file_get_contents($path);
+        File::partialMock()->shouldReceive('put')->once()->andReturn(false);
+
+        $this->assertFalse(CompetitionSyncService::saveLiveSyncData([...$snapshot, 'status' => 'partial']));
+        $this->assertSame($original, file_get_contents($path));
+        $this->assertSame($snapshot, CompetitionSyncService::getLiveSyncData());
+    }
 
     protected function tearDown(): void
     {

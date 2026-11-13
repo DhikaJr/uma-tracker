@@ -1,5 +1,3 @@
-import racetracksCatalog from '../data/racetracksCatalog.json';
-
 /**
  * Phase definitions and Indonesian translations with GameTora colors.
  */
@@ -76,69 +74,5 @@ export function formatSpurtLocations(locations = []) {
  * Returns null if event is not fully confirmed or course is not found.
  */
 export function findRacetrackCourse(event) {
-    if (!event) return null;
-
-    // If backend already attached pre-matched racetrack_course, use it directly
-    if (event.racetrack_course) {
-        return event.racetrack_course;
-    }
-
-    const venue = event.venue;
-    const distance = Number(event.distance);
-    const surface = (event.surface || 'turf').toLowerCase();
-    const direction = (event.direction || '').toLowerCase();
-
-    // Zero speculative data: required track properties must be known
-    if (!venue || !distance) {
-        return null;
-    }
-
-    const normVenue = String(venue).toLowerCase().trim();
-    const track = (racetracksCatalog || []).find(t => 
-        (t.name_en || '').toLowerCase() === normVenue ||
-        (t.slug || '').toLowerCase() === normVenue ||
-        (t.name_ja || '').toLowerCase() === normVenue
-    );
-
-    if (!track || !track.courses || track.courses.length === 0) {
-        return null;
-    }
-
-    const wantsOuter = direction.includes('outer');
-    const wantsInner = direction.includes('inner');
-
-    // Filter courses matching length & surface
-    const candidates = track.courses.filter(c => 
-        Number(c.length) === distance && 
-        (c.surface || '').toLowerCase() === surface
-    );
-
-    if (candidates.length === 0) {
-        return null;
-    }
-
-    let selectedCourse = null;
-    if (candidates.length === 1) {
-        selectedCourse = candidates[0];
-    } else {
-        if (wantsOuter) {
-            selectedCourse = candidates.find(c => c.inout === 3 || c.inout_str === 'outer');
-        }
-        if (!selectedCourse && wantsInner) {
-            selectedCourse = candidates.find(c => c.inout === 2 || c.inout_str === 'inner');
-        }
-        if (!selectedCourse) {
-            selectedCourse = candidates[0];
-        }
-    }
-
-    return {
-        track_id: track.id,
-        track_name: track.name_en,
-        track_name_ja: track.name_ja,
-        track_slug: track.slug,
-        course: selectedCourse,
-        gametora_url: selectedCourse.gametora_url,
-        gametora_hash: selectedCourse.gametora_hash,
-    };
+    return event?.racetrack_course ?? null;
 }

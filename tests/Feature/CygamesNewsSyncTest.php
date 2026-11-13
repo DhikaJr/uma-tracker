@@ -7,9 +7,13 @@ namespace Tests\Feature;
 use App\Models\AppSetting;
 use App\Models\GachaBanner;
 use App\Models\UmaCatalogItem;
+use App\Services\CircleTrackerService;
 use App\Services\CygamesNewsService;
 use App\Services\GameToraSyncService;
+use App\Support\CompetitionRacetrackHelper;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -18,6 +22,65 @@ class CygamesNewsSyncTest extends TestCase
     use RefreshDatabase;
 
     protected CygamesNewsService $service;
+
+    public function test_gametora_and_circle_verify_tls_and_explain_ca_failure(): void
+    {
+        $assertTls = function ($request, array $options): never {
+            $this->assertTrue($options['verify']);
+
+            throw new ConnectionException('cURL error 60: SSL certificate problem');
+        };
+        config(['services.uma_http.ca_bundle' => null]);
+        Http::fake([
+            GameToraSyncService::MANIFEST_URL => $assertTls,
+            CircleTrackerService::BASE_URL.'/api/circles/123/contributions' => $assertTls,
+        ]);
+
+        $gameTora = app(GameToraSyncService::class)->sync();
+        $circle = app(CircleTrackerService::class)->refresh('123', true);
+        $this->assertFalse($gameTora['success']);
+        $this->assertFalse($circle['success']);
+        $this->assertStringContainsString('UMA_HTTP_CA_BUNDLE', $gameTora['message']);
+        $this->assertStringContainsString('UMA_HTTP_CA_BUNDLE', $circle['message']);
+    }
+
+    public function test_unchanged_manifest_rebuilds_missing_runtime_racetrack_snapshot(): void
+    {
+        $originalStorage = storage_path();
+        $isolatedStorage = storage_path('framework/testing/'.uniqid('tracks-'));
+        $this->app->useStoragePath($isolatedStorage);
+        CompetitionRacetrackHelper::clearCache();
+        $source = resource_path('js/data/racetracksCatalog.json');
+        $sourceHash = hash_file('sha256', $source);
+        $manifest = [
+            'character-cards' => 'cards', 'characters' => 'characters', 'support-cards' => 'support',
+            'racetracks' => 'tracks', 'racetracks_extended' => 'extended',
+        ];
+        AppSetting::setValue('gametora_manifest_hash', implode('|', ['characters', 'cards', 'support', '', '', '', '', '', '', '', 'tracks', 'extended']));
+        GachaBanner::create(['name' => 'Example', 'start_date' => '2026-11-13']);
+        Http::fake([
+            GameToraSyncService::MANIFEST_URL => Http::response($manifest),
+            GameToraSyncService::DATA_BASE_URL.'/racetracks.tracks.json' => Http::response([
+                ['id' => 101, 'courses' => [['id' => 10101, 'length' => 2400, 'terrain' => 1, 'inout' => 0]]],
+            ]),
+            GameToraSyncService::DATA_BASE_URL.'/racetracks_extended.extended.json' => Http::response([
+                ['id' => 101, 'name_en' => 'Runtime Course'],
+            ]),
+            'https://umamusume.jp/api/ajax/pr_info_index*' => Http::response(['information_list' => []]),
+        ]);
+
+        try {
+            $this->assertTrue(app(GameToraSyncService::class)->sync()['is_up_to_date']);
+            $course = CompetitionRacetrackHelper::findCourse(['venue' => 'Runtime Course', 'surface' => 'turf', 'distance' => 2400]);
+            $this->assertSame(10101, $course['course']['id']);
+            $this->assertFileExists(CompetitionRacetrackHelper::runtimePath());
+            $this->assertSame($sourceHash, hash_file('sha256', $source));
+        } finally {
+            CompetitionRacetrackHelper::clearCache();
+            $this->app->useStoragePath($originalStorage);
+            File::deleteDirectory($isolatedStorage);
+        }
+    }
 
     protected function setUp(): void
     {

@@ -2,6 +2,14 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.8] - 13 November 2026
+
+### Status sinkronisasi dan navigasi Koleksi
+
+- Sinkronisasi kompetisi membedakan hasil penuh, tanpa perubahan, parsial, dan gagal. Snapshot lama tetap tersedia jika penulisan gagal.
+- GameTora dan Circle memverifikasi sertifikat TLS. Detail skill mengutamakan snapshot lokal, dan jadwal kompetisi memakai katalog lintasan yang tersimpan di `storage/app/`.
+- Koleksi memuat katalog sesuai tab. Modal bertingkat menjaga fokus keyboard dan mengarahkannya ke pencarian saat pengguna memilih Cari Sumber Skill.
+
 ## [Versi 3.3.7] - 13 November 2026
 
 ### Riwayat Gacha dan penyimpanan preset dek

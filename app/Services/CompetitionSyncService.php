@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\CompetitionEvent;
+use App\Support\AtomicJsonFile;
 use App\Support\CompetitionRacetrackHelper;
 use App\Support\CompetitionStatRecoveryRecommender;
 use Carbon\Carbon;
@@ -107,21 +108,18 @@ class CompetitionSyncService
      */
     public static function saveLiveSyncData(array $data): bool
     {
-        $path = self::getStoragePath();
-        $dir = dirname($path);
+        try {
+            AtomicJsonFile::write(self::getStoragePath(), $data);
+        } catch (Throwable $e) {
+            Log::warning('Gagal menyimpan snapshot kompetisi', ['error' => $e->getMessage()]);
 
-        if (! is_dir($dir)) {
-            mkdir($dir, 0755, true);
+            return false;
         }
 
-        $encoded = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $result = file_put_contents($path, $encoded) !== false;
-        if ($result) {
-            self::$cachedLiveSyncData = $data;
-            CompetitionStatRecoveryRecommender::clearGuidesCache();
-        }
+        self::$cachedLiveSyncData = $data;
+        CompetitionStatRecoveryRecommender::clearGuidesCache();
 
-        return $result;
+        return true;
     }
 
     /**
@@ -129,8 +127,9 @@ class CompetitionSyncService
      *
      * @return array{
      *     success: bool,
+     *     status: string,
      *     message: string,
-     *     last_synced_at: string,
+     *     last_synced_at: ?string,
      *     updated_events: array<int, string>,
      *     events_checked: int,
      *     data: array<int, array<string, mixed>>
@@ -139,10 +138,11 @@ class CompetitionSyncService
     public function syncAll(bool $force = false): array
     {
         $current = self::getLiveSyncData();
+        $previous = $current;
         $updatedKeys = [];
 
         // 1. Sync from Cygames News
-        $cygamesResults = $this->syncFromCygamesNews($force);
+        ['status' => $cygamesStatus, 'data' => $cygamesResults] = $this->syncFromCygamesNews($force);
         foreach ($cygamesResults as $eventKey => $eventData) {
             $existing = $current['events'][$eventKey] ?? [];
             $hasDiff = false;
@@ -162,7 +162,7 @@ class CompetitionSyncService
         }
 
         // 2. Sync from GameWith Guides
-        $gamewithResults = $this->syncFromGameWithGuides($force);
+        ['status' => $gamewithStatus, 'data' => $gamewithResults] = $this->syncFromGameWithGuides($force);
         foreach ($gamewithResults as $eventKey => $guideData) {
             $existingGuide = $current['guides'][$eventKey] ?? [];
             if ($existingGuide !== $guideData) {
@@ -173,11 +173,22 @@ class CompetitionSyncService
             }
         }
 
-        $now = Carbon::now()->toIso8601String();
-        $current['last_synced_at'] = $now;
-        $current['status'] = 'success';
-
-        self::saveLiveSyncData($current);
+        $status = match (true) {
+            $cygamesStatus === 'error' && $gamewithStatus === 'error' => 'error',
+            $cygamesStatus !== 'success' || $gamewithStatus !== 'success' => 'partial',
+            $updatedKeys === [] => 'unchanged',
+            default => 'success',
+        };
+        if ($status === 'success' || $status === 'unchanged') {
+            $current['last_synced_at'] = Carbon::now()->toIso8601String();
+        }
+        $current['status'] = $status;
+        if (! self::saveLiveSyncData($current)) {
+            $status = 'error';
+            $current = $previous;
+            $updatedKeys = [];
+            $saveFailed = true;
+        }
 
         // Fetch all events chronologically (overlay is applied automatically via booted() retrieval)
         $events = CompetitionEvent::chronological()->get()->map(function (CompetitionEvent $event) {
@@ -190,16 +201,18 @@ class CompetitionSyncService
         $eventsCount = count($events);
         $updateCount = count(array_unique($updatedKeys));
 
-        $msg = sprintf(
-            'Berhasil menyinkronkan data turnamen dari Cygames JP & GameWith JP. %d event diperiksa, %d pembaruan diterapkan.',
-            $eventsCount,
-            $updateCount
-        );
+        $message = match ($status) {
+            'success' => "Sinkronisasi kompetisi berhasil. {$updateCount} event diperbarui.",
+            'unchanged' => 'Sinkronisasi kompetisi berhasil. Data sudah mutakhir.',
+            'partial' => "Sinkronisasi kompetisi sebagian berhasil. {$updateCount} event diperbarui.",
+            default => isset($saveFailed) ? 'Gagal menyimpan snapshot kompetisi.' : 'Gagal memuat sumber sinkronisasi kompetisi.',
+        };
 
         return [
-            'success' => true,
-            'message' => $msg,
-            'last_synced_at' => $now,
+            'success' => $status !== 'error',
+            'status' => $status,
+            'message' => $message,
+            'last_synced_at' => $current['last_synced_at'],
             'updated_events' => array_values(array_unique($updatedKeys)),
             'events_checked' => $eventsCount,
             'data' => $events,
@@ -209,11 +222,12 @@ class CompetitionSyncService
     /**
      * Synchronize official event announcements from Cygames JP.
      *
-     * @return array<string, array<string, mixed>>
+     * @return array{status: string, data: array<string, array<string, mixed>>}
      */
     public function syncFromCygamesNews(bool $force = false): array
     {
         $events = [];
+        $status = 'error';
 
         try {
             $indexResponse = Http::withHeaders([
@@ -229,14 +243,15 @@ class CompetitionSyncService
                     'status' => $indexResponse->status(),
                 ]);
 
-                return [];
+                return ['status' => 'error', 'data' => []];
             }
 
             $infoList = $indexResponse->json('information_list');
             if (! is_array($infoList)) {
-                return [];
+                return ['status' => 'error', 'data' => []];
             }
 
+            $status = 'success';
             // Filter relevant articles: multi-event overview or single event announcements
             $relevantArticles = array_filter($infoList, function (array $item): bool {
                 $title = (string) ($item['title'] ?? '');
@@ -251,23 +266,37 @@ class CompetitionSyncService
             foreach ($relevantArticles as $article) {
                 $announceId = (int) ($article['announce_id'] ?? 0);
                 if ($announceId <= 0) {
+                    $status = 'partial';
+
                     continue;
                 }
 
-                $detailResponse = Http::withHeaders([
-                    'User-Agent' => self::USER_AGENT,
-                    'Referer' => 'https://umamusume.jp/news/',
-                ])->timeout(10)->get(self::CYGAMES_DETAIL_URL, [
-                    'format' => 'json',
-                    'announce_id' => $announceId,
-                ]);
+                try {
+                    $detailResponse = Http::withHeaders([
+                        'User-Agent' => self::USER_AGENT,
+                        'Referer' => 'https://umamusume.jp/news/',
+                    ])->timeout(10)->get(self::CYGAMES_DETAIL_URL, [
+                        'format' => 'json',
+                        'announce_id' => $announceId,
+                    ]);
+
+                } catch (Throwable $e) {
+                    $status = 'partial';
+                    Log::warning('Gagal mengambil detail Cygames', ['error' => $e->getMessage()]);
+
+                    continue;
+                }
 
                 if (! $detailResponse->successful()) {
+                    $status = 'partial';
+
                     continue;
                 }
 
                 $detailMessage = (string) ($detailResponse->json('detail.message') ?? '');
                 if ($detailMessage === '') {
+                    $status = 'partial';
+
                     continue;
                 }
 
@@ -286,10 +315,13 @@ class CompetitionSyncService
                 }
             }
         } catch (Throwable $e) {
+            if ($status !== 'error') {
+                $status = 'partial';
+            }
             Log::warning('Error during syncFromCygamesNews', ['error' => $e->getMessage()]);
         }
 
-        return $events;
+        return ['status' => $status, 'data' => $events];
     }
 
     /**
@@ -681,11 +713,12 @@ class CompetitionSyncService
     /**
      * Synchronize event build guides from GameWith JP articles.
      *
-     * @return array<string, array<string, mixed>>
+     * @return array{status: string, data: array<string, array<string, mixed>>}
      */
     public function syncFromGameWithGuides(bool $force = false): array
     {
         $guides = [];
+        $status = 'error';
 
         try {
             $response = Http::withHeaders([
@@ -697,10 +730,14 @@ class CompetitionSyncService
                     'status' => $response->status(),
                 ]);
 
-                return [];
+                return ['status' => 'error', 'data' => []];
             }
 
-            $html = (string) $response->body();
+            $html = $response->body();
+            if (trim($html) === '') {
+                return ['status' => 'error', 'data' => []];
+            }
+            $status = 'success';
 
             // Extract articles matching competition guide links:
             // e.g. <a href="https://gamewith.jp/uma-musume/article/show/586061">...1月チャンミ...</a>
@@ -724,13 +761,18 @@ class CompetitionSyncService
                 $guide = $this->fetchGameWithArticleGuide($articleId);
                 if ($guide !== null && ! empty($guide['event_key'])) {
                     $guides[$guide['event_key']] = $guide;
+                } else {
+                    $status = 'partial';
                 }
             }
         } catch (Throwable $e) {
+            if ($status !== 'error') {
+                $status = 'partial';
+            }
             Log::warning('Error during syncFromGameWithGuides', ['error' => $e->getMessage()]);
         }
 
-        return $guides;
+        return ['status' => $status, 'data' => $guides];
     }
 
     /**

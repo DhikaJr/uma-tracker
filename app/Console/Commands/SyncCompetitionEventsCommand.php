@@ -40,7 +40,11 @@ class SyncCompetitionEventsCommand extends Command
             return Command::FAILURE;
         }
 
-        $this->info($result['message']);
+        if ($result['status'] === 'partial') {
+            $this->warn($result['message']);
+        } else {
+            $this->info($result['message']);
+        }
 
         $rows = [];
         foreach ($result['data'] as $event) {
@@ -65,8 +69,8 @@ class SyncCompetitionEventsCommand extends Command
         );
 
         $this->line('');
-        $this->comment("Terakhir disinkronkan: {$result['last_synced_at']}");
+        $this->comment('Sinkronisasi penuh terakhir: '.($result['last_synced_at'] ?? 'belum ada'));
 
-        return Command::SUCCESS;
+        return $result['status'] === 'partial' ? Command::FAILURE : Command::SUCCESS;
     }
 }

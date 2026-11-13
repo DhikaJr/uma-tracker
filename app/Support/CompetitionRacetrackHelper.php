@@ -11,6 +11,32 @@ class CompetitionRacetrackHelper
     /** @var array<int, array<string, mixed>>|null */
     protected static ?array $catalogCache = null;
 
+    public static function runtimePath(): string
+    {
+        return storage_path('app/racetracks_catalog.json');
+    }
+
+    public static function clearCache(): void
+    {
+        self::$catalogCache = null;
+    }
+
+    public static function readRuntimeCatalog(?string $expectedRevision = null): array
+    {
+        $path = self::runtimePath();
+        $contents = is_file($path) ? @file_get_contents($path) : false;
+        $snapshot = is_string($contents) ? json_decode($contents, true) : null;
+        if ($expectedRevision !== null && ($snapshot['revision'] ?? null) !== $expectedRevision) {
+            return [];
+        }
+
+        $catalog = $snapshot['tracks'] ?? null;
+
+        return is_array($catalog) && array_is_list($catalog) && $catalog !== []
+            && array_all($catalog, fn ($track) => is_array($track) && isset($track['slug']) && is_array($track['courses'] ?? null))
+            ? $catalog : [];
+    }
+
     /**
      * Get the racetracks catalog.
      *
@@ -20,6 +46,11 @@ class CompetitionRacetrackHelper
     {
         if (self::$catalogCache !== null) {
             return self::$catalogCache;
+        }
+
+        $runtime = self::readRuntimeCatalog();
+        if ($runtime !== []) {
+            return self::$catalogCache = $runtime;
         }
 
         $path = resource_path('js/data/racetracksCatalog.json');

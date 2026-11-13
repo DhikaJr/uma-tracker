@@ -7,9 +7,9 @@ namespace App\Services;
 use App\Models\AppSetting;
 use App\Models\CareerRun;
 use App\Models\CircleSnapshot;
+use App\Support\VerifiedHttp;
 use Exception;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class CircleTrackerService
@@ -68,7 +68,7 @@ class CircleTrackerService
                     try {
                         $snapshot = $this->fetchAndSavePeriod($circleId, $periodNorm);
                     } catch (Exception $e) {
-                        Log::error("Fetching circle snapshot for period {$periodNorm} failed: ".$e->getMessage());
+                        Log::error("Fetching circle snapshot for period {$periodNorm} failed: ".VerifiedHttp::errorMessage($e));
                     }
                 }
 
@@ -87,7 +87,7 @@ class CircleTrackerService
             try {
                 $latest = $this->fetchAndSave($circleId);
             } catch (Exception $e) {
-                Log::error('Initial circle fetch failed: '.$e->getMessage());
+                Log::error('Initial circle fetch failed: '.VerifiedHttp::errorMessage($e));
             }
         }
 
@@ -179,11 +179,11 @@ class CircleTrackerService
                 'data' => $this->formatSnapshotResponse($newSnapshot, $circleId, $trackedViewerId),
             ];
         } catch (Exception $e) {
-            Log::error('Muxueuma refresh error: '.$e->getMessage());
+            Log::error('Muxueuma refresh error: '.VerifiedHttp::errorMessage($e));
 
             return [
                 'success' => false,
-                'message' => 'Gagal menghubungi server muxueuma.com: '.$e->getMessage(),
+                'message' => 'Gagal menghubungi server muxueuma.com: '.VerifiedHttp::errorMessage($e),
                 'data' => $this->formatSnapshotResponse($latest, $circleId, $trackedViewerId),
             ];
         }
@@ -203,7 +203,7 @@ class CircleTrackerService
 
         // 1. Fetch contributions
         $contribUrl = self::BASE_URL."/api/circles/{$circleId}/contributions";
-        $contribRes = Http::withoutVerifying()->withHeaders($headers)->timeout(25)->get($contribUrl);
+        $contribRes = VerifiedHttp::request()->withHeaders($headers)->timeout(25)->get($contribUrl);
 
         if (! $contribRes->successful()) {
             throw new Exception("HTTP {$contribRes->status()} from {$contribUrl}");
@@ -213,7 +213,7 @@ class CircleTrackerService
 
         // 2. Fetch ranking trend
         $trendUrl = self::BASE_URL."/api/circles/{$circleId}/ranking-trend?range=7d";
-        $trendRes = Http::withoutVerifying()->withHeaders($headers)->timeout(25)->get($trendUrl);
+        $trendRes = VerifiedHttp::request()->withHeaders($headers)->timeout(25)->get($trendUrl);
 
         if (! $trendRes->successful()) {
             throw new Exception("HTTP {$trendRes->status()} from {$trendUrl}");
@@ -253,7 +253,7 @@ class CircleTrackerService
         ];
 
         $contribUrl = self::BASE_URL."/api/circles/{$circleId}/contributions?period={$periodNorm}";
-        $contribRes = Http::withoutVerifying()->withHeaders($headers)->timeout(25)->get($contribUrl);
+        $contribRes = VerifiedHttp::request()->withHeaders($headers)->timeout(25)->get($contribUrl);
 
         if (! $contribRes->successful()) {
             throw new Exception("HTTP {$contribRes->status()} from {$contribUrl}");
@@ -269,7 +269,7 @@ class CircleTrackerService
 
         // Fetch trend for past month rank if available
         $trendUrl = self::BASE_URL."/api/circles/{$circleId}/ranking-trend?range=30d";
-        $trendRes = Http::withoutVerifying()->withHeaders($headers)->timeout(25)->get($trendUrl);
+        $trendRes = VerifiedHttp::request()->withHeaders($headers)->timeout(25)->get($trendUrl);
         $trend = $trendRes->successful() ? $trendRes->json() : [];
 
         $rank = null;

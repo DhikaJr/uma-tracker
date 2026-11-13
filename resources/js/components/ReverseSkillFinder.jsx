@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import AllSkillsCatalogModal from './AllSkillsCatalogModal';
 import {
     Search,
@@ -29,16 +29,11 @@ export default function ReverseSkillFinder({
     onOpenCharacter, 
     onToggleCompareCard, 
     compareCards = [], 
-    onNotify 
+    onNotify,
+    searchShortcut,
 }) {
-    const [query, setQuery] = useState(() => {
-        const pending = sessionStorage.getItem('uma_pending_skill_search');
-        if (pending) {
-            sessionStorage.removeItem('uma_pending_skill_search');
-            return pending;
-        }
-        return '';
-    });
+    const searchRef = useRef(null);
+    const [query, setQuery] = useState(searchShortcut?.query ?? '');
     const [debouncedQuery, setDebouncedQuery] = useState(query);
     const [rarityFilter, setRarityFilter] = useState('all'); // all, rare, normal, unique, evolved
     const [sourceTypeFilter, setSourceTypeFilter] = useState('all'); // all, support_card, character
@@ -50,18 +45,13 @@ export default function ReverseSkillFinder({
     const [expandedCards, setExpandedCards] = useState({});
     const [showAllSkillsModal, setShowAllSkillsModal] = useState(false);
 
-    // Global listener for shortcut events to find skill sources
     useEffect(() => {
-        const handleFindSkillSources = (e) => {
-            const q = e.detail?.query;
-            if (q) {
-                setQuery(q);
-                setDebouncedQuery(q);
-            }
-        };
-        window.addEventListener('uma:find-skill-sources', handleFindSkillSources);
-        return () => window.removeEventListener('uma:find-skill-sources', handleFindSkillSources);
-    }, []);
+        if (!searchShortcut) return;
+        setQuery(searchShortcut.query);
+        setDebouncedQuery(searchShortcut.query);
+        const frame = requestAnimationFrame(() => searchRef.current?.focus());
+        return () => cancelAnimationFrame(frame);
+    }, [searchShortcut]);
 
     // 300ms Debounce Query
     useEffect(() => {
@@ -209,6 +199,7 @@ export default function ReverseSkillFinder({
                         </div>
                         <input
                             type="text"
+                            ref={searchRef}
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder="Cari nama skill EN atau JP (misal: Groundwork, 円弧, Curvature, Spurt, 好転一息)..."
@@ -605,7 +596,7 @@ export default function ReverseSkillFinder({
                                                     {charSources.map((char, chIdx) => (
                                                         <div
                                                             key={`${char.id || char.name}-${chIdx}`}
-                                                            onClick={() => onOpenCharacter?.(char)}
+                                                            onClick={(event) => onOpenCharacter?.(char, event.currentTarget)}
                                                             role="button"
                                                             tabIndex={0}
                                                             title="Klik untuk membuka detail karakter & skill tree"

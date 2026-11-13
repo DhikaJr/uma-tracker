@@ -36,6 +36,13 @@ class CollectionController extends Controller
      */
     public const INDEXED_SKILLS_CACHE_KEY = 'collection_indexed_skills_map_v1';
 
+    public static function clearSkillCatalogCache(): void
+    {
+        Cache::forget(self::ALL_SKILLS_CACHE_KEY);
+        Cache::forget('collection_all_skills_list_v2');
+        Cache::forget(self::INDEXED_SKILLS_CACHE_KEY);
+    }
+
     /**
      * Helper to determine base star rating (1, 2, or 3) for a character.
      */
@@ -932,7 +939,15 @@ class CollectionController extends Controller
             return response()->json(['success' => false, 'message' => 'Parameter id atau name diperlukan.'], 400);
         }
 
-        $skillsById = $syncService->loadSkillsLookup();
+        try {
+            $skillsById = $syncService->loadSkillsLookup(reportFailure: true);
+        } catch (RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 503);
+        }
+        if ($skillsById === []) {
+            return response()->json(['success' => false, 'message' => 'Dataset skill GameTora sedang tidak tersedia.'], 503);
+        }
+
         $rawSkill = null;
 
         if ($id && isset($skillsById[(int) $id])) {

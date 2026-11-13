@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
 import { 
     Layers, 
     Sparkles, 
@@ -31,11 +31,20 @@ const SkillDetailModal = lazy(() => import('./SkillDetailModal'));
 const SupportDeckBuilder = lazy(() => import('./SupportDeckBuilder'));
 
 export default function CollectionView({ onNotify }) {
-    const [activeSection, setActiveSection] = useState('characters'); // 'characters' | 'cards' | 'skills' | 'deck'
+    const [activeSection, setActiveSection] = useState(() => sessionStorage.getItem('uma_pending_skill_search') ? 'skills' : 'characters'); // 'characters' | 'cards' | 'skills' | 'deck'
+    const [skillSearchShortcut, setSkillSearchShortcut] = useState(() => {
+        const query = sessionStorage.getItem('uma_pending_skill_search');
+        return query ? { query } : null;
+    });
     const [previewCard, setPreviewCard] = useState(null);
     const [previewCharacter, setPreviewCharacter] = useState(null);
     const [selectedCharForDetail, setSelectedCharForDetail] = useState(null);
     const [selectedCardForDetail, setSelectedCardForDetail] = useState(null);
+    const [characterTrigger, setCharacterTrigger] = useState(null);
+    const characterPreviewTrigger = useRef(null);
+    const detailRequest = useRef(null);
+    const [catalogRevision, setCatalogRevision] = useState(0);
+    const loadedCatalogs = useRef({});
 
     // Support card comparison & skill detail states
     const [compareCards, setCompareCards] = useState([]); // up to 2 cards [cardA, cardB]
@@ -68,40 +77,44 @@ export default function CollectionView({ onNotify }) {
     const [lastSyncDate, setLastSyncDate] = useState(null);
 
     // Fetch character collection
-    const fetchCharacters = async () => {
+    const fetchCharacters = useCallback(async (signal) => {
         setLoadingChars(true);
         try {
-            const res = await fetch('/api/collection/characters');
+            const res = await fetch('/api/collection/characters', { signal });
             const data = await res.json();
-            if (data.success) {
-                setCharacters(data.characters || []);
-                setCharStats(data.stats || null);
-            }
+            if (signal?.aborted) return;
+            if (!res.ok || !data.success) throw new Error(data.message);
+            loadedCatalogs.current.characters = true;
+            setCharacters(data.characters || []);
+            setCharStats(data.stats || null);
         } catch (err) {
+            if (signal?.aborted) return;
             console.error('Failed to load characters collection:', err);
             onNotify?.('Gagal memuat daftar koleksi karakter', 'error');
         } finally {
-            setLoadingChars(false);
+            if (!signal?.aborted) setLoadingChars(false);
         }
-    };
+    }, [onNotify]);
 
     // Fetch support cards collection
-    const fetchSupportCards = async () => {
+    const fetchSupportCards = useCallback(async (signal) => {
         setLoadingCards(true);
         try {
-            const res = await fetch('/api/collection/support-cards');
+            const res = await fetch('/api/collection/support-cards', { signal });
             const data = await res.json();
-            if (data.success) {
-                setCards(data.cards || []);
-                setCardStats(data.stats || null);
-            }
+            if (signal?.aborted) return;
+            if (!res.ok || !data.success) throw new Error(data.message);
+            loadedCatalogs.current.cards = true;
+            setCards(data.cards || []);
+            setCardStats(data.stats || null);
         } catch (err) {
+            if (signal?.aborted) return;
             console.error('Failed to load support cards collection:', err);
             onNotify?.('Gagal memuat daftar koleksi support card', 'error');
         } finally {
-            setLoadingCards(false);
+            if (!signal?.aborted) setLoadingCards(false);
         }
-    };
+    }, [onNotify]);
 
     // Fetch GameTora sync status
     const fetchSyncStatus = async () => {
@@ -117,10 +130,26 @@ export default function CollectionView({ onNotify }) {
     };
 
     useEffect(() => {
-        fetchCharacters();
-        fetchSupportCards();
         fetchSyncStatus();
     }, []);
+
+    const needsCards = activeSection === 'cards' || activeSection === 'deck';
+
+    useEffect(() => {
+        if (activeSection !== 'characters' || loadedCatalogs.current.characters) return;
+        const controller = new AbortController();
+        fetchCharacters(controller.signal);
+        return () => controller.abort();
+    }, [activeSection, catalogRevision, fetchCharacters]);
+
+    useEffect(() => {
+        if (!needsCards || loadedCatalogs.current.cards) return;
+        const controller = new AbortController();
+        fetchSupportCards(controller.signal);
+        return () => controller.abort();
+    }, [needsCards, catalogRevision, fetchSupportCards]);
+
+    useEffect(() => () => detailRequest.current?.abort(), []);
 
     // Trigger GameTora Synchronization
     const handleSyncGameTora = async () => {
@@ -133,8 +162,8 @@ export default function CollectionView({ onNotify }) {
             const data = await res.json();
             if (data.success) {
                 onNotify?.(data.message || 'Katalog GameTora berhasil disinkronkan!', 'success');
-                fetchCharacters();
-                fetchSupportCards();
+                loadedCatalogs.current = {};
+                setCatalogRevision(value => value + 1);
                 fetchSyncStatus();
             } else {
                 onNotify?.(data.message || 'Gagal menyinkronkan data GameTora', 'error');
@@ -361,11 +390,9 @@ export default function CollectionView({ onNotify }) {
 
     // Auto-switch to 'skills' section when reverse skill lookup is requested
     useEffect(() => {
-        if (sessionStorage.getItem('uma_pending_skill_search')) {
-            setActiveSection('skills');
-        }
-
-        const handleFindSkillSources = () => {
+        const handleFindSkillSources = (event) => {
+            detailRequest.current?.abort();
+            setSkillSearchShortcut({ query: event.detail?.query ?? '' });
             setActiveSection('skills');
             setSelectedCharForDetail(null);
             setSelectedCardForDetail(null);
@@ -378,17 +405,44 @@ export default function CollectionView({ onNotify }) {
         return () => window.removeEventListener('uma:find-skill-sources', handleFindSkillSources);
     }, []);
 
+    useEffect(() => {
+        if (skillSearchShortcut) sessionStorage.removeItem('uma_pending_skill_search');
+    }, [skillSearchShortcut]);
+
     // Handlers for ReverseSkillFinder interactions
-    const handleOpenSupportCardFromFinder = (cardItem) => {
-        if (!cardItem) return;
-        const fullCard = cards.find(c => (c.catalog_id && c.catalog_id === cardItem.catalog_id) || c.name === cardItem.name || (c.id && c.id === cardItem.id)) || cardItem;
-        setSelectedCardForDetail(fullCard);
+    const loadFinderDetail = async (item, resource, field, onOpen) => {
+        if (!item) return;
+        detailRequest.current?.abort();
+        const controller = new AbortController();
+        detailRequest.current = controller;
+        const query = new URLSearchParams(item.catalog_id ? { id: item.catalog_id } : { name: item.name });
+        try {
+            const response = await fetch(`/api/collection/${resource}/detail?${query}`, { signal: controller.signal });
+            const data = await response.json();
+            if (controller.signal.aborted) return;
+            if (!response.ok || !data[field]) throw new Error(data.message || 'Gagal memuat detail Koleksi.');
+            onOpen({ ...item, ...data[field] });
+        } catch (error) {
+            if (!controller.signal.aborted) onNotify?.(error.message, 'error');
+        }
     };
 
-    const handleOpenCharacterFromFinder = (charItem) => {
-        if (!charItem) return;
-        const fullChar = characters.find(c => (c.catalog_id && c.catalog_id === charItem.catalog_id) || c.name === charItem.name || (c.id && c.id === charItem.id)) || charItem;
-        setSelectedCharForDetail(fullChar);
+    const openCharacter = (character, trigger) => {
+        setCharacterTrigger(trigger);
+        setSelectedCharForDetail(character);
+    };
+
+    const handleOpenSupportCardFromFinder = (card) => {
+        if (card?.details) {
+            detailRequest.current?.abort();
+            setSelectedCardForDetail(card);
+            return;
+        }
+        loadFinderDetail(card, 'support-cards', 'card', setSelectedCardForDetail);
+    };
+
+    const handleOpenCharacterFromFinder = (character, trigger) => {
+        loadFinderDetail(character, 'characters', 'character', detail => openCharacter(detail, trigger));
     };
 
     const handleToggleCompareCardFromFinder = (cardItem) => {
@@ -881,7 +935,7 @@ export default function CollectionView({ onNotify }) {
                                             {/* Character Avatar & Name */}
                                             <div className="flex items-center gap-3 pt-1">
                                                 <div 
-                                                    onClick={() => setPreviewCharacter(char)}
+                                                    onClick={(event) => { characterPreviewTrigger.current = event.currentTarget; setPreviewCharacter(char); }}
                                                     className={`w-14 h-14 rounded-2xl overflow-hidden shrink-0 border relative flex items-center justify-center shadow-xs transition-transform cursor-pointer hover:scale-105 group/avatar ${
                                                     baseStars === 3
                                                         ? 'border-amber-300/80 bg-amber-50/60 dark:bg-amber-950/30'
@@ -907,7 +961,7 @@ export default function CollectionView({ onNotify }) {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <h3 
-                                                        onClick={() => setSelectedCharForDetail(char)}
+                                                        onClick={(event) => openCharacter(char, event.currentTarget)}
                                                         className="text-sm font-black text-slate-900 dark:text-white line-clamp-2 leading-snug cursor-pointer hover:text-pink-600 dark:hover:text-pink-400 transition-colors" 
                                                         title={`${char.name} - Klik untuk lihat detail`}
                                                     >
@@ -988,7 +1042,7 @@ export default function CollectionView({ onNotify }) {
                                                     <div className="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-800/80">
                                                         <button
                                                             type="button"
-                                                            onClick={() => setSelectedCharForDetail(char)}
+                                                            onClick={(event) => openCharacter(char, event.currentTarget)}
                                                             className="w-full py-1.5 px-2 rounded-xl bg-pink-50 hover:bg-pink-100 dark:bg-pink-950/40 dark:hover:bg-pink-950/70 text-pink-700 dark:text-pink-300 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-pink-200/60 dark:border-pink-800/50"
                                                         >
                                                             <BookOpen className="w-3.5 h-3.5" />
@@ -1004,7 +1058,7 @@ export default function CollectionView({ onNotify }) {
                                                         <span>Kesesuaian (Aptitude):</span>
                                                         <button
                                                             type="button"
-                                                            onClick={() => setSelectedCharForDetail(char)}
+                                                            onClick={(event) => openCharacter(char, event.currentTarget)}
                                                             className="text-pink-600 hover:text-pink-700 dark:text-pink-400 dark:hover:text-pink-300 flex items-center gap-1 font-bold cursor-pointer"
                                                         >
                                                             <BookOpen className="w-3 h-3" />
@@ -1048,7 +1102,7 @@ export default function CollectionView({ onNotify }) {
                                                     {/* Detail Button */}
                                                     <button
                                                         type="button"
-                                                        onClick={() => setSelectedCharForDetail(char)}
+                                                        onClick={(event) => openCharacter(char, event.currentTarget)}
                                                         className="w-full mt-1 py-1.5 px-2 rounded-xl bg-pink-50 hover:bg-pink-100 dark:bg-pink-950/40 dark:hover:bg-pink-950/70 text-pink-700 dark:text-pink-300 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-pink-200/60 dark:border-pink-800/50"
                                                     >
                                                         <BookOpen className="w-3.5 h-3.5" />
@@ -1484,6 +1538,7 @@ export default function CollectionView({ onNotify }) {
             {/* ============================================================ */}
             {activeSection === 'skills' && (
                 <ReverseSkillFinder
+                    searchShortcut={skillSearchShortcut}
                     onSkillDetail={(skill) => setSelectedSkillForDetail(skill)}
                     onOpenSupportCard={handleOpenSupportCardFromFinder}
                     onOpenCharacter={handleOpenCharacterFromFinder}
@@ -1693,7 +1748,7 @@ export default function CollectionView({ onNotify }) {
                                 onClick={() => {
                                     const targetChar = previewCharacter;
                                     setPreviewCharacter(null);
-                                    setSelectedCharForDetail(targetChar);
+                                    openCharacter(targetChar, characterPreviewTrigger.current);
                                 }}
                                 className="px-4 py-2 rounded-xl bg-pink-50 hover:bg-pink-100 dark:bg-pink-950/60 dark:hover:bg-pink-900/80 text-pink-700 dark:text-pink-300 border border-pink-200 dark:border-pink-800 font-bold transition-colors cursor-pointer flex items-center gap-1.5"
                             >
@@ -1719,6 +1774,7 @@ export default function CollectionView({ onNotify }) {
                 {selectedCharForDetail && (
                     <CharacterDetailModal
                         character={selectedCharForDetail}
+                        trigger={characterTrigger}
                         isOpen={!!selectedCharForDetail}
                         onClose={() => setSelectedCharForDetail(null)}
                     />

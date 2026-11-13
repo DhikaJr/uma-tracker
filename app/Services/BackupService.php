@@ -18,7 +18,6 @@ use App\Models\UserSupportCard;
 use App\Support\UmaCatalog;
 use Database\Seeders\CompetitionEventSeeder;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use InvalidArgumentException;
@@ -1240,8 +1239,7 @@ class BackupService
 
         DB::afterCommit(static function (): void {
             UmaCatalog::clearCache();
-            Cache::forget(CollectionController::ALL_SKILLS_CACHE_KEY);
-            Cache::forget(CollectionController::INDEXED_SKILLS_CACHE_KEY);
+            CollectionController::clearSkillCatalogCache();
         });
 
         return $results;

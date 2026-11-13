@@ -50,6 +50,8 @@ php artisan uma:sync-competitions
 
 Perintah pertama memperbarui katalog GameTora. Perintah kedua menyegarkan jadwal resmi Cygames dan panduan GameWith. Tambahkan `--force` pada perintah yang ingin dijalankan ulang tanpa pemeriksaan pembaruan normal.
 
+Jika PHP di Windows gagal memverifikasi sertifikat TLS, arahkan `UMA_HTTP_CA_BUNDLE` di `.env` atau `curl.cainfo` di `php.ini` ke berkas PEM bundel CA tepercaya. Jika konfigurasi Laravel dicache, perbarui cache setelah mengubah `.env`.
+
 ## Cadangan dan pemulihan
 
 Backup Schema v2.0 menyimpan sembilan entitas SQLite dalam berkas JSON. Cakupannya meliputi `gacha_banners`, `gacha_pulls`, `gacha_pities`, `career_runs`, `circle_snapshots`, `app_settings`, `uma_catalog_items`, `user_characters`, dan `user_support_cards`. Jadwal resmi `competition_events` dilindungi secara terpisah saat pemulihan.

@@ -14,6 +14,10 @@ return [
     |
     */
 
+    'uma_http' => [
+        'ca_bundle' => env('UMA_HTTP_CA_BUNDLE'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

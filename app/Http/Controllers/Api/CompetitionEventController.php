@@ -50,12 +50,13 @@ class CompetitionEventController extends Controller
             $force = $request->boolean('force', false);
             $result = $syncService->syncAll($force);
 
-            return response()->json($result);
+            return response()->json($result, $result['success'] ? 200 : 503);
         } catch (Throwable $e) {
             return response()->json([
                 'success' => false,
+                'status' => 'error',
                 'message' => 'Gagal menyinkronkan data kompetisi: '.$e->getMessage(),
-                'last_synced_at' => null,
+                'last_synced_at' => CompetitionSyncService::getLiveSyncData()['last_synced_at'],
                 'updated_events' => [],
                 'events_checked' => 0,
                 'data' => [],
