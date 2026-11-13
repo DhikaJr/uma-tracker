@@ -2,6 +2,14 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.6] - 13 November 2026
+
+### Pemulihan backup dan akurasi Perencana Jewel
+
+- Mode overwrite skema v2.0 memerlukan kesembilan kelompok data. Mode merge memakai ID lokal dan memetakan relasi agar ID sumber yang sama tidak menimpa data lain.
+- Batas unggah aplikasi naik ke 100 MiB. Gunakan `php artisan uma:restore <file>` jika arsip melebihi batas server HTTP.
+- Perencana Jewel menghitung kekurangan Carat secara eksak dan membatasi klaim paket harian sesuai tanggal target.
+
 ## [Versi 3.3.5] - 13 November 2026
 
 ### Kalibrasi Perencana Jewel dan biaya farming

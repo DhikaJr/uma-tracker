@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+    calculateCaratDeficit,
+    calculateDailyJewelPack,
     calculateFarmingImpact,
     calculateProjectionPeriod,
     calculateRoutineRewards,
     calculateTargetReadiness,
+    getBannerTickets,
 } from '../../resources/js/utils/jewelPlannerHelper.js';
 
 test('Class 5 earns 600 Carat for four weeks and login earns 110 Carat per seven days', () => {
@@ -32,11 +35,41 @@ for (const [bannerType, expectedTickets] of [['character', 2], ['support', 2], [
 
 test('monthly payouts exclude the starting date and include the first day of the target month', () => {
     assert.deepEqual(calculateProjectionPeriod('2026-11-01', '2026-11-30'), {
-        diffDays: 29, diffWeeks: 4, monthTransitions: 0,
+        diffDays: 29, diffWeeks: 4, monthTransitions: 0, monthsCount: 1,
     });
     assert.equal(calculateProjectionPeriod('2026-11-30', '2026-12-01').monthTransitions, 1);
     assert.equal(calculateProjectionPeriod('2026-11-30', '2027-01-01').monthTransitions, 2);
     assert.equal(calculateProjectionPeriod('2026-11-30', '2026-11-29').monthTransitions, 0);
+});
+
+for (const { target, days, estimatedMonths, paid, free } of [
+    { target: '2026-11-01', days: 0, estimatedMonths: 0, paid: 0, free: 0 },
+    { target: '2026-11-02', days: 1, estimatedMonths: 0, paid: 500, free: 50 },
+    { target: '2026-12-01', days: 30, estimatedMonths: 1, paid: 500, free: 1500 },
+    { target: '2026-12-02', days: 31, estimatedMonths: 1, paid: 1000, free: 1550 },
+]) {
+    test(`paid packs and monthly estimates respect a ${days}-day horizon`, () => {
+        const { diffDays, diffWeeks, monthsCount } = calculateProjectionPeriod('2026-11-01', target);
+        const rewards = calculateRoutineRewards({ f2p_training_pass: true }, diffDays, diffWeeks, monthsCount);
+
+        assert.equal(diffDays, days);
+        assert.equal(monthsCount, estimatedMonths);
+        assert.equal(rewards.f2pPassCarats, estimatedMonths * 500);
+        assert.equal(rewards.f2pPassTickets, estimatedMonths * 2);
+        assert.deepEqual(calculateDailyJewelPack(diffDays, true), {
+            dailyPackPaid: paid, dailyPackFree: free, dailyPackCarats: paid + free,
+        });
+    });
+}
+
+test('the exact Carat deficit uses only tickets eligible for the selected banner', () => {
+    const currentCharacterTickets = getBannerTickets('character', 0, 2);
+    const projectedSupportTickets = getBannerTickets('support', 5, 0);
+
+    assert.equal(calculateCaratDeficit(200, 29999, currentCharacterTickets), 1);
+    assert.equal(calculateCaratDeficit(200, 29999, projectedSupportTickets), 1);
+    assert.equal(calculateCaratDeficit(200, 29849, getBannerTickets('support', 5, 1)), 1);
+    assert.equal(calculateCaratDeficit(200, 0, 201), 0);
 });
 
 test('a 4,900 Carat farming cost removes 33 current pulls and 32 projected pulls', () => {

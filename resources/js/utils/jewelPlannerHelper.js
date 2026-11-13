@@ -1,5 +1,6 @@
 const CARATS_PER_PULL = 150;
 const DAYS_PER_WEEK = 7;
+const DAYS_PER_PACK = 30;
 const MILLISECONDS_PER_DAY = 86_400_000;
 
 export const STADIUM_RETENTION_CARATS = Object.freeze({
@@ -30,7 +31,12 @@ export function calculateProjectionPeriod(startDate, targetDate) {
         ? (target.getUTCFullYear() - start.getUTCFullYear()) * 12 + target.getUTCMonth() - start.getUTCMonth()
         : 0;
 
-    return { diffDays, diffWeeks: Math.floor(diffDays / DAYS_PER_WEEK), monthTransitions };
+    return {
+        diffDays,
+        diffWeeks: Math.floor(diffDays / DAYS_PER_WEEK),
+        monthTransitions,
+        monthsCount: Math.round(diffDays / 30),
+    };
 }
 
 export function getBannerTickets(bannerType, characterTickets, supportTickets) {
@@ -51,6 +57,20 @@ export function calculateRoutineRewards(config, days, weeks, estimatedMonths) {
         f2pPassCarats: passCount * 500,
         f2pPassTickets: getBannerTickets(config.target_banner_type || 'character', ticketsPerType, ticketsPerType),
     };
+}
+
+export function calculateDailyJewelPack(days, enabled) {
+    const claimDays = enabled ? days : 0;
+    const dailyPackPaid = Math.ceil(claimDays / DAYS_PER_PACK) * 500;
+    const dailyPackFree = claimDays * 50;
+
+    return { dailyPackPaid, dailyPackFree, dailyPackCarats: dailyPackPaid + dailyPackFree };
+}
+
+export function calculateCaratDeficit(targetPulls, carats, tickets) {
+    const pullsNeededAfterTickets = Math.max(0, targetPulls - tickets);
+
+    return Math.max(0, pullsNeededAfterTickets * CARATS_PER_PULL - carats);
 }
 
 export function getPullCapacity(carats, tickets = 0) {

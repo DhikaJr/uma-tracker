@@ -28,6 +28,8 @@ import JewelSacrificeCalculator from './JewelSacrificeCalculator';
 
 import {
     STADIUM_RETENTION_CARATS,
+    calculateCaratDeficit,
+    calculateDailyJewelPack,
     calculateProjectionPeriod,
     calculateRoutineRewards,
     calculateTargetReadiness,
@@ -155,8 +157,8 @@ export default function JewelPlannerView({ onNotify }) {
                 if (data.config) {
                     const todayStr = getPlannerDate();
                     let targetDate = data.config.target_date;
-                    // Jika target date di database sudah lewat atau hari ini, default ke 30 hari ke depan
-                    if (!targetDate || targetDate <= todayStr) {
+                    // Gunakan target bawaan jika tanggal tersimpan sudah lewat.
+                    if (!targetDate || targetDate < todayStr) {
                         targetDate = getPlannerDate(30);
                     }
 
@@ -206,8 +208,7 @@ export default function JewelPlannerView({ onNotify }) {
 
     const today = getPlannerDate();
     const calculation = useMemo(() => {
-        const { diffDays, diffWeeks, monthTransitions } = calculateProjectionPeriod(today, config.target_date);
-        const monthsCount = Math.max(1, Math.round(diffDays / 30));
+        const { diffDays, diffWeeks, monthTransitions, monthsCount } = calculateProjectionPeriod(today, config.target_date);
 
         // 1. Current Holdings
         const freeCarats = parseInt(config.free_carats, 10) || 0;
@@ -261,18 +262,14 @@ export default function JewelPlannerView({ onNotify }) {
         const totalCompetitiveCarats = circleCarats + cmCarats;
 
         // PvE Events (Kalibrasi Realistis JP Server)
-        const storyCarats = (parseInt(config.story_events_count, 10) || 0) * 1000;
-        const legendCarats = (parseInt(config.legend_races_count, 10) || 0) * 150;
+        const storyCarats = diffDays > 0 ? (parseInt(config.story_events_count, 10) || 0) * 1000 : 0;
+        const legendCarats = diffDays > 0 ? (parseInt(config.legend_races_count, 10) || 0) * 150 : 0;
         const g1Carats = config.g1_bonus_enabled ? monthsCount * 300 : 0;
-        const pakaliveCarats = (parseInt(config.pakalive_streams_count, 10) || 0) * 1500;
+        const pakaliveCarats = diffDays > 0 ? (parseInt(config.pakalive_streams_count, 10) || 0) * 1500 : 0;
         const totalPveCarats = storyCarats + legendCarats + g1Carats + pakaliveCarats;
 
         // Paid Passes (Daily Jewel Pack: 500 Paid Carat + 50 Free Carat/hari = 2.000 Carat / 30 hari pack)
-        const dailyPackCount = Math.max(1, Math.ceil(diffDays / 30));
-        const dailyPackPaid = config.daily_jewel_pack ? dailyPackCount * 500 : 0;
-        const dailyPackDays = Math.max(diffDays, dailyPackCount * 30);
-        const dailyPackFree = config.daily_jewel_pack ? dailyPackDays * 50 : 0;
-        const dailyPackCarats = dailyPackPaid + dailyPackFree;
+        const { dailyPackPaid, dailyPackFree, dailyPackCarats } = calculateDailyJewelPack(diffDays, config.daily_jewel_pack);
         const trainerPassCarats = config.trainer_pass ? monthsCount * 1700 : 0;
         const trainerPassPaid = config.trainer_pass ? monthsCount * 350 : 0;
         const trainerPassFree = config.trainer_pass ? monthsCount * 1350 : 0;
@@ -307,12 +304,12 @@ export default function JewelPlannerView({ onNotify }) {
         // Status Tanpa Prediksi (Aset Saat Ini)
         const currentPullDeficit = Math.max(0, targetPulls - currentTotalPulls);
         const currentPullSurplus = Math.max(0, currentTotalPulls - targetPulls);
-        const currentCaratDeficit = currentPullDeficit * 150;
+        const currentCaratDeficit = calculateCaratDeficit(targetPulls, currentCarats, currentTicketsPulls);
 
         // Status Dengan Prediksi (Proyeksi Target Tanggal)
         const projectedPullDeficit = Math.max(0, targetPulls - totalPullCapacity);
         const projectedPullSurplus = Math.max(0, totalPullCapacity - targetPulls);
-        const projectedCaratDeficit = projectedPullDeficit * 150;
+        const projectedCaratDeficit = calculateCaratDeficit(targetPulls, grandTotalCarats, grandTotalTickets);
         const projectedDailyCaratDeficit = diffDays > 0 ? Math.ceil(projectedCaratDeficit / diffDays) : projectedCaratDeficit;
 
         // Mode Evaluasi Aktif (include_predictions)
@@ -1384,6 +1381,9 @@ export default function JewelPlannerView({ onNotify }) {
 
                         {expandedAccordion.pve && (
                             <div className="p-6 space-y-4 border-t border-slate-100 dark:border-slate-800">
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    Masukkan jumlah Story Event, Legend Race, dan hadiah PakaLive yang dapat diklaim sebelum tanggal target.
+                                </p>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     {/* Story Events */}
                                     <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
@@ -1505,7 +1505,8 @@ export default function JewelPlannerView({ onNotify }) {
                                             <span>Daily Jewel Pack (30 Hari)</span>
                                         </label>
                                         <span className="text-[11px] text-slate-400 pl-6.5 block">
-                                            500 Paid Carat saat aktivasi + 50 Free Carat setiap hari (Total 2.000 Carat / 30 hari)
+                                            Simulasi aktivasi pada hari ke-1 dan perpanjangan tiap 30 hari (+500 Paid Carat per siklus).
+                                            Klaim +50 Free Carat per hari dalam rentang proyeksi.
                                         </span>
                                     </div>
                                     <div className="text-right">
