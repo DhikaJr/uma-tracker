@@ -2,6 +2,14 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.9] - 14 November 2026
+
+### Periode dan sumber data Circle Club
+
+- Status, jeda refresh, dan estimasi ritme memakai snapshot Circle aktif pada bulan berjalan menurut kalender Jepang. Arsip kosong tetap menampilkan bulan yang dipilih.
+- Circle Club menerima ID atau tautan profil MuxueUma. Circle aktif baru disimpan setelah ID dan periode respons terverifikasi.
+- Poin ranking, kontribusi anggota aktif, dan fans dari Career Run lokal diberi label berbeda. Peringkat dan poin arsip hanya tampil jika bulannya terkonfirmasi.
+
 ## [Versi 3.3.8] - 13 November 2026
 
 ### Status sinkronisasi dan navigasi Koleksi

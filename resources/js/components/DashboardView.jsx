@@ -382,7 +382,7 @@ export default function DashboardView({
                 {/* 4. Circle Monthly Fans */}
                 <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Fans Circle Bulanan</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Fans Bulanan (Career Run Lokal)</span>
                         <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center">
                             <Users className="w-5 h-5" />
                         </div>

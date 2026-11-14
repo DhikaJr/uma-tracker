@@ -231,7 +231,7 @@ export default function AppMain() {
         }
     };
 
-    const monthlyFans = liveMonthlyFans !== null ? liveMonthlyFans : (summaryData?.career?.monthly_fans || 0);
+    const localCareerFans = liveMonthlyFans !== null ? liveMonthlyFans : (summaryData?.career?.monthly_fans || 0);
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800 antialiased selection:bg-emerald-500 selection:text-white">
@@ -239,7 +239,7 @@ export default function AppMain() {
             <Navbar 
                 activeTab={activeTab} 
                 setActiveTab={setActiveTab} 
-                monthlyFans={monthlyFans}
+                monthlyFans={localCareerFans}
                 circleGoal={circleGoal}
                 darkMode={darkMode}
                 toggleDarkMode={toggleDarkMode}

@@ -101,7 +101,7 @@ export default function Navbar({
                     <div className="flex items-center gap-1.5 shrink-0">
                         {/* Circle Monthly Fans Badge (Desktop Only) */}
                         <div 
-                            title={`Kuota Circle ${circlePercent}%: ${(monthlyFans).toLocaleString()} / ${(circleGoal).toLocaleString()}`}
+                            title={`Kuota Circle (Career Run lokal) ${circlePercent}%: ${(monthlyFans).toLocaleString()} / ${(circleGoal).toLocaleString()}`}
                             className="hidden xl:flex items-center gap-1.5 bg-emerald-950/70 border border-emerald-700/50 px-2 py-1 rounded-xl whitespace-nowrap shrink-0 shadow-xs select-none"
                         >
                             <div className="p-1 rounded-lg bg-emerald-800/80 text-amber-300 shrink-0">
@@ -109,7 +109,7 @@ export default function Navbar({
                             </div>
                             <div className="text-right leading-tight whitespace-nowrap shrink-0">
                                 <div className="text-[10px] text-emerald-300 font-medium flex items-center gap-1 justify-end whitespace-nowrap">
-                                    <span>Kuota Circle</span>
+                                    <span>Kuota Circle · Career Run Lokal</span>
                                     <span className="text-amber-400 font-bold">{circlePercent}%</span>
                                 </div>
                                 <div className="text-[11px] font-bold text-white font-mono whitespace-nowrap">
@@ -242,7 +242,7 @@ export default function Navbar({
                                     />
                                 </div>
                                 <div className="text-[10px] text-emerald-300 font-mono text-right">
-                                    {(monthlyFans).toLocaleString()} / {(circleGoal).toLocaleString()} fans
+                                    {(monthlyFans).toLocaleString()} / {(circleGoal).toLocaleString()} fans (Career Run lokal)
                                 </div>
                             </div>
                         </div>

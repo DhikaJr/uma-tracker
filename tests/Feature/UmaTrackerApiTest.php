@@ -699,6 +699,8 @@ class UmaTrackerApiTest extends TestCase
 
     public function test_circle_tracker_status_returns_data(): void
     {
+        $this->travelTo(now()->setDate(2026, 11, 14)->setTime(12, 0));
+
         CircleSnapshot::create([
             'circle_id' => '441730573',
             'circle_name' => 'なんか適当',
@@ -706,7 +708,7 @@ class UmaTrackerApiTest extends TestCase
             'point' => 1171960184,
             'member_count' => 30,
             'active_total' => 853547402,
-            'period' => '2026-09-01',
+            'period' => '2026-11-01',
             'payload' => [
                 'contributions' => [
                     'circle' => ['id' => 441730573, 'name' => 'なんか適当', 'memberCount' => 30],
@@ -743,6 +745,8 @@ class UmaTrackerApiTest extends TestCase
 
     public function test_circle_tracker_status_filters_trend_segments_to_current_month(): void
     {
+        $this->travelTo(now()->setDate(2026, 11, 14)->setTime(12, 0));
+
         CircleSnapshot::create([
             'circle_id' => '441730573',
             'circle_name' => 'Cutoff Test Circle',
@@ -794,6 +798,8 @@ class UmaTrackerApiTest extends TestCase
 
     public function test_circle_tracker_status_with_historical_period_returns_past_month_data(): void
     {
+        $this->travelTo(now()->setDate(2026, 11, 14)->setTime(12, 0));
+
         CircleSnapshot::create([
             'circle_id' => '441730573',
             'circle_name' => 'なんか適当',
@@ -829,6 +835,8 @@ class UmaTrackerApiTest extends TestCase
             ->assertJsonPath('has_data', true)
             ->assertJsonPath('period', '2026-09-01')
             ->assertJsonPath('is_current_period', false)
+            ->assertJsonPath('rank', null)
+            ->assertJsonPath('point', null)
             ->assertJsonPath('active_total', 2075037321)
             ->assertJsonPath('can_refresh', false)
             ->assertJsonPath('tracked_player.contribution', 210457263);
@@ -838,6 +846,8 @@ class UmaTrackerApiTest extends TestCase
 
     public function test_circle_tracker_refresh_enforces_1_hour_cooldown(): void
     {
+        $this->travelTo(now()->setDate(2026, 11, 14)->setTime(12, 0));
+
         // Snapshot refreshed 30 minutes ago (within 1 hour cooldown window)
         CircleSnapshot::create([
             'circle_id' => '441730573',
@@ -846,7 +856,7 @@ class UmaTrackerApiTest extends TestCase
             'point' => 1171960184,
             'member_count' => 30,
             'active_total' => 853547402,
-            'period' => '2026-09-01',
+            'period' => '2026-11-01',
             'payload' => ['contributions' => ['rows' => []], 'trend' => []],
             'last_refreshed_at' => now()->subMinutes(30),
         ]);
@@ -873,6 +883,97 @@ class UmaTrackerApiTest extends TestCase
             'value' => '414486880',
         ]);
         Http::assertSentCount(2);
+    }
+
+    public function test_circle_archive_refresh_cannot_change_current_status_cooldown_or_pace(): void
+    {
+        // At 00:00 in Japan, the application clock is still in the previous UTC month.
+        $this->travelTo(now()->setDate(2026, 10, 31)->setTime(15, 0));
+        CircleSnapshot::create([
+            'circle_id' => '441730573', 'circle_name' => 'Current',
+            'period' => '2026-11', 'point' => 0, 'rank' => 0, 'member_count' => 0,
+            'payload' => ['contributions' => ['rows' => [['viewerId' => '886175385', 'contribution' => 1000]]]],
+            'last_refreshed_at' => now()->subMinutes(30),
+        ]);
+        CircleSnapshot::create([
+            'circle_id' => '999', 'circle_name' => 'Different Circle',
+            'period' => '2026-11-01', 'point' => 999,
+            'payload' => [], 'last_refreshed_at' => now(),
+        ]);
+        Http::fake([
+            'https://muxueuma.com/api/circles/441730573/contributions?period=2026-09' => Http::response([
+                'circle' => ['id' => 441730573, 'name' => 'Archive'], 'period' => '2026-09',
+                'activeTotal' => 9000, 'rows' => [['viewerId' => '886175385', 'contribution' => 9000]],
+            ]),
+            'https://muxueuma.com/api/circles/441730573/ranking-trend?range=30d' => Http::response([
+                'lastMonth' => ['period' => '2026-10-01', 'rank' => 5, 'point' => 5000],
+            ]),
+            'https://muxueuma.com/api/circles/441730573/contributions?period=2026-08' => Http::response([], 404),
+            'https://muxueuma.com/api/circles/441730573/contributions?period=2026-10' => Http::response([
+                'circle' => ['id' => 441730573, 'name' => 'Previous Month'], 'period' => '2026-10-01', 'activeTotal' => 9000,
+            ]),
+        ]);
+
+        $status = $this->getJson('/api/circle-tracker/status')->assertOk()
+            ->assertJsonPath('current_period', '2026-11-01')->assertJsonPath('point', 0)
+            ->assertJsonPath('rank', 0)->assertJsonPath('member_count', 0)->json();
+        $pace = $this->getJson('/api/circle-tracker/pace')->assertJsonPath('tracked_circle_fans', 1000)->json();
+
+        $this->getJson('/api/circle-tracker/status?period=2026-09-01')->assertOk()
+            ->assertJsonPath('selected_period', '2026-09-01')->assertJsonPath('is_current_period', false)
+            ->assertJsonPath('point', null)->assertJsonPath('rank', null)
+            ->assertJsonPath('active_total', 9000)->assertJsonPath('pace_estimator', null);
+        $this->getJson('/api/circle-tracker/status?period=2026-10')->assertOk()
+            ->assertJsonPath('point', 5000)->assertJsonPath('rank', 5);
+        $this->getJson('/api/circle-tracker/status?period=2026-08')->assertOk()
+            ->assertJsonPath('selected_period', '2026-08-01')->assertJsonPath('has_data', false)
+            ->assertJsonPath('is_current_period', false);
+
+        $archive = CircleSnapshot::where('circle_id', '441730573')->where('period', '2026-09-01')->sole();
+        $this->assertTrue($archive->last_refreshed_at->gt(now()->subMinutes(30)));
+        $current = $this->getJson('/api/circle-tracker/status')->assertOk()->json();
+        $this->assertSame(['2026-11-01', '2026-10-01', '2026-09-01'], $current['available_periods']);
+        unset($current['available_periods'], $status['available_periods']);
+        $this->assertSame($status, $current);
+        $this->postJson('/api/circle-tracker/refresh')->assertStatus(429)
+            ->assertJsonPath('data.cooldown_seconds_remaining', 1800)
+            ->assertJsonPath('data.circle_name', 'Current');
+        $this->getJson('/api/circle-tracker/pace')->assertExactJson($pace);
+        Http::assertSentCount(5);
+    }
+
+    public function test_circle_id_extraction_and_failed_switch_preserve_active_circle(): void
+    {
+        $this->fakeCircleTrackerRequests();
+        Http::fake([
+            'https://muxueuma.com/api/circles/123/contributions' => Http::response([], 404),
+            'https://muxueuma.com/api/circles/124/contributions' => Http::response(['circle' => ['id' => 441730573], 'period' => '2026-09']),
+            'https://muxueuma.com/api/circles/125/contributions' => Http::response(['circle' => ['id' => 125], 'period' => '2026-08']),
+            'https://muxueuma.com/api/circles/126/contributions' => Http::failedConnection(),
+        ]);
+
+        $this->postJson('/api/circle-tracker/set-circle', ['circle_id' => 'https://muxueuma.com/ja/circles/441730573?from=top100'])
+            ->assertOk()->assertJsonPath('data.circle_id', '441730573');
+        $this->getJson('/api/circle-tracker/status?'.http_build_query(['circle_id' => '/circles/441730573']))
+            ->assertOk()->assertJsonPath('circle_id', '441730573');
+        $this->postJson('/api/circle-tracker/refresh', ['circle_id' => '/ja/circles/441730573'])
+            ->assertStatus(429)->assertJsonPath('data.circle_id', '441730573');
+
+        foreach (['http://muxueuma.com/circles/1', 'https://muxueuma.com.example/circles/1', 'https://evil.example@muxueuma.com/circles/1', '//muxueuma.com/circles/1', '/ja/circles/1/other'] as $invalid) {
+            $this->getJson('/api/circle-tracker/status?'.http_build_query(['circle_id' => $invalid]))
+                ->assertUnprocessable()->assertJsonValidationErrors('circle_id');
+        }
+        foreach (['refresh', 'set-circle', 'track-player'] as $endpoint) {
+            $this->postJson('/api/circle-tracker/'.$endpoint, ['circle_id' => 'https://example.com/circles/1', 'viewer_id' => '123'])
+                ->assertUnprocessable()->assertJsonValidationErrors('circle_id');
+        }
+
+        foreach ([123 => [404, 'not_found'], 124 => [502, 'response_mismatch'], 125 => [502, 'response_mismatch'], 126 => [502, 'upstream_failure']] as $id => [$status, $error]) {
+            $this->postJson('/api/circle-tracker/set-circle', ['circle_id' => $id])
+                ->assertStatus($status)->assertJsonPath('error', $error);
+            $this->assertSame('441730573', AppSetting::getValue('circle_id'));
+        }
+        $this->assertDatabaseCount('circle_snapshots', 1);
     }
 
     public function test_gacha_sync_status_returns_catalog_counts(): void
@@ -2560,9 +2661,11 @@ class UmaTrackerApiTest extends TestCase
 
     private function fakeCircleTrackerRequests(): void
     {
+        $this->travelTo(now()->setDate(2026, 9, 15)->setTime(12, 0));
+
         Http::fake([
             'https://muxueuma.com/api/circles/441730573/contributions' => Http::response([
-                'circle' => ['name' => 'なんか適当', 'memberCount' => 30],
+                'circle' => ['id' => 441730573, 'name' => 'なんか適当', 'memberCount' => 30],
                 'rows' => [
                     ['viewerId' => '886175385', 'playerName' => 'TestPlayer', 'contribution' => 15000000],
                 ],

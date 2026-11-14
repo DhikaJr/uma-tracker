@@ -183,7 +183,7 @@ export default function CirclePaceWidget({
                             <p className="text-xs text-slate-500 dark:text-slate-400">
                                 {isHistorical
                                     ? 'Rekapitulasi pencapaian target bulanan pada periode arsip yang telah selesai'
-                                    : 'Pantau ritme grinding fans harian agar target kuota bulanan tercapai tepat waktu'}
+                                    : 'Fans bulan berjalan memakai nilai tertinggi antara total Career Run lokal dan kontribusi pemain di MuxueUma.'}
                             </p>
                         </div>
                     </div>

@@ -18,101 +18,76 @@ class CircleTrackerService
 
     public const COOLDOWN_SECONDS = 3600; // 1 hour in seconds
 
-    /**
-     * Get Circle Tracker Status including latest snapshot and cooldown info.
-     *
-     * @return array<string, mixed>
-     */
-    public function getStatus(?string $circleId = null, ?string $period = null): array
+    // Circle periods follow the Japanese calendar and roll over at midnight JST.
+    private const BUSINESS_TIMEZONE = 'Asia/Tokyo';
+
+    public static function extractCircleId(string $input): ?string
     {
-        $savedCircleId = (string) AppSetting::getValue('circle_id', '');
-        if (empty($circleId) && empty($savedCircleId)) {
-            return [
-                'has_circle' => false,
-                'has_data' => false,
-                'circle_id' => null,
-                'circle_name' => null,
-                'member_count' => 0,
-                'rank' => null,
-                'point' => 0,
-                'active_total' => 0,
-                'period' => null,
-                'available_periods' => [],
-                'is_current_period' => true,
-                'selected_period' => null,
-                'members' => [],
-                'trend_segments' => [],
-                'tracked_player' => null,
-                'last_refreshed_at' => null,
-                'cooldown_seconds_remaining' => 0,
-                'can_refresh' => true,
-                'pace_estimator' => $this->calculatePaceEstimator(),
-            ];
+        if (preg_match('/^[0-9]{1,20}$/D', trim($input))) {
+            return trim($input);
         }
 
-        $circleId = $circleId ?: $savedCircleId;
-        $trackedViewerId = (string) AppSetting::getValue('tracked_viewer_id', '886175385');
-
-        // Check if a specific period is requested
-        if (! empty($period)) {
-            $periodNorm = substr(trim($period), 0, 7); // e.g. '2026-09'
-            $currentMonthNorm = date('Y-m');
-
-            if ($periodNorm !== $currentMonthNorm) {
-                $snapshot = CircleSnapshot::where('circle_id', $circleId)
-                    ->where('period', 'LIKE', "{$periodNorm}%")
-                    ->latest('last_refreshed_at')
-                    ->first();
-
-                if (! $snapshot) {
-                    try {
-                        $snapshot = $this->fetchAndSavePeriod($circleId, $periodNorm);
-                    } catch (Exception $e) {
-                        Log::error("Fetching circle snapshot for period {$periodNorm} failed: ".VerifiedHttp::errorMessage($e));
-                    }
-                }
-
-                if ($snapshot) {
-                    return $this->formatSnapshotResponse($snapshot, $circleId, $trackedViewerId);
-                }
-            }
+        if (preg_match('~^(?:https://muxueuma\.com)?/(?:[a-z]{2}(?:-[a-z]{2})?/)?circles/([0-9]{1,20})/?(?:\?[^#\s]*)?(?:#[^\s]*)?$~iD', trim($input), $matches)) {
+            return $matches[1];
         }
 
-        $latest = CircleSnapshot::where('circle_id', $circleId)
-            ->latest('last_refreshed_at')
-            ->first();
-
-        // If no snapshot exists yet, automatically perform initial fetch
-        if (! $latest) {
-            try {
-                $latest = $this->fetchAndSave($circleId);
-            } catch (Exception $e) {
-                Log::error('Initial circle fetch failed: '.VerifiedHttp::errorMessage($e));
-            }
-        }
-
-        return $this->formatSnapshotResponse($latest, $circleId, $trackedViewerId);
+        return null;
     }
 
-    /**
-     * Save circle ID and perform initial fetch from Muxueuma.
-     *
-     * @return array<string, mixed>
-     */
-    public function setCircle(string $circleId): array
+    public static function normalizePeriod(mixed $period): ?string
     {
-        $circleId = trim($circleId);
-        if ($circleId === '') {
-            return [
-                'success' => false,
-                'message' => 'ID Circle Club tidak boleh kosong.',
-            ];
+        return is_string($period) && preg_match('/^(\d{4}-(?:0[1-9]|1[0-2]))(?:-01)?$/D', trim($period), $matches)
+            ? $matches[1]
+            : null;
+    }
+
+    private function latestSnapshot(string $circleId, string $period): ?CircleSnapshot
+    {
+        return CircleSnapshot::where('circle_id', $circleId)
+            ->whereIn('period', [$period, "{$period}-01"])
+            ->latest('last_refreshed_at')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    private function activeCircleId(): ?string
+    {
+        return self::extractCircleId((string) AppSetting::getValue('circle_id', ''));
+    }
+
+    /** @return array<string, mixed> */
+    public function getStatus(?string $circleId = null, ?string $period = null): array
+    {
+        $circleId = $circleId === null ? $this->activeCircleId() : self::extractCircleId($circleId);
+        $currentPeriod = Carbon::now(self::BUSINESS_TIMEZONE)->format('Y-m');
+        $period = self::normalizePeriod($period) ?? $currentPeriod;
+        $snapshot = $circleId === null ? null : $this->latestSnapshot($circleId, $period);
+        $message = null;
+
+        if ($circleId !== null && $snapshot === null) {
+            try {
+                $snapshot = $this->fetchSnapshot($circleId, $period, $period === $currentPeriod);
+            } catch (Exception $e) {
+                $message = $this->describeFetchFailure($e, $period !== $currentPeriod);
+                Log::warning("Gagal mengambil snapshot Circle untuk {$period}: {$message}");
+            }
         }
 
-        AppSetting::setValue('circle_id', $circleId);
+        return $this->formatSnapshotResponse($snapshot, $circleId, $period, $currentPeriod, $message);
+    }
 
-        // Fetch fresh data for this circle (force = true)
-        return $this->refresh($circleId, true);
+    /** @return array<string, mixed> */
+    public function setCircle(string $circleId): array
+    {
+        $result = $this->refresh($circleId, true);
+        if (! $result['success']) {
+            return $result;
+        }
+
+        AppSetting::setValue('circle_id', $result['data']['circle_id']);
+        $result['data']['pace_estimator'] = $this->calculatePaceEstimator();
+
+        return $result;
     }
 
     /**
@@ -135,115 +110,67 @@ class CircleTrackerService
         ];
     }
 
-    /**
-     * Refresh data from muxueuma.com with strict 3-hour cooldown enforcement.
-     *
-     * @return array{success: bool, message?: string, data?: array<string, mixed>}
-     */
+    /** @return array<string, mixed> */
     public function refresh(?string $circleId = null, bool $force = false): array
     {
-        $circleId = $circleId ?: (string) AppSetting::getValue('circle_id', '441730573');
-        $trackedViewerId = (string) AppSetting::getValue('tracked_viewer_id', '886175385');
+        $circleId = $circleId === null ? $this->activeCircleId() : self::extractCircleId($circleId);
+        if ($circleId === null) {
+            return ['success' => false, 'error' => 'invalid_circle_id', 'message' => 'Masukkan ID atau URL profil Circle MuxueUma yang valid.'];
+        }
 
-        $latest = CircleSnapshot::where('circle_id', $circleId)
-            ->latest('last_refreshed_at')
-            ->first();
-
-        if ($latest && ! $force) {
-            $lastRefreshed = Carbon::parse($latest->last_refreshed_at);
-            $secondsElapsed = (int) $lastRefreshed->diffInSeconds(now());
-
-            if ($secondsElapsed < self::COOLDOWN_SECONDS) {
-                $secondsRemaining = self::COOLDOWN_SECONDS - $secondsElapsed;
-                $hours = floor($secondsRemaining / 3600);
-                $minutes = ceil(($secondsRemaining % 3600) / 60);
-
-                $timeLeft = $hours > 0
-                    ? "{$hours} jam {$minutes} menit"
-                    : "{$minutes} menit";
-
-                return [
-                    'success' => false,
-                    'message' => "Tombol refresh data hanya dapat ditekan per 1 jam sekali sebelum tombolnya dapat ditekan kembali. Silakan coba lagi dalam {$timeLeft}.",
-                    'data' => $this->formatSnapshotResponse($latest, $circleId, $trackedViewerId),
-                ];
-            }
+        $period = Carbon::now(self::BUSINESS_TIMEZONE)->format('Y-m');
+        $latest = $this->latestSnapshot($circleId, $period);
+        if ($latest && ! $force && $this->cooldownRemaining($latest) > 0) {
+            return [
+                'success' => false,
+                'error' => 'cooldown',
+                'message' => 'Tombol refresh data hanya dapat ditekan per 1 jam sekali.',
+                'data' => $this->formatSnapshotResponse($latest, $circleId, $period, $period),
+            ];
         }
 
         try {
-            $newSnapshot = $this->fetchAndSave($circleId);
+            $snapshot = $this->fetchSnapshot($circleId, $period, true);
 
             return [
                 'success' => true,
-                'message' => 'Data Fans Club berhasil diperbarui dari muxueuma.com!',
-                'data' => $this->formatSnapshotResponse($newSnapshot, $circleId, $trackedViewerId),
+                'message' => 'Data Circle berhasil diperbarui dari MuxueUma.',
+                'data' => $this->formatSnapshotResponse($snapshot, $circleId, $period, $period),
             ];
         } catch (Exception $e) {
-            Log::error('Muxueuma refresh error: '.VerifiedHttp::errorMessage($e));
+            $message = $this->describeFetchFailure($e);
+            Log::warning("Gagal memperbarui Circle: {$message}");
 
             return [
                 'success' => false,
-                'message' => 'Gagal menghubungi server muxueuma.com: '.VerifiedHttp::errorMessage($e),
-                'data' => $this->formatSnapshotResponse($latest, $circleId, $trackedViewerId),
+                'error' => match ($e->getCode()) {
+                    404 => 'not_found',
+                    409 => 'response_mismatch',
+                    default => 'upstream_failure',
+                },
+                'message' => $message,
+                'data' => $this->formatSnapshotResponse($latest, $circleId, $period, $period, $message),
             ];
         }
     }
 
-    /**
-     * Fetch from muxueuma endpoints and save a new CircleSnapshot record.
-     */
-    public function fetchAndSave(string $circleId): CircleSnapshot
+    private function describeFetchFailure(Exception $e, bool $archive = false): string
     {
-        $headers = [
-            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36',
-            'Accept' => 'application/json, text/plain, */*',
-            'Referer' => self::BASE_URL.'/ja/',
-            'Accept-Language' => 'ja,en-US;q=0.8,en;q=0.7',
-        ];
-
-        // 1. Fetch contributions
-        $contribUrl = self::BASE_URL."/api/circles/{$circleId}/contributions";
-        $contribRes = VerifiedHttp::request()->withHeaders($headers)->timeout(25)->get($contribUrl);
-
-        if (! $contribRes->successful()) {
-            throw new Exception("HTTP {$contribRes->status()} from {$contribUrl}");
-        }
-
-        $contributions = $contribRes->json();
-
-        // 2. Fetch ranking trend
-        $trendUrl = self::BASE_URL."/api/circles/{$circleId}/ranking-trend?range=7d";
-        $trendRes = VerifiedHttp::request()->withHeaders($headers)->timeout(25)->get($trendUrl);
-
-        if (! $trendRes->successful()) {
-            throw new Exception("HTTP {$trendRes->status()} from {$trendUrl}");
-        }
-
-        $trend = $trendRes->json();
-
-        $circle = $contributions['circle'] ?? [];
-        $current = $trend['current'] ?? [];
-
-        return CircleSnapshot::create([
-            'circle_id' => (string) ($circle['id'] ?? $circleId),
-            'circle_name' => (string) ($circle['name'] ?? 'Circle '.$circleId),
-            'rank' => isset($current['rank']) ? (int) $current['rank'] : null,
-            'point' => isset($current['point']) ? (int) $current['point'] : null,
-            'member_count' => isset($circle['memberCount']) ? (int) $circle['memberCount'] : null,
-            'active_total' => isset($contributions['activeTotal']) ? (int) $contributions['activeTotal'] : null,
-            'period' => (string) ($contributions['period'] ?? $current['period'] ?? date('Y-m-01')),
-            'payload' => [
-                'contributions' => $contributions,
-                'trend' => $trend,
-            ],
-            'last_refreshed_at' => now(),
-        ]);
+        return match ($e->getCode()) {
+            404 => $archive ? 'Arsip Circle untuk bulan tersebut belum tersedia.' : 'Profil Circle tidak ditemukan di MuxueUma.',
+            409 => $e->getMessage(),
+            default => 'Gagal menghubungi MuxueUma: '.VerifiedHttp::errorMessage($e),
+        };
     }
 
-    /**
-     * Fetch from muxueuma contributions endpoint for a specific period (e.g. '2026-09') and save snapshot.
-     */
-    public function fetchAndSavePeriod(string $circleId, string $periodNorm): CircleSnapshot
+    private function cooldownRemaining(CircleSnapshot $snapshot): int
+    {
+        $secondsElapsed = now()->getTimestamp() - $snapshot->last_refreshed_at->getTimestamp();
+
+        return max(0, self::COOLDOWN_SECONDS - max(0, $secondsElapsed));
+    }
+
+    private function fetchSnapshot(string $circleId, string $period, bool $isCurrent): CircleSnapshot
     {
         $headers = [
             'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36',
@@ -251,48 +178,53 @@ class CircleTrackerService
             'Referer' => self::BASE_URL.'/ja/',
             'Accept-Language' => 'ja,en-US;q=0.8,en;q=0.7',
         ];
-
-        $contribUrl = self::BASE_URL."/api/circles/{$circleId}/contributions?period={$periodNorm}";
-        $contribRes = VerifiedHttp::request()->withHeaders($headers)->timeout(25)->get($contribUrl);
-
-        if (! $contribRes->successful()) {
-            throw new Exception("HTTP {$contribRes->status()} from {$contribUrl}");
+        $client = fn () => VerifiedHttp::request()->withHeaders($headers)->timeout(25)->withoutRedirecting();
+        $base = self::BASE_URL."/api/circles/{$circleId}";
+        $response = $client()->get($base.'/contributions', $isCurrent ? [] : ['period' => $period]);
+        if (! $response->successful()) {
+            throw new Exception("HTTP {$response->status()} dari endpoint kontribusi.", $response->status());
         }
 
-        $contributions = $contribRes->json();
+        $contributions = $response->json();
         $circle = $contributions['circle'] ?? [];
-        $rows = $contributions['rows'] ?? [];
+        if ((string) ($circle['id'] ?? '') !== $circleId) {
+            throw new Exception('ID Circle pada respons MuxueUma berbeda dari ID yang diminta.', 409);
+        }
+        if (self::normalizePeriod($contributions['period'] ?? null) !== $period) {
+            throw new Exception('Periode kontribusi pada respons MuxueUma berbeda dari periode yang diminta.', 409);
+        }
 
-        $activeTotal = isset($contributions['activeTotal'])
-            ? (int) $contributions['activeTotal']
-            : (int) array_sum(array_column($rows, 'contribution'));
-
-        // Fetch trend for past month rank if available
-        $trendUrl = self::BASE_URL."/api/circles/{$circleId}/ranking-trend?range=30d";
-        $trendRes = VerifiedHttp::request()->withHeaders($headers)->timeout(25)->get($trendUrl);
-        $trend = $trendRes->successful() ? $trendRes->json() : [];
-
-        $rank = null;
-        $point = $activeTotal;
-        if (isset($trend['lastMonth']) && is_array($trend['lastMonth'])) {
-            $rank = $trend['lastMonth']['rank'] ?? null;
-            if (! empty($trend['lastMonth']['point'])) {
-                $point = (int) $trend['lastMonth']['point'];
+        try {
+            $response = $client()->get($base.'/ranking-trend', ['range' => $isCurrent ? '7d' : '30d']);
+            if (! $response->successful()) {
+                throw new Exception("HTTP {$response->status()} dari endpoint ranking.");
             }
+            $trend = $response->json();
+            if (! is_array($trend)) {
+                throw new Exception('Respons ranking MuxueUma tidak valid.');
+            }
+        } catch (Exception $e) {
+            if ($isCurrent) {
+                throw $e;
+            }
+            Log::warning('Ranking arsip Circle tidak tersedia: '.VerifiedHttp::errorMessage($e));
+            $trend = [];
+        }
+        $ranking = $trend[$isCurrent ? 'current' : 'lastMonth'] ?? [];
+        $rankingPeriod = self::normalizePeriod($ranking['period'] ?? null);
+        if ($isCurrent && $ranking !== [] && $rankingPeriod !== $period) {
+            throw new Exception('Periode ranking pada respons MuxueUma berbeda dari periode yang diminta.', 409);
         }
 
         return CircleSnapshot::create([
-            'circle_id' => (string) ($circle['id'] ?? $circleId),
+            'circle_id' => $circleId,
             'circle_name' => (string) ($circle['name'] ?? 'Circle '.$circleId),
-            'rank' => $rank ? (int) $rank : null,
-            'point' => $point ? (int) $point : null,
-            'member_count' => isset($circle['memberCount']) ? (int) $circle['memberCount'] : count($rows),
-            'active_total' => $activeTotal,
-            'period' => (string) ($contributions['period'] ?? "{$periodNorm}-01"),
-            'payload' => [
-                'contributions' => $contributions,
-                'trend' => $trend,
-            ],
+            'rank' => $rankingPeriod === $period && isset($ranking['rank']) ? (int) $ranking['rank'] : null,
+            'point' => $rankingPeriod === $period && isset($ranking['point']) ? (int) $ranking['point'] : null,
+            'member_count' => isset($circle['memberCount']) ? (int) $circle['memberCount'] : null,
+            'active_total' => isset($contributions['activeTotal']) ? (int) $contributions['activeTotal'] : null,
+            'period' => "{$period}-01",
+            'payload' => ['contributions' => $contributions, 'trend' => $trend],
             'last_refreshed_at' => now(),
         ]);
     }
@@ -302,103 +234,62 @@ class CircleTrackerService
      *
      * @return array<string, mixed>
      */
-    protected function formatSnapshotResponse(?CircleSnapshot $snapshot, string $circleId, string $trackedViewerId): array
+    protected function formatSnapshotResponse(?CircleSnapshot $snapshot, ?string $circleId, string $period, string $currentPeriod, ?string $message = null): array
     {
-        if (! $snapshot) {
-            return [
-                'has_circle' => true,
-                'circle_id' => $circleId,
-                'has_data' => false,
-                'available_periods' => [],
-                'is_current_period' => true,
-                'selected_period' => null,
-                'can_refresh' => true,
-                'cooldown_seconds_remaining' => 0,
-                'next_refresh_at' => null,
-                'last_refreshed_at' => null,
-                'pace_estimator' => $this->calculatePaceEstimator(),
-            ];
-        }
-
-        $payload = $snapshot->payload ?? [];
-        $contributions = $payload['contributions'] ?? [];
-        $trend = $payload['trend'] ?? [];
+        $isCurrent = $period === $currentPeriod;
+        $contributions = $snapshot?->payload['contributions'] ?? [];
+        $trend = $snapshot?->payload['trend'] ?? [];
         $rows = $contributions['rows'] ?? [];
+        $trackedViewerId = (string) AppSetting::getValue('tracked_viewer_id', '886175385');
+        $trackedPlayer = collect($rows)->first(fn ($row) => (string) ($row['viewerId'] ?? '') === $trackedViewerId);
 
-        // Find tracked player
-        $trackedPlayer = null;
-        foreach ($rows as $row) {
-            if (isset($row['viewerId']) && (string) $row['viewerId'] === $trackedViewerId) {
-                $trackedPlayer = $row;
-                break;
-            }
-        }
-
-        // Available periods resolution
-        $availablePeriods = $contributions['availablePeriods'] ?? [];
-        if (empty($availablePeriods) && $snapshot->period) {
-            $availablePeriods = [$snapshot->period];
-        }
-
-        // Also query periods in DB for this circle
-        $dbPeriods = CircleSnapshot::where('circle_id', $circleId)
-            ->whereNotNull('period')
-            ->pluck('period')
-            ->toArray();
-        foreach ($dbPeriods as $dbp) {
-            $formattedDbp = strlen($dbp) === 7 ? "{$dbp}-01" : $dbp;
-            if (! in_array($formattedDbp, $availablePeriods, true)) {
-                $availablePeriods[] = $formattedDbp;
-            }
-        }
+        $dbPeriods = $circleId === null ? [] : CircleSnapshot::where('circle_id', $circleId)->distinct()->pluck('period')->all();
+        $availablePeriods = array_filter(array_map(self::normalizePeriod(...), [
+            ...($contributions['availablePeriods'] ?? []), ...$dbPeriods, $period, $currentPeriod,
+        ]));
+        $availablePeriods = array_values(array_unique($availablePeriods));
         rsort($availablePeriods);
+        $secondsRemaining = $isCurrent && $snapshot ? $this->cooldownRemaining($snapshot) : 0;
 
-        $isCurrentPeriod = isset($contributions['isCurrentPeriod'])
-            ? (bool) $contributions['isCurrentPeriod']
-            : (substr((string) $snapshot->period, 0, 7) === date('Y-m'));
-
-        $lastRefreshed = Carbon::parse($snapshot->last_refreshed_at);
-        $secondsElapsed = (int) $lastRefreshed->diffInSeconds(now());
-        $secondsRemaining = $isCurrentPeriod ? max(0, self::COOLDOWN_SECONDS - $secondsElapsed) : 0;
-        $canRefresh = $isCurrentPeriod && ($secondsRemaining === 0);
-        $nextRefreshAt = $isCurrentPeriod ? $lastRefreshed->copy()->addSeconds(self::COOLDOWN_SECONDS)->toIso8601String() : null;
-
-        $currentMonth = substr((string) ($snapshot->period ?? date('Y-m')), 0, 7);
         $filteredSegments = [];
-        foreach ($trend['segments'] ?? [] as $seg) {
-            $pts = array_values(array_filter($seg['points'] ?? [], function ($p) use ($currentMonth) {
-                return ! isset($p['date']) || str_starts_with((string) $p['date'], $currentMonth);
-            }));
-            if (! empty($pts)) {
-                $seg['points'] = $pts;
-                $filteredSegments[] = $seg;
+        foreach ($trend['segments'] ?? [] as $segment) {
+            $segment['points'] = array_values(array_filter($segment['points'] ?? [], fn ($point) => str_starts_with((string) ($point['date'] ?? ''), $period.'-')
+            ));
+            if ($segment['points'] !== []) {
+                $filteredSegments[] = $segment;
             }
         }
+
+        // Older archive snapshots could have copied activeTotal into point.
+        $lastMonth = $trend['lastMonth'] ?? [];
+        $hasArchiveRanking = self::normalizePeriod($lastMonth['period'] ?? null) === $period;
 
         return [
-            'has_circle' => true,
-            'has_data' => true,
-            'circle_id' => $snapshot->circle_id,
-            'circle_name' => $snapshot->circle_name,
-            'rank' => $snapshot->rank,
-            'point' => $snapshot->point,
-            'member_count' => $snapshot->member_count,
-            'active_total' => $snapshot->active_total,
-            'period' => $snapshot->period,
-            'available_periods' => array_values(array_unique($availablePeriods)),
-            'is_current_period' => $isCurrentPeriod,
-            'selected_period' => $snapshot->period,
+            'has_circle' => $circleId !== null,
+            'has_data' => $snapshot !== null,
+            'message' => $message,
+            'circle_id' => $circleId,
+            'circle_name' => $snapshot?->circle_name,
+            'rank' => $isCurrent ? $snapshot?->rank : ($hasArchiveRanking && isset($lastMonth['rank']) ? (int) $lastMonth['rank'] : null),
+            'point' => $isCurrent ? $snapshot?->point : ($hasArchiveRanking && isset($lastMonth['point']) ? (int) $lastMonth['point'] : null),
+            'member_count' => $snapshot?->member_count,
+            'active_total' => $snapshot?->active_total,
+            'period' => "{$period}-01",
+            'current_period' => "{$currentPeriod}-01",
+            'available_periods' => array_map(fn ($month) => "{$month}-01", $availablePeriods),
+            'is_current_period' => $isCurrent,
+            'selected_period' => "{$period}-01",
             'business_date' => $contributions['businessDate'] ?? null,
             'last_month' => $trend['lastMonth'] ?? null,
             'tracked_viewer_id' => $trackedViewerId,
             'tracked_player' => $trackedPlayer,
             'members' => $rows,
             'trend_segments' => $filteredSegments,
-            'last_refreshed_at' => $snapshot->last_refreshed_at->toIso8601String(),
-            'next_refresh_at' => $nextRefreshAt,
+            'last_refreshed_at' => $snapshot?->last_refreshed_at->toIso8601String(),
+            'next_refresh_at' => $isCurrent && $snapshot ? $snapshot->last_refreshed_at->copy()->addSeconds(self::COOLDOWN_SECONDS)->toIso8601String() : null,
             'cooldown_seconds_remaining' => $secondsRemaining,
-            'can_refresh' => $canRefresh,
-            'pace_estimator' => $this->calculatePaceEstimator(),
+            'can_refresh' => $isCurrent && $secondsRemaining === 0,
+            'pace_estimator' => $isCurrent ? $this->calculatePaceEstimator() : null,
         ];
     }
 
@@ -409,7 +300,7 @@ class CircleTrackerService
      */
     public function calculatePaceEstimator(?int $customTarget = null): array
     {
-        $now = Carbon::now();
+        $now = Carbon::now(self::BUSINESS_TIMEZONE);
         $target = $customTarget ?: (int) AppSetting::getValue('monthly_circle_target', AppSetting::getValue('circle_goal', 30000000));
         if ($target <= 0) {
             $target = 30000000;
@@ -423,9 +314,9 @@ class CircleTrackerService
 
         // Check if there is also tracked member contribution from circle snapshot in the current month
         $trackedContribution = 0;
-        $savedCircleId = (string) AppSetting::getValue('circle_id', '');
+        $savedCircleId = $this->activeCircleId();
         if (! empty($savedCircleId)) {
-            $latestSnapshot = CircleSnapshot::where('circle_id', $savedCircleId)->latest('last_refreshed_at')->first();
+            $latestSnapshot = $this->latestSnapshot($savedCircleId, $now->format('Y-m'));
             if ($latestSnapshot && ! empty($latestSnapshot->payload['contributions']['rows'])) {
                 $trackedViewerId = (string) AppSetting::getValue('tracked_viewer_id', '886175385');
                 foreach ($latestSnapshot->payload['contributions']['rows'] as $row) {

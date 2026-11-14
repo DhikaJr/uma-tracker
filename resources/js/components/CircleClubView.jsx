@@ -44,7 +44,7 @@ const monthNamesShort = [
 ];
 
 const formatPeriodId = (periodStr) => {
-    if (!periodStr) return 'Oktober 2026';
+    if (!periodStr) return '—';
     const match = String(periodStr).match(/^(\d{4})-(\d{2})/);
     if (match) {
         const monthIdx = parseInt(match[2], 10) - 1;
@@ -56,6 +56,10 @@ const formatPeriodId = (periodStr) => {
 const formatPeriodJp = (periodStr) => {
     return formatPeriodId(periodStr);
 };
+
+const formatCount = (value) => value == null ? '—' : Number(value).toLocaleString('id-ID');
+const formatRank = (value) => value == null ? '—' : '#' + formatCount(value);
+const formatDelta = (value) => value == null ? '—' : '+' + formatCount(value);
 
 export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
     const [statusData, setStatusData] = useState(null);
@@ -72,16 +76,10 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
     const periodDropdownRef = useRef(null);
 
     // Active Period and Grouped Periods Memo (Declared BEFORE any early return)
-    const currentPeriod = statusData?.period || '2026-10-01';
-    const activePeriodKey = (() => {
-        const match = String(currentPeriod).match(/^(\d{4})-(\d{2})/);
-        return match ? `${match[1]}-${match[2]}` : '2026-10';
-    })();
+    const activePeriodKey = (selectedPeriod ?? statusData?.selected_period)?.slice(0, 7);
 
     const groupedPeriods = useMemo(() => {
-        const rawList = (statusData?.available_periods && statusData.available_periods.length > 0)
-            ? statusData.available_periods
-            : [statusData?.period || '2026-10-01'];
+        const rawList = statusData?.available_periods ?? [];
 
         const map = {};
         rawList.forEach((p) => {
@@ -98,24 +96,16 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
             }
         });
 
-        // Ensure current month and previous month exist
-        const now = new Date();
-        const currYr = String(now.getFullYear());
-        const currMo = now.getMonth() + 1;
-        const prevMoDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const prevYr = String(prevMoDate.getFullYear());
-        const prevMo = prevMoDate.getMonth() + 1;
-
-        const currKey = `${currYr}-${String(currMo).padStart(2, '0')}`;
-        if (!map[currYr]) map[currYr] = [];
-        if (!map[currYr].some(item => item.key === currKey)) {
-            map[currYr].push({ year: currYr, month: currMo, key: currKey, raw: `${currKey}-01` });
-        }
-
-        const prevKey = `${prevYr}-${String(prevMo).padStart(2, '0')}`;
-        if (!map[prevYr]) map[prevYr] = [];
-        if (!map[prevYr].some(item => item.key === prevKey)) {
-            map[prevYr].push({ year: prevYr, month: prevMo, key: prevKey, raw: `${prevKey}-01` });
+        const currentMonth = statusData?.current_period;
+        if (currentMonth) {
+            const [year, month] = currentMonth.split('-').map(Number);
+            const previousMonth = month === 1 ? 12 : month - 1;
+            const previousYear = String(month === 1 ? year - 1 : year);
+            const key = previousYear + '-' + String(previousMonth).padStart(2, '0');
+            if (!map[previousYear]) map[previousYear] = [];
+            if (!map[previousYear].some(item => item.key === key)) {
+                map[previousYear].push({ year: previousYear, month: previousMonth, key });
+            }
         }
 
         const sortedYears = Object.keys(map).sort((a, b) => b.localeCompare(a));
@@ -124,7 +114,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
         });
 
         return { sortedYears, map };
-    }, [statusData?.available_periods, statusData?.period]);
+    }, [statusData?.available_periods, statusData?.current_period]);
 
     // Pre-scraping & Circle Switching State
     const [inputCircleId, setInputCircleId] = useState('');
@@ -150,6 +140,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
             const query = targetPeriod ? `?period=${encodeURIComponent(targetPeriod)}` : '';
             const res = await fetch(`/api/circle-tracker/status${query}`);
             const data = await res.json();
+            if (!res.ok) throw new Error(data.message);
             setStatusData(data);
             if (data.cooldown_seconds_remaining > 0) {
                 setCountdownSecs(data.cooldown_seconds_remaining);
@@ -218,7 +209,8 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
             const result = await res.json();
             if (res.ok && result.success) {
                 setStatusData(result.data);
-                setCountdownSecs(result.data?.cooldown_seconds_remaining || 3600);
+                setSelectedPeriod(null);
+                setCountdownSecs(result.data?.cooldown_seconds_remaining ?? 0);
                 setIsChangingCircle(false);
                 setInputCircleId('');
                 onNotify?.(result.message || 'Circle Club berhasil dihubungkan!', 'success');
@@ -263,7 +255,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
 
             if (res.ok && result.success) {
                 setStatusData(result.data);
-                setCountdownSecs(result.data.cooldown_seconds_remaining || 3600);
+                setCountdownSecs(result.data.cooldown_seconds_remaining ?? 0);
                 onNotify?.(result.message || 'Data Fans Club berhasil diperbarui!', 'success');
             } else {
                 if (result.data) {
@@ -286,7 +278,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
             const res = await fetch('/api/circle-tracker/track-player', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ viewer_id: String(viewerId) }),
+                body: JSON.stringify({ viewer_id: String(viewerId), period: selectedPeriod ?? statusData?.selected_period }),
             });
             const result = await res.json();
             if (res.ok && result.data) {
@@ -299,7 +291,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
         }
     };
 
-    if (loading && !statusData) {
+    if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[450px] space-y-3">
                 <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
@@ -385,7 +377,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                         </span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <a
-                                href="https://muxueuma.com/ja"
+                                href="https://muxueuma.com/ja/circles"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:border-emerald-300 dark:hover:border-emerald-700/50 transition-all group cursor-pointer"
@@ -399,7 +391,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                                             Daftar Circle Terdaftar
                                         </div>
                                         <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 font-mono">
-                                            <span>https://muxueuma.com/ja</span>
+                                            <span>https://muxueuma.com/ja/circles</span>
                                         </div>
                                     </div>
                                 </div>
@@ -499,6 +491,22 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
         );
     }
 
+    if (statusData?.has_circle && !statusData.has_data && !statusData.is_current_period) {
+        return (
+            <section className="space-y-4 max-w-2xl mx-auto py-12 text-center">
+                <h2 className="text-xl font-black text-slate-900 dark:text-white">Arsip {formatPeriodId(selectedPeriod ?? statusData.selected_period)} belum tersedia</h2>
+                <p className="text-sm text-slate-600 dark:text-slate-400">{statusData.message}</p>
+                <button
+                    type="button"
+                    onClick={() => handleSelectPeriod(null)}
+                    className="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer"
+                >
+                    Kembali ke Bulan Berjalan
+                </button>
+            </section>
+        );
+    }
+
     // If circle exists but has no data
     if (statusData?.has_circle && !statusData?.has_data) {
         return (
@@ -508,10 +516,10 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                 </div>
                 <div className="space-y-2">
                     <h2 className="text-xl font-black text-slate-900 dark:text-white">
-                        Data Circle #{statusData?.circle_id} Belum Ditemukan di Muxueuma
+                        Data Circle #{statusData.circle_id} belum tersedia
                     </h2>
                     <p className="text-sm text-slate-600 dark:text-slate-400 max-w-lg mx-auto">
-                        ID circle tersebut belum terdaftar di database Muxueuma.com atau proses scraping mengalami kendala. Pastikan circle sudah diajukan pendaftarannya di situs Muxueuma.
+                        {statusData.message ?? "Data Circle belum tersedia di MuxueUma."}
                     </p>
                 </div>
                 <div className="flex justify-center gap-3 pt-2">
@@ -536,13 +544,13 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
         );
     }
 
-    const circleName = statusData?.circle_name || 'なんか適当';
-    const circleId = statusData?.circle_id || '441730573';
-    const memberCount = statusData?.member_count || 30;
-    const currentRank = statusData?.rank || 986;
-    const currentPoint = statusData?.point || 0;
-    const activeTotal = statusData?.active_total || 0;
-    const period = statusData?.period || '2026-10-01';
+    const circleName = statusData?.circle_name ?? '—';
+    const circleId = statusData?.circle_id;
+    const memberCount = statusData?.member_count;
+    const currentRank = statusData?.rank;
+    const currentPoint = statusData?.point;
+    const activeTotal = statusData?.active_total;
+    const period = statusData?.selected_period;
     const isCurrentPeriod = statusData?.is_current_period ?? true;
     const trackedPlayer = statusData?.tracked_player;
     const members = statusData?.members || [];
@@ -583,23 +591,18 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
     const outMembersCount = members.filter(m => !m.rank || m.isVoided).length;
 
     // Chart Data for Ranking Trend (cut off previous month to avoid end-of-month reset cliff)
-    const currentPeriodMonth = statusData?.period 
-        ? String(statusData.period).slice(0, 7) 
-        : new Date().toISOString().slice(0, 7);
-
     const chartData = (statusData?.trend_segments || [])
         .flatMap(seg => seg.points || [])
-        .filter(p => !p.date || String(p.date).startsWith(currentPeriodMonth))
         .map(p => ({
             time: p.date ? String(p.date).slice(5) : '',
-            rank: p.rank || 0,
-            point: Math.round((p.point || 0) / 10000) / 100, // in Millions
-            rawPoint: p.point || 0,
+            rank: p.rank,
+            point: p.point == null ? null : Math.round(p.point / 10000) / 100,
+            rawPoint: p.point,
         }));
 
     // Personal Progress toward Circle Goal
-    const playerContribution = trackedPlayer?.contribution || 0;
-    const quotaPercent = Math.min(200, Math.round((playerContribution / (circleGoal || 1)) * 100));
+    const playerContribution = trackedPlayer?.contribution;
+    const quotaPercent = playerContribution == null ? null : Math.min(200, Math.round((playerContribution / (circleGoal || 1)) * 100));
 
     return (
         <div className="space-y-8 animate-fadeIn">
@@ -743,13 +746,9 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
             )}
 
             {/* Daily Circle Pace & Run Estimator Widget */}
-            <CirclePaceWidget 
-                initialPaceData={statusData?.pace_estimator} 
-                circleGoal={circleGoal} 
-                isHistorical={!isCurrentPeriod}
-                selectedPeriod={period}
-                onBackToCurrent={() => handleSelectPeriod(null)}
-            />
+            {isCurrentPeriod && (
+                <CirclePaceWidget initialPaceData={statusData?.pace_estimator} circleGoal={circleGoal} />
+            )}
 
             {/* 4 Club KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -762,10 +761,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                         </div>
                     </div>
                     <div className="mt-4 flex items-baseline gap-2">
-                        <span className="text-3xl font-black text-slate-900 dark:text-white font-mono">#{currentRank.toLocaleString()}</span>
-                        <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
-                            Top Tier
-                        </span>
+                        <span className="text-3xl font-black text-slate-900 dark:text-white font-mono">{formatRank(currentRank)}</span>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                         {isCurrentPeriod ? 'Peringkat global bulan ini' : 'Peringkat global akhir periode'}
@@ -775,40 +771,36 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                 {/* 2. Total Points (Fans) */}
                 <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Fans Club</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Poin Ranking Circle</span>
                         <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                             <Flame className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                         </div>
                     </div>
                     <div className="mt-4 flex items-baseline gap-2">
                         <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono">
-                            {(currentPoint).toLocaleString('id-ID')}
+                            {formatCount(currentPoint)}
                         </span>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        {isCurrentPeriod
-                            ? `~${((currentPoint) / 1000000).toFixed(1)} Juta Fans terkumpul`
-                            : `Total perolehan fans periode ini`}
+                        Poin dari data ranking MuxueUma
                     </p>
                 </div>
 
                 {/* 3. Active Total */}
                 <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Active Total Fans</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Kontribusi Anggota Aktif</span>
                         <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                             <TrendingUp className="w-5 h-5" />
                         </div>
                     </div>
                     <div className="mt-4 flex items-baseline gap-2">
                         <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono">
-                            {(activeTotal).toLocaleString('id-ID')}
+                            {formatCount(activeTotal)}
                         </span>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        {isCurrentPeriod
-                            ? `~${((activeTotal) / 1000000).toFixed(1)} Juta fans aktif`
-                            : `Active total fans periode ini`}
+                        Total kontribusi aktif di MuxueUma
                     </p>
                 </div>
 
@@ -821,12 +813,14 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                         </div>
                     </div>
                     <div className="mt-4 flex items-baseline gap-2">
-                        <span className="text-3xl font-black text-slate-900 dark:text-white font-mono">{memberCount} / 30</span>
-                        <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300">
-                            Penuh
-                        </span>
+                        <span className="text-3xl font-black text-slate-900 dark:text-white font-mono">{formatCount(memberCount)} / 30</span>
+                        {memberCount != null && memberCount >= 30 && (
+                            <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300">
+                                Penuh
+                            </span>
+                        )}
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Semua kursi anggota terisi</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Jumlah anggota dari MuxueUma</p>
                 </div>
             </div>
 
@@ -856,16 +850,16 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                     <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 min-w-[260px]">
                         <div className="flex items-center justify-between text-xs mb-1.5">
                             <span className="font-bold text-slate-700 dark:text-slate-300">Target Kuota Bulanan ({((circleGoal) / 1000000).toFixed(0)}M):</span>
-                            <span className="font-black text-emerald-600 dark:text-emerald-400">{quotaPercent}%</span>
+                            <span className="font-black text-emerald-600 dark:text-emerald-400">{quotaPercent == null ? "—" : quotaPercent + "%"}</span>
                         </div>
                         <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
                             <div 
                                 className="h-full bg-gradient-to-r from-emerald-500 to-green-400 rounded-full transition-all duration-500"
-                                style={{ width: `${Math.min(100, quotaPercent)}%` }}
+                                style={{ width: `${Math.min(100, quotaPercent ?? 0)}%` }}
                             />
                         </div>
                         <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                            <span>{((playerContribution) / 1000000).toFixed(2)}M fans</span>
+                            <span>{formatCount(playerContribution)} fans (MuxueUma)</span>
                             <span>{((circleGoal) / 1000000).toFixed(0)}M fans</span>
                         </div>
                     </div>
@@ -877,27 +871,27 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                         <div className="p-3.5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/60">
                             <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Rank di Club</div>
                             <div className="text-xl font-black text-emerald-900 dark:text-emerald-300 font-mono mt-1">
-                                #{trackedPlayer.rank || '-'}
+                                {formatRank(trackedPlayer.rank)}
                             </div>
-                            <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">Dari 30 member</div>
+                            <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">Peringkat anggota di MuxueUma</div>
                         </div>
 
                         <div className="p-3.5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/60">
                             <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">
-                                {isCurrentPeriod ? 'Kontribusi Bulan Ini' : `Kontribusi (${formatPeriodJp(period)})`}
+                                {isCurrentPeriod ? 'Kontribusi Bulan Ini (MuxueUma)' : `Kontribusi (${formatPeriodJp(period)})`}
                             </div>
                             <div className="text-xl font-black text-emerald-900 dark:text-emerald-300 font-mono mt-1">
-                                +{(trackedPlayer.contribution || 0).toLocaleString('id-ID')}
+                                {formatDelta(trackedPlayer.contribution)}
                             </div>
                             <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">
-                                ~{((trackedPlayer.contribution || 0) / 1000000).toFixed(2)} Juta fans
+                                Kontribusi MuxueUma
                             </div>
                         </div>
 
                         <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
                             <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Perolehan Hari Ini</div>
                             <div className="text-xl font-black text-slate-900 dark:text-white font-mono mt-1">
-                                +{(trackedPlayer.todayDelta || 0).toLocaleString('id-ID')}
+                                {formatDelta(trackedPlayer.todayDelta)}
                             </div>
                             <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Today delta</div>
                         </div>
@@ -905,7 +899,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                         <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
                             <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">3 Hari Terakhir</div>
                             <div className="text-xl font-black text-slate-900 dark:text-white font-mono mt-1">
-                                +{(trackedPlayer.day3Delta || 0).toLocaleString('id-ID')}
+                                {formatDelta(trackedPlayer.day3Delta)}
                             </div>
                             <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">3-day delta</div>
                         </div>
@@ -913,7 +907,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                         <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
                             <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">1 Minggu Terakhir</div>
                             <div className="text-xl font-black text-slate-900 dark:text-white font-mono mt-1">
-                                +{(trackedPlayer.weekDelta || 0).toLocaleString('id-ID')}
+                                {formatDelta(trackedPlayer.weekDelta)}
                             </div>
                             <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Week delta</div>
                         </div>
@@ -932,9 +926,9 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                         <div>
                             <h2 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                                 <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                                <span>Tren Peringkat & Perolehan Fans Club (7 Hari)</span>
+                                <span>Tren Poin Circle</span>
                             </h2>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Perkembangan total poin fans dan ranking club seiring berjalannya waktu</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Snapshot: {statusData.last_refreshed_at ? new Date(statusData.last_refreshed_at).toLocaleString('id-ID') : '—'}</p>
                         </div>
                     </div>
 
@@ -963,8 +957,8 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                                 />
                                 <Tooltip 
                                     formatter={(value, name, props) => [
-                                        `${(props.payload.rawPoint).toLocaleString('id-ID')} fans (Rank #${props.payload.rank})`,
-                                        'Poin Club'
+                                        `${formatCount(props.payload.rawPoint)} poin (${formatRank(props.payload.rank)})`,
+                                        'Poin Ranking Circle'
                                     ]}
                                     labelFormatter={(label) => `Waktu: ${label}`}
                                 />
@@ -1193,7 +1187,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                                                 {member.viewerId}
                                             </td>
                                             <td className="px-5 py-3.5 font-mono font-black text-emerald-700 dark:text-emerald-400">
-                                                +{(member.contribution || 0).toLocaleString('id-ID')}
+                                                {formatDelta(member.contribution)}
                                             </td>
                                             <td className="px-5 py-3.5 font-mono text-slate-700 dark:text-slate-200">
                                                 {member.todayDelta !== null && member.todayDelta !== undefined
@@ -1211,7 +1205,7 @@ export default function CircleClubView({ onNotify, circleGoal = 20000000 }) {
                                                     : 'ー'}
                                             </td>
                                             <td className="px-5 py-3.5 font-mono text-slate-700 dark:text-slate-300">
-                                                {(member.totalFans || 0).toLocaleString('id-ID')}
+                                                {formatCount(member.totalFans)}
                                             </td>
                                             <td className="px-5 py-3.5 text-right">
                                                 {isTracked ? (
