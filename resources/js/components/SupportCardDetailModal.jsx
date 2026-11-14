@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
 import SkillDetailModal from './SkillDetailModal';
 import { formatSupportUniqueEffect } from '../utils/supportUniqueEffectFormatter';
+import { useModalDialog } from '../utils/useModalDialog';
 import {
     X,
     Sparkles,
@@ -206,33 +207,23 @@ function RewardBadge({ reward, onSkillClick }) {
     }
 }
 
-export default function SupportCardDetailModal({ card, isOpen, onClose }) {
+export default function SupportCardDetailModal({ card, isOpen, onClose, trigger, detailsLoaded = false, catalogUnavailable = false }) {
     const [activeTab, setActiveTab] = useState('effects'); // 'effects' | 'hints' | 'events'
     const [selectedLevelCol, setSelectedLevelCol] = useState(null); // '0lb' | '1lb' | '2lb' | '3lb' | 'mlb'
     const [loadingEvents, setLoadingEvents] = useState(false);
     const [cardDetails, setCardDetails] = useState(card?.details || null);
     const [selectedSkillPopup, setSelectedSkillPopup] = useState(null);
+    const titleId = useId();
+    const dialogRef = useModalDialog(Boolean(isOpen && card), onClose, trigger);
 
-    // Escape listener
     useEffect(() => {
-        const handleKeyDown = (e) => {
-            if (e.key === 'Escape') {
-                if (selectedSkillPopup) {
-                    setSelectedSkillPopup(null);
-                } else {
-                    onClose?.();
-                }
-            }
-        };
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-            window.addEventListener('keydown', handleKeyDown);
-        }
+        if (!isOpen) return;
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
         return () => {
-            document.body.style.overflow = '';
-            window.removeEventListener('keydown', handleKeyDown);
+            document.body.style.overflow = previousOverflow;
         };
-    }, [isOpen, onClose, selectedSkillPopup]);
+    }, [isOpen]);
 
     // Close modal when reverse skill search is triggered from inside SkillDetailModal
     useEffect(() => {
@@ -265,7 +256,7 @@ export default function SupportCardDetailModal({ card, isOpen, onClose }) {
             : (!existingDetails?.training_events || existingDetails.training_events.length === 0);
 
         // Check if training events / dates need fetching
-        if (needsFetch && (card.gametora_id || card.uma_catalog_item_id || card.id)) {
+        if (!detailsLoaded && needsFetch && (card.gametora_id || card.uma_catalog_item_id || card.id)) {
             setLoadingEvents(true);
             const queryId = card.uma_catalog_item_id || card.gametora_id || card.id;
             fetch(`/api/collection/support-cards/detail?id=${encodeURIComponent(queryId)}`)
@@ -282,7 +273,7 @@ export default function SupportCardDetailModal({ card, isOpen, onClose }) {
                     setLoadingEvents(false);
                 });
         }
-    }, [isOpen, card]);
+    }, [isOpen, card, detailsLoaded]);
 
     if (!isOpen || !card) return null;
 
@@ -401,7 +392,7 @@ export default function SupportCardDetailModal({ card, isOpen, onClose }) {
 
     return createPortal(
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-6 overflow-y-auto bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} className="relative w-full max-w-4xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 
                 {/* ======================================================== */}
                 {/* HEADER                                                   */}
@@ -414,7 +405,7 @@ export default function SupportCardDetailModal({ card, isOpen, onClose }) {
                                 {card.image_url || card.icon_url ? (
                                     <img 
                                         src={card.image_url || card.icon_url} 
-                                        alt={card.name} 
+                                        alt={card.display_name || card.name}
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (
@@ -454,8 +445,8 @@ export default function SupportCardDetailModal({ card, isOpen, onClose }) {
                                     )}
                                 </div>
 
-                                <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">
-                                    {card.name}
+                                <h2 id={titleId} className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">
+                                    {card.display_name || card.name}
                                 </h2>
                                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                                     Karakter: <strong className="text-slate-800 dark:text-slate-200">{card.char_name || '-'}</strong>
@@ -530,6 +521,11 @@ export default function SupportCardDetailModal({ card, isOpen, onClose }) {
                 {/* BODY CONTENT                                             */}
                 {/* ======================================================== */}
                 <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+                    {catalogUnavailable && (
+                        <p role="status" className="text-sm text-slate-600 dark:text-slate-300">
+                            Detail Support Card ini belum tersedia di katalog. Sinkronkan katalog GameTora untuk memperbarui data.
+                        </p>
+                    )}
 
                     {/* ==================================================== */}
                     {/* TAB 1: EFFECTS TABLE (0LB TO MLB)                    */}

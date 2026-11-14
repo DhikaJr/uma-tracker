@@ -1959,6 +1959,68 @@ class UmaTrackerApiTest extends TestCase
         $this->assertNull($activeBanners->firstWhere('name', 'Empty Dummy Banner'));
     }
 
+    public function test_dashboard_lineups_link_to_exact_catalog_variants_and_recover_blank_costumes(): void
+    {
+        UmaCatalogItem::create([
+            'type' => 'character',
+            'name' => 'Yukino Bijin [Snowy Girl of Tea and Cake]',
+            'rarity' => 'SSR',
+        ]);
+        $yukino = UmaCatalogItem::create([
+            'type' => 'character',
+            'name' => 'Yukino Bijin',
+            'rarity' => 'SSR',
+            'raw_data' => ['name_en' => 'Yukino Bijin', 'title_en_gl' => ' [ ] ', 'title_jp' => '［熟れしめでたし実り姫］'],
+        ]);
+        $creek = UmaCatalogItem::create([
+            'type' => 'character',
+            'name' => 'Super Creek [Rainy Blossoms]',
+            'rarity' => 'SSR',
+            'raw_data' => ['name_en' => 'Super Creek', 'title_en_gl' => 'Rainy Blossoms', 'title_jp' => '慈雨華影'],
+        ]);
+        $stayGold = UmaCatalogItem::create([
+            'type' => 'support_card',
+            'name' => 'SR [] Stay Gold (Power)',
+            'rarity' => 'SR',
+            'raw_data' => ['char_name' => 'Stay Gold', 'title_ja' => '黄昏に馳せる追憶', 'rarity' => 2, 'type' => 'power'],
+        ]);
+
+        $this->characterBanner->update([
+            'start_date' => now()->subDay()->toDateString(),
+            'end_date' => now()->addDay()->toDateString(),
+            'featured_items' => ['Yukino Bijin', 'Super Creek ［慈雨華影］', 'Yukino Bijin [Varian lain]'],
+        ]);
+        $this->supportCardBanner->update([
+            'start_date' => now()->subDay()->toDateString(),
+            'end_date' => now()->addDay()->toDateString(),
+            'featured_items' => [['name' => 'SR [ ] Stay Gold', 'is_support' => true, 'tier_label' => 'SR']],
+        ]);
+
+        $response = $this->getJson('/api/dashboard/summary')->assertOk();
+        $banners = collect($response->json('active_banners'))->keyBy('id');
+        $characters = $banners[$this->characterBanner->id]['featured_items'];
+        $supports = $banners[$this->supportCardBanner->id]['featured_items'];
+
+        $this->assertSame('Yukino Bijin [熟れしめでたし実り姫]', $characters[0]['name']);
+        $this->assertSame($yukino->id, $characters[0]['catalog_id']);
+        $this->assertSame($creek->id, $characters[1]['catalog_id']);
+        $this->assertNull($characters[2]['catalog_id']);
+        $this->assertSame($stayGold->id, $supports[0]['catalog_id']);
+        $this->assertSame('SR [黄昏に馳せる追憶] Stay Gold (Power)', $supports[0]['name']);
+        $this->assertSame('SR', $supports[0]['tier_label']);
+
+        $this->getJson('/api/collection/characters/detail?id='.$characters[0]['catalog_id'])
+            ->assertOk()
+            ->assertJsonPath('character.costume_title', '熟れしめでたし実り姫');
+        $this->getJson('/api/collection/characters')
+            ->assertOk()
+            ->assertJsonFragment(['name' => 'Yukino Bijin', 'costume_title' => '熟れしめでたし実り姫']);
+        $this->getJson('/api/collection/support-cards/detail?id='.$supports[0]['catalog_id'])
+            ->assertOk()
+            ->assertJsonPath('card.uma_catalog_item_id', $stayGold->id)
+            ->assertJsonPath('card.display_name', 'SR [黄昏に馳せる追憶] Stay Gold (Power)');
+    }
+
     public function test_career_runs_can_be_filtered_and_paginated(): void
     {
         CareerRun::create([

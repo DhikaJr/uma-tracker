@@ -188,7 +188,7 @@ function translateTrackCondition(cond) {
         .replace(/\bLong\b/g, 'Jarak Jauh');
 }
 
-export default function CharacterDetailModal({ character, isOpen, onClose, trigger }) {
+export default function CharacterDetailModal({ character, isOpen, onClose, trigger, catalogUnavailable = false }) {
     const [activeTab, setActiveTab] = useState('skills'); // 'skills' | 'stats' | 'aptitude' | 'objectives'
     const [selectedSkillModal, setSelectedSkillModal] = useState(null);
     const [openAlternatives, setOpenAlternatives] = useState({});
@@ -235,11 +235,11 @@ export default function CharacterDetailModal({ character, isOpen, onClose, trigg
 
     // Parse Title & Name from "Special Week [Special Dreamer]"
     let charBaseName = name;
-    let charTitle = '';
-    const match = name.match(/^(.*?)\s*\[(.*?)\]$/);
+    let charTitle = character.costume_title || '';
+    const match = name.match(/^(.*?)\s*[\[［](.*?)[\]］]$/);
     if (match) {
         charBaseName = match[1].trim();
-        charTitle = match[2].trim();
+        charTitle ||= match[2].trim();
     }
 
     const rawData = typeof character.raw_data === 'string'
@@ -359,7 +359,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose, trigg
                                 {charBaseName}
                             </h2>
 
-                            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                            {!catalogUnavailable && <div className="flex flex-wrap items-center gap-2 pt-0.5">
                                 {/* Base Stars */}
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-black bg-amber-400 text-slate-950">
                                     <Star className="w-3 h-3 fill-current" />
@@ -380,7 +380,7 @@ export default function CharacterDetailModal({ character, isOpen, onClose, trigg
                                     <CheckCircle2 className={`w-3 h-3 ${isOwned ? 'text-emerald-300' : 'text-white/40'}`} />
                                     <span>{isOwned ? 'Sudah Dimiliki' : 'Belum Dimiliki'}</span>
                                 </span>
-                            </div>
+                            </div>}
                         </div>
                     </div>
 
@@ -439,6 +439,11 @@ export default function CharacterDetailModal({ character, isOpen, onClose, trigg
 
                 {/* Modal Body: Scrollable */}
                 <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+                    {catalogUnavailable && (
+                        <p role="status" className="text-sm text-slate-600 dark:text-slate-300">
+                            Detail karakter ini belum tersedia di katalog. Sinkronkan katalog GameTora untuk memperbarui data.
+                        </p>
+                    )}
                     {/* ======================================================== */}
                     {/* TAB 1: SKILLS & ABILITIES                                */}
                     {/* ======================================================== */}

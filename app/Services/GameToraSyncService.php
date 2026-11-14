@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Log;
 
 class GameToraSyncService
 {
+    private const CATALOG_FORMAT_VERSION = '2';
+
     private const EVOLUTION_STATUS_EFFECTS = [
         7 => 'Fast Learner (切れ者)',
     ];
@@ -88,7 +90,7 @@ class GameToraSyncService
             $racetracksHash = $manifest['racetracks'] ?? '';
             $racetracksExtHash = $manifest['racetracks_extended'] ?? '';
 
-            $combinedHash = "{$charBaseHash}|{$charCardHash}|{$supportHash}|{$skillsHash}|{$objHash}|{$charStdHash}|{$suppStdHash}|{$specialHash}|{$charBannersHash}|{$suppBannersHash}|{$racetracksHash}|{$racetracksExtHash}";
+            $combinedHash = "{$charBaseHash}|{$charCardHash}|{$supportHash}|{$skillsHash}|{$objHash}|{$charStdHash}|{$suppStdHash}|{$specialHash}|{$charBannersHash}|{$suppBannersHash}|{$racetracksHash}|{$racetracksExtHash}|".self::CATALOG_FORMAT_VERSION;
             $savedHash = (string) AppSetting::getValue('gametora_manifest_hash', '');
 
             if (! $force && $savedHash === $combinedHash && UmaCatalogItem::count() > 0 && GachaBanner::count() > 0) {
@@ -196,6 +198,13 @@ class GameToraSyncService
                 }
             }
 
+            // Keep existing names used by ownership records when only the display title was missing.
+            $catalogNames = UmaCatalogItem::whereIn('type', ['character', 'support_card'])
+                ->get(['type', 'name', 'gametora_id'])
+                ->groupBy('type');
+            $characterNames = $catalogNames->get('character', collect())->keyBy('name');
+            $supportNames = $catalogNames->get('support_card', collect())->keyBy('name');
+
             // Process & Upsert Character Variants (Alt Costumes)
             $newCharCount = 0;
             foreach ($rawCharCards as $c) {
@@ -204,14 +213,12 @@ class GameToraSyncService
                     continue;
                 }
 
-                $title = $c['title_en_gl'] ?? $c['title'] ?? $c['title_jp'] ?? $c['title_ja'] ?? '';
-                $title = trim(preg_replace('/^[\[\s]+|[\]\s]+$/u', '', $title));
-
-                if ($title === '' && $nameEn === 'Phalaenopsis') {
-                    $title = '絶佳の暁闇';
-                }
-
+                $title = UmaCatalog::gameToraTitles($c)[0] ?? '';
                 $fullName = $title !== '' ? "{$nameEn} [{$title}]" : $nameEn;
+                if ($title !== '' && isset($c['id']) && ! $characterNames->has($fullName)
+                    && $characterNames->get($nameEn)?->gametora_id === (int) $c['id']) {
+                    $fullName = $nameEn;
+                }
                 $rarity = ($c['rarity'] ?? 3) === 3 ? 'SSR' : (($c['rarity'] ?? 2) === 2 ? 'SR' : 'R');
 
                 $charId = $c['char_id'] ?? null;
@@ -255,16 +262,16 @@ class GameToraSyncService
                 }
 
                 $rarityStr = ($s['rarity'] ?? 3) === 3 ? 'SSR' : (($s['rarity'] ?? 2) === 2 ? 'SR' : 'R');
-                $title = $s['title_en'] ?? $s['title_ja'] ?? '';
-                if ($title === '[トレセン学園]') {
-                    $title = 'Tracen Academy';
-                } elseif ($title === '[URA職員]') {
-                    $title = 'URA Staff';
-                }
-                $title = trim(preg_replace('/^[\[\s]+|[\]\s]+$/u', '', $title));
+                $title = UmaCatalog::bannerTitle(UmaCatalog::gameToraTitles($s, isSupport: true)[0] ?? '', isSupport: true);
 
                 $typeStr = ucfirst(trim($s['type'] ?? ''));
-                $cardFullName = "{$rarityStr} [{$title}] {$charName}".($typeStr !== '' ? " ({$typeStr})" : '');
+                $typeSuffix = $typeStr !== '' ? " ({$typeStr})" : '';
+                $cardFullName = "{$rarityStr} [{$title}] {$charName}{$typeSuffix}";
+                $legacyName = "{$rarityStr} [] {$charName}{$typeSuffix}";
+                if ($title !== '' && isset($s['id']) && ! $supportNames->has($cardFullName)
+                    && $supportNames->get($legacyName)?->gametora_id === (int) $s['id']) {
+                    $cardFullName = $legacyName;
+                }
 
                 $supportId = $s['support_id'] ?? $s['id'] ?? null;
                 $imageUrl = $supportId
@@ -454,23 +461,12 @@ class GameToraSyncService
      */
     protected function sync2026Banners(array $manifest, array $rawCharCards, array $rawSupportCards, bool $force = false): int
     {
-        // Title translations mapping from English wiki / Umapyoi for known Japanese titles
-        $titleTranslations = [
-            'マジックナイトガーランド' => 'Magic Night Garland',
-            'すまいる・まい・うぇい！' => 'sMile My Way!',
-            '絶佳の暁闇' => 'Noble Fleur',
-        ];
-
         // 1. Build lookup tables for character & support names
         $charCards = [];
         foreach ($rawCharCards as $c) {
             $cardId = $c['card_id'] ?? null;
             if ($cardId) {
-                $title = $c['title_en_gl'] ?? $c['title_jp'] ?? '';
-                $title = trim(preg_replace('/^[\[\s]+|[\]\s]+$/u', '', $title));
-                if (isset($titleTranslations[$title])) {
-                    $title = $titleTranslations[$title];
-                }
+                $title = UmaCatalog::bannerTitle(UmaCatalog::gameToraTitles($c)[0] ?? '');
                 $charCards[$cardId] = $c['name_en'].($title !== '' ? " [{$title}]" : '');
             }
         }
@@ -480,8 +476,7 @@ class GameToraSyncService
             $suppId = $s['support_id'] ?? null;
             if ($suppId) {
                 $r = ($s['rarity'] ?? 3) === 3 ? 'SSR' : (($s['rarity'] ?? 2) === 2 ? 'SR' : 'R');
-                $title = $s['title_en'] ?? $s['title_ja'] ?? '';
-                $title = trim(preg_replace('/^[\[\s]+|[\]\s]+$/u', '', $title));
+                $title = UmaCatalog::gameToraTitles($s, isSupport: true)[0] ?? '';
                 $suppCards[$suppId] = "{$r} [{$title}] {$s['char_name']}";
             }
         }

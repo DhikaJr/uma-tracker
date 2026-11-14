@@ -457,7 +457,7 @@ export default function CollectionView({ onNotify }) {
             // Search
             if (charSearch.trim()) {
                 const q = charSearch.toLowerCase();
-                if (!char.name.toLowerCase().includes(q)) {
+                if (!(char.display_name || char.name).toLowerCase().includes(q)) {
                     return false;
                 }
             }
@@ -497,7 +497,7 @@ export default function CollectionView({ onNotify }) {
             // Search
             if (cardSearch.trim()) {
                 const q = cardSearch.toLowerCase();
-                const matchName = card.name.toLowerCase().includes(q);
+                const matchName = (card.display_name || card.name).toLowerCase().includes(q);
                 const matchChar = card.char_name && card.char_name.toLowerCase().includes(q);
                 if (!matchName && !matchChar) return false;
             }
@@ -963,9 +963,9 @@ export default function CollectionView({ onNotify }) {
                                                     <h3 
                                                         onClick={(event) => openCharacter(char, event.currentTarget)}
                                                         className="text-sm font-black text-slate-900 dark:text-white line-clamp-2 leading-snug cursor-pointer hover:text-pink-600 dark:hover:text-pink-400 transition-colors" 
-                                                        title={`${char.name} - Klik untuk lihat detail`}
+                                                        title={`${char.display_name || char.name} - Klik untuk lihat detail`}
                                                     >
-                                                        {char.name}
+                                                        {char.display_name || char.name}
                                                     </h3>
                                                 </div>
                                             </div>
@@ -1413,8 +1413,8 @@ export default function CollectionView({ onNotify }) {
                                                     </div>
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <h3 className="text-sm font-black text-slate-900 dark:text-white line-clamp-2 leading-snug" title={card.name}>
-                                                        {card.name}
+                                                    <h3 className="text-sm font-black text-slate-900 dark:text-white line-clamp-2 leading-snug" title={card.display_name || card.name}>
+                                                        {card.display_name || card.name}
                                                     </h3>
                                                     {card.char_name && (
                                                         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">

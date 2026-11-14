@@ -335,6 +335,7 @@ class CollectionController extends Controller
         foreach ($characterNames as $name) {
             $catalogItem = $catalogItems->get($name);
             $userChar = $userCharacters->get($name);
+            $costumeTitle = UmaCatalog::characterCostumeTitle($name, $catalogItem?->raw_data ?? []);
 
             $baseStars = $userChar?->base_stars ?? $this->resolveBaseStars($name, $catalogItem);
             $isOwned = $userChar ? (bool) $userChar->is_owned : false;
@@ -354,6 +355,10 @@ class CollectionController extends Controller
                 'uma_catalog_item_id' => $catalogItem?->id,
                 'gametora_id' => $catalogItem?->gametora_id,
                 'name' => $name,
+                'costume_title' => $costumeTitle,
+                'display_name' => $costumeTitle !== null && ! str_contains($name, '[') && ! str_contains($name, '［')
+                    ? "{$name} [{$costumeTitle}]"
+                    : $name,
                 'base_stars' => $baseStars,
                 'current_stars' => $currentStars,
                 'is_owned' => $isOwned,
@@ -426,6 +431,7 @@ class CollectionController extends Controller
                 'uma_catalog_item_id' => $catalogItem->id,
                 'gametora_id' => $catalogItem->gametora_id,
                 'name' => $catalogItem->name,
+                'costume_title' => UmaCatalog::characterCostumeTitle($catalogItem->name, $catalogItem->raw_data ?? []),
                 'base_stars' => $baseStars,
                 'current_stars' => $currentStars,
                 'is_owned' => $userChar ? (bool) $userChar->is_owned : false,
@@ -670,6 +676,7 @@ class CollectionController extends Controller
                 'gametora_id' => $catalogItem?->gametora_id,
                 'name' => $name,
                 'char_name' => $charName,
+                'display_name' => UmaCatalog::supportCardDisplayName($name, $catalogItem?->raw_data ?? []),
                 'rarity' => $rarity,
                 'card_type' => $cardType,
                 'limit_break' => $limitBreak,
@@ -762,6 +769,7 @@ class CollectionController extends Controller
                 'gametora_id' => $catalogItem->gametora_id,
                 'name' => $catalogItem->name,
                 'char_name' => $userCard?->char_name ?? $meta['char_name'],
+                'display_name' => UmaCatalog::supportCardDisplayName($catalogItem->name, $catalogItem->raw_data ?? []),
                 'rarity' => $userCard?->rarity ?? $meta['rarity'],
                 'card_type' => $cardType,
                 'is_friend_or_group' => $isFriendOrGroup,

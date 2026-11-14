@@ -178,21 +178,7 @@ class DashboardController extends Controller
         // Active Banners Today
         $today = Carbon::now()->format('Y-m-d');
 
-        $charCatalog = UmaCatalogItem::where('type', 'character')
-            ->get(['name', 'rarity', 'raw_data']);
-        $charCatalogMap = [];
-        foreach ($charCatalog as $c) {
-            $norm = mb_strtolower(trim($c->name));
-            $r = 3;
-            if (isset($c->raw_data['rarity'])) {
-                $r = (int) $c->raw_data['rarity'];
-            } elseif ($c->rarity === 'R') {
-                $r = 1;
-            } elseif ($c->rarity === 'SR') {
-                $r = 2;
-            }
-            $charCatalogMap[$norm] = $r;
-        }
+        $catalog = $this->bannerCatalog();
 
         $b1Map = [
             'Agnes Tachyon' => ['tach-nology'],
@@ -240,19 +226,32 @@ class DashboardController extends Controller
                 return ! empty($b->featured_items) && count($b->featured_items) > 0;
             })
             ->values()
-            ->map(function ($b) use ($today, $charCatalogMap, $b1Map, $b2Map) {
+            ->map(function ($b) use ($today, $catalog, $b1Map, $b2Map) {
                 $start = $b->start_date ? Carbon::parse($b->start_date) : null;
                 $end = $b->end_date ? Carbon::parse($b->end_date) : null;
                 $daysRemaining = $end ? (int) max(0, Carbon::parse($today)->diffInDays($end, false)) : null;
 
                 $isSupport = $b->banner_type === 'support_card';
 
-                $formattedItems = collect($b->featured_items ?? [])->map(function ($itemName) use ($isSupport, $charCatalogMap, $b1Map, $b2Map) {
-                    if (is_array($itemName)) {
-                        return $itemName;
+                $formattedItems = collect($b->featured_items)->map(function ($item) use ($isSupport, $catalog, $b1Map, $b2Map) {
+                    $attributes = is_array($item) ? $item : [];
+                    $itemName = $attributes['name'] ?? (is_string($item) ? $item : '');
+                    $itemIsSupport = $attributes['is_support'] ?? $isSupport;
+                    $type = $itemIsSupport ? 'support_card' : 'character';
+                    $key = $this->bannerCatalogKey($itemName);
+                    $matches = $catalog['aliases'][$type][$key] ?? [];
+                    $entry = $catalog['names'][$type][mb_strtolower(trim($itemName))]
+                        ?? (count($matches) === 1 ? reset($matches) : null);
+                    $displayName = $itemName;
+                    if ($entry && ! preg_match('/[\[［]\s*[^\s\]］]/u', $itemName)) {
+                        $displayName = $entry['name'];
                     }
+                    $detail = [
+                        'name' => $displayName,
+                        'catalog_id' => $entry['id'] ?? null,
+                    ];
 
-                    if ($isSupport) {
+                    if ($itemIsSupport) {
                         $rarity = 'SSR';
                         if (str_starts_with($itemName, 'SR ')) {
                             $rarity = 'SR';
@@ -260,21 +259,19 @@ class DashboardController extends Controller
                             $rarity = 'R';
                         }
 
-                        return [
-                            'name' => $itemName,
+                        return array_replace([
                             'is_support' => true,
                             'rarity' => $rarity,
                             'tier_label' => $rarity,
                             'badge_text' => $rarity,
                             'stars' => null,
                             'star_text' => null,
-                        ];
+                        ], $attributes, $detail);
                     }
 
-                    $norm = mb_strtolower(trim($itemName));
                     $stars = 3;
-                    if (isset($charCatalogMap[$norm])) {
-                        $stars = $charCatalogMap[$norm];
+                    if ($entry) {
+                        $stars = $entry['stars'];
                     } else {
                         foreach ($b1Map as $charName => $epithets) {
                             if (stripos($itemName, $charName) !== false) {
@@ -308,15 +305,14 @@ class DashboardController extends Controller
                         }
                     }
 
-                    return [
-                        'name' => $itemName,
+                    return array_replace([
                         'is_support' => false,
                         'stars' => $stars,
                         'rarity' => "{$stars}★",
                         'tier_label' => "B{$stars}",
                         'star_text' => str_repeat('★', $stars),
                         'badge_text' => str_repeat('★', $stars)." (B{$stars})",
-                    ];
+                    ], $attributes, $detail);
                 })->all();
 
                 return [
@@ -362,5 +358,70 @@ class DashboardController extends Controller
             'recent_runs' => $recentRuns,
             'fan_trends' => $fanTrends,
         ]);
+    }
+
+    private function bannerCatalog(): array
+    {
+        $catalog = ['names' => [], 'aliases' => []];
+        $items = UmaCatalogItem::whereIn('type', ['character', 'support_card'])
+            ->orderBy('name', 'desc')
+            ->get(['id', 'type', 'name', 'rarity', 'gametora_id', 'raw_data']);
+
+        foreach ($items as $item) {
+            $raw = $item->raw_data ?? [];
+            $isSupport = $item->type === 'support_card';
+            $titles = UmaCatalog::gameToraTitles($raw, $isSupport);
+            $name = $item->name;
+            $entry = [
+                'id' => $item->id,
+                'name' => $name,
+                'stars' => (int) ($raw['rarity'] ?? match ($item->rarity) {
+                    'R' => 1,
+                    'SR' => 2,
+                    default => 3,
+                }),
+            ];
+
+            if ($isSupport) {
+                $character = trim($raw['char_name'] ?? '');
+                $rarity = $item->rarity ?? 'SSR';
+                $aliases = [$name, "{$rarity} [] {$character}"];
+                foreach ($titles as $title) {
+                    $aliases[] = "{$rarity} [{$title}] {$character}";
+                    $aliases[] = "{$rarity} [".UmaCatalog::bannerTitle($title, true)."] {$character}";
+                }
+                $entry['name'] = UmaCatalog::supportCardDisplayName($name, $raw);
+            } else {
+                $character = trim($raw['name_en'] ?? '') ?: trim(preg_replace('/\s*[\[［].*[\]］]$/u', '', $name));
+                $aliases = [$name, $character, "{$character} []"];
+                foreach ($titles as $title) {
+                    $aliases[] = "{$character} [{$title}]";
+                    $aliases[] = "{$character} [".UmaCatalog::bannerTitle($title).']';
+                }
+                $costume = UmaCatalog::characterCostumeTitle($name, $raw);
+                if ($costume !== null) {
+                    $entry['name'] = "{$character} [{$costume}]";
+                }
+            }
+
+            // A legacy and a titled record of the same card count as one match.
+            $identity = $item->gametora_id ?? $raw['card_id'] ?? $raw['support_id'] ?? 'local-'.$item->id;
+            $catalog['names'][$item->type][mb_strtolower(trim($name))] = $entry;
+            foreach ($aliases as $alias) {
+                $key = $this->bannerCatalogKey($alias);
+                $catalog['aliases'][$item->type][$key][$identity] ??= $entry;
+            }
+        }
+
+        return $catalog;
+    }
+
+    private function bannerCatalogKey(string $name): string
+    {
+        // Banner support names can omit the training type suffix stored in the catalog.
+        $name = preg_replace('/\s+\((?:Speed|Stamina|Power|Guts|Wit|Intelligence|Friend|Group)\)$/iu', '', trim($name));
+        $name = str_replace(['［', '］'], ['[', ']'], $name);
+
+        return mb_strtolower(preg_replace('/\[\s*\]/u', '[]', $name));
     }
 }

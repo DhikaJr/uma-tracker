@@ -2,6 +2,13 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.10] - 14 November 2026
+
+### Detail Koleksi dari banner aktif Dasbor
+
+- Klik karakter atau Support Card pada banner aktif di Dasbor untuk membuka modal detail Koleksi.
+- Judul kostum dan Support Card ditampilkan dalam bahasa Jepang saat judul Inggris belum tersedia.
+
 ## [Versi 3.3.9] - 14 November 2026
 
 ### Periode dan sumber data Circle Club

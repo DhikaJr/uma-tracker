@@ -10,6 +10,69 @@ use Throwable;
 
 class UmaCatalog
 {
+    private const CHARACTER_TITLE_FIELDS = ['title_en_gl', 'title_en', 'title', 'title_jp', 'title_ja'];
+
+    private const SUPPORT_TITLE_FIELDS = ['title_en', 'title_ja', 'title_jp'];
+
+    private const BANNER_TITLE_TRANSLATIONS = [
+        'マジックナイトガーランド' => 'Magic Night Garland',
+        'すまいる・まい・うぇい！' => 'sMile My Way!',
+        '絶佳の暁闇' => 'Noble Fleur',
+    ];
+
+    /** @return list<string> */
+    public static function gameToraTitles(array $raw, bool $isSupport = false): array
+    {
+        $titles = [];
+        foreach ($isSupport ? self::SUPPORT_TITLE_FIELDS : self::CHARACTER_TITLE_FIELDS as $field) {
+            if (is_string($raw[$field] ?? null)) {
+                $title = preg_replace('/^[\s\[［「【]+|[\s\]］」】]+$/u', '', $raw[$field]);
+                if ($title !== null && $title !== '') {
+                    $titles[] = $title;
+                }
+            }
+        }
+
+        if ($titles === [] && ! $isSupport && ($raw['name_en'] ?? null) === 'Phalaenopsis') {
+            $titles[] = '絶佳の暁闇';
+        }
+
+        return array_values(array_unique($titles));
+    }
+
+    public static function bannerTitle(string $title, bool $isSupport = false): string
+    {
+        if (! $isSupport) {
+            return self::BANNER_TITLE_TRANSLATIONS[$title] ?? $title;
+        }
+
+        return match ($title) {
+            'トレセン学園' => 'Tracen Academy',
+            'URA職員' => 'URA Staff',
+            default => $title,
+        };
+    }
+
+    public static function characterCostumeTitle(string $name, array $raw = []): ?string
+    {
+        if (preg_match('/[\[［]([^\]］]+)[\]］]\s*$/u', $name, $matches) && trim($matches[1]) !== '') {
+            return trim($matches[1]);
+        }
+
+        return self::gameToraTitles($raw)[0] ?? null;
+    }
+
+    public static function supportCardDisplayName(string $name, array $raw = []): string
+    {
+        if (! str_contains($name, '[]')) {
+            return $name;
+        }
+
+        $title = self::gameToraTitles($raw, isSupport: true)[0] ?? null;
+
+        return $title === null ? $name : str_replace('[]', '['.self::bannerTitle($title, isSupport: true).']', $name);
+    }
+
     /** @var array<int, string> List of non-playable characters (NPCs, staff, trainers, Three Goddesses, rivals, and unreleased lore/support-only characters) */
     public const NON_PLAYABLE_NAMES = [
         'Aoi Kiryuin',

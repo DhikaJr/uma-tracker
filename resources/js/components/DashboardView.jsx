@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { 
     Sparkles, 
     Trophy, 
@@ -47,6 +47,9 @@ import {
     DISTANCE_CATEGORY_MAP 
 } from '../utils/competitionEventHelper';
 
+const CharacterDetailModal = lazy(() => import('./CharacterDetailModal'));
+const SupportCardDetailModal = lazy(() => import('./SupportCardDetailModal'));
+
 export default function DashboardView({ 
     summaryData, 
     loading, 
@@ -66,6 +69,47 @@ export default function DashboardView({
     const [featuredEvent, setFeaturedEvent] = useState(null);
     const [loadingFeaturedEvent, setLoadingFeaturedEvent] = useState(true);
     const [showNoDebuffModal, setShowNoDebuffModal] = useState(false);
+    const [bannerDetail, setBannerDetail] = useState(null);
+    const [loadingBannerItem, setLoadingBannerItem] = useState(null);
+    const bannerDetailRequest = useRef(null);
+
+    useEffect(() => () => bannerDetailRequest.current?.abort(), []);
+
+    const openBannerDetail = async (item, isSupport, rowKey, trigger) => {
+        bannerDetailRequest.current?.abort();
+        bannerDetailRequest.current = null;
+        if (!item.catalog_id) {
+            setLoadingBannerItem(null);
+            setBannerDetail({
+                data: { name: item.name, base_stars: item.stars, rarity: item.rarity },
+                isSupport,
+                trigger,
+                catalogUnavailable: true,
+            });
+            return;
+        }
+
+        const controller = new AbortController();
+        bannerDetailRequest.current = controller;
+        setLoadingBannerItem(rowKey);
+        const resource = isSupport ? 'support-cards' : 'characters';
+        try {
+            const response = await fetch(`/api/collection/${resource}/detail?id=${encodeURIComponent(item.catalog_id)}`, {
+                signal: controller.signal,
+            });
+            const payload = await response.json();
+            const data = isSupport ? payload.card : payload.character;
+            if (!response.ok || !data) throw new Error(payload.message || 'Gagal memuat detail Koleksi.');
+            if (!controller.signal.aborted) setBannerDetail({ data, isSupport, trigger });
+        } catch (error) {
+            if (!controller.signal.aborted) onNotify?.(error.message || 'Gagal memuat detail Koleksi.', 'error');
+        } finally {
+            if (bannerDetailRequest.current === controller && !controller.signal.aborted) {
+                bannerDetailRequest.current = null;
+                setLoadingBannerItem(null);
+            }
+        }
+    };
 
     useEffect(() => {
         let isMounted = true;
@@ -523,17 +567,23 @@ export default function DashboardView({
                                                 </div>
                                                 <div className="flex flex-col gap-1.5 w-full">
                                                     {banner.featured_items.map((item, idx) => {
-                                                        const isObj = typeof item === 'object' && item !== null;
-                                                        const itemName = isObj ? item.name : item;
-                                                        const isCardSupport = isObj ? item.is_support : !isChar;
-                                                        const stars = isObj ? (item.stars || 3) : 3;
-                                                        const tierLabel = isObj ? item.tier_label : (isChar ? 'B3' : 'SSR');
-                                                        const badgeText = isObj ? item.badge_text : (isChar ? '★★★ (B3)' : 'SSR');
+                                                        const itemName = item.name;
+                                                        const isCardSupport = item.is_support;
+                                                        const stars = item.stars || 3;
+                                                        const tierLabel = item.tier_label;
+                                                        const badgeText = item.badge_text;
+                                                        const rowKey = `${banner.id}-${idx}`;
+                                                        const isLoadingItem = loadingBannerItem === rowKey;
 
                                                         return (
-                                                            <div
-                                                                key={idx}
-                                                                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 shadow-2xs gap-2"
+                                                            <button
+                                                                key={rowKey}
+                                                                type="button"
+                                                                aria-haspopup="dialog"
+                                                                aria-busy={isLoadingItem}
+                                                                title={itemName}
+                                                                onClick={(event) => openBannerDetail(item, isCardSupport, rowKey, event.currentTarget)}
+                                                                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 shadow-2xs gap-2 text-left cursor-pointer transition-colors hover:border-amber-400 hover:bg-amber-50 dark:hover:border-amber-500 dark:hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
                                                             >
                                                                 <span className="text-xs font-bold truncate flex-1 text-slate-800 dark:text-slate-200">
                                                                     {itemName}
@@ -560,7 +610,10 @@ export default function DashboardView({
                                                                         <span>{badgeText}</span>
                                                                     </span>
                                                                 )}
-                                                            </div>
+                                                                {isLoadingItem
+                                                                    ? <RefreshCw aria-hidden="true" className="h-3 w-3 shrink-0 animate-spin text-amber-500" />
+                                                                    : <ChevronRight aria-hidden="true" className="h-3 w-3 shrink-0 text-slate-400" />}
+                                                            </button>
                                                         );
                                                     })}
                                                 </div>
@@ -1065,6 +1118,29 @@ export default function DashboardView({
                     </div>
                 </div>
             </div>
+
+            {bannerDetail && (
+                <Suspense fallback={<p role="status" className="sr-only">Memuat modal detail…</p>}>
+                    {bannerDetail.isSupport ? (
+                        <SupportCardDetailModal
+                            card={bannerDetail.data}
+                            isOpen
+                            onClose={() => setBannerDetail(null)}
+                            trigger={bannerDetail.trigger}
+                            detailsLoaded
+                            catalogUnavailable={bannerDetail.catalogUnavailable}
+                        />
+                    ) : (
+                        <CharacterDetailModal
+                            character={bannerDetail.data}
+                            isOpen
+                            onClose={() => setBannerDetail(null)}
+                            trigger={bannerDetail.trigger}
+                            catalogUnavailable={bannerDetail.catalogUnavailable}
+                        />
+                    )}
+                </Suspense>
+            )}
 
             {/* No Debuff Skills Modal */}
             {showNoDebuffModal && (

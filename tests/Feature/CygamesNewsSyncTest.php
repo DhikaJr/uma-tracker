@@ -111,7 +111,7 @@ class CygamesNewsSyncTest extends TestCase
             'character-cards' => 'cards', 'characters' => 'characters', 'support-cards' => 'support',
             'racetracks' => 'tracks', 'racetracks_extended' => 'extended',
         ];
-        AppSetting::setValue('gametora_manifest_hash', implode('|', ['characters', 'cards', 'support', '', '', '', '', '', '', '', 'tracks', 'extended']));
+        AppSetting::setValue('gametora_manifest_hash', implode('|', ['characters', 'cards', 'support', '', '', '', '', '', '', '', 'tracks', 'extended', '2']));
         GachaBanner::create(['name' => 'Example', 'start_date' => '2026-11-13']);
         Http::fake([
             GameToraSyncService::MANIFEST_URL => Http::response($manifest),
@@ -432,6 +432,7 @@ class CygamesNewsSyncTest extends TestCase
     {
         $indexJson = file_get_contents(base_path('tests/Fixtures/cygames_news_index.json'));
         $detailJson = file_get_contents(base_path('tests/Fixtures/cygames_select_pickup_3490.json'));
+        $legacy = UmaCatalogItem::create(['type' => 'character', 'name' => 'Super Creek', 'gametora_id' => 102902]);
 
         Http::fake([
             'https://gametora.com/data/manifests/umamusume.json' => Http::response([
@@ -447,12 +448,30 @@ class CygamesNewsSyncTest extends TestCase
                 'racetracks' => 'hash10',
                 'racetracks_extended' => 'hash11',
             ], 200),
-            'https://gametora.com/data/umamusume/character-cards.hash1.json' => Http::response([], 200),
+            'https://gametora.com/data/umamusume/character-cards.hash1.json' => Http::response([
+                [
+                    'id' => 110501, 'card_id' => 110501, 'name_en' => 'Yukino Bijin',
+                    'title_en_gl' => '', 'title' => ' [ ] ', 'title_ja' => '[熟れしめでたし実り姫]',
+                ],
+                [
+                    'id' => 102902, 'card_id' => 102902, 'name_en' => 'Super Creek',
+                    'title_en_gl' => '', 'title_jp' => '[慈雨華影]',
+                ],
+            ]),
             'https://gametora.com/data/umamusume/characters.hash2.json' => Http::response([], 200),
-            'https://gametora.com/data/umamusume/support-cards.hash3.json' => Http::response([], 200),
+            'https://gametora.com/data/umamusume/support-cards.hash3.json' => Http::response([
+                [
+                    'id' => 40001, 'support_id' => 40001, 'char_name' => 'Stay Gold',
+                    'rarity' => 2, 'type' => 'power', 'title_en' => '', 'title_ja' => '[黄昏に馳せる追憶]',
+                ],
+            ]),
             'https://gametora.com/data/umamusume/skills.hash4.json' => Http::response([], 200),
-            'https://gametora.com/data/umamusume/gacha/char-standard.hash5.json' => Http::response([]),
-            'https://gametora.com/data/umamusume/gacha/support-standard.hash6.json' => Http::response([]),
+            'https://gametora.com/data/umamusume/gacha/char-standard.hash5.json' => Http::response([
+                ['id' => 41001, 'start' => strtotime('2026-11-10'), 'end' => strtotime('2026-11-19'), 'pickups' => [[110501]]],
+            ]),
+            'https://gametora.com/data/umamusume/gacha/support-standard.hash6.json' => Http::response([
+                ['id' => 41002, 'start' => strtotime('2026-11-10'), 'end' => strtotime('2026-11-19'), 'pickups' => [[40001]]],
+            ]),
             'https://gametora.com/data/umamusume/gacha/special.hash7.json' => Http::response([]),
             'https://umapyoi.net/api/v1/news/search/twinkle' => Http::response([]),
             'https://gametora.com/data/umamusume/gacha/support_banners.hash9.json' => Http::response([], 200),
@@ -467,6 +486,12 @@ class CygamesNewsSyncTest extends TestCase
         $result = $syncService->sync(true);
 
         $this->assertTrue($result['success']);
+        $this->assertDatabaseHas('uma_catalog_items', ['type' => 'character', 'name' => 'Yukino Bijin [熟れしめでたし実り姫]']);
+        $this->assertSame('[慈雨華影]', $legacy->refresh()->raw_data['title_jp']);
+        $this->assertSame(1, UmaCatalogItem::where('gametora_id', 102902)->count());
+        $this->assertDatabaseHas('uma_catalog_items', ['type' => 'support_card', 'name' => 'SR [黄昏に馳せる追憶] Stay Gold (Power)']);
+        $this->assertSame(['Yukino Bijin [熟れしめでたし実り姫]'], GachaBanner::where('gametora_id', 41001)->firstOrFail()->featured_items);
+        $this->assertSame(['SR [黄昏に馳せる追憶] Stay Gold'], GachaBanner::where('gametora_id', 41002)->firstOrFail()->featured_items);
 
         $banner = GachaBanner::where('gametora_id', 30477)->first();
         $this->assertNotNull($banner);
