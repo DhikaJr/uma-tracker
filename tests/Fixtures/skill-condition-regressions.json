@@ -1,0 +1,32 @@
+{
+    "clauses": [
+        {"formula": "overtake_target_time>=2", "text": "Anda menjadi target salip pelari lain selama minimal 2 detik"},
+        {"formula": "same_skill_horse_count==1", "text": "Tidak ada pelari lain yang memiliki skill yang sama", "note": "Hitungan mencakup pemilik skill sendiri."},
+        {"formula": "same_skill_horse_count>=5", "text": "Jumlah pelari yang memiliki skill yang sama >= 5", "note": "Hitungan mencakup pemilik skill sendiri."},
+        {"formula": "is_dirtgrade==1", "text": "Exchange race di sirkuit lokal"},
+        {"formula": "is_dirtgrade!=1", "text": "Bukan exchange race di sirkuit lokal"},
+        {"formula": "is_dirtgrade==0", "text": "Bukan exchange race di sirkuit lokal"},
+        {"formula": "furlong==3", "text": "Berada pada furlong ke-4 (sekitar 600–800 m sejak start)"},
+        {"formula": "order_rate>=40", "text": "Peringkat pada batas 40% atau lebih belakang (CM [Champions Meetings] >= 4, posisi ke-4 atau lebih belakang | LoH [League of Heroes] >= 5, posisi ke-5 atau lebih belakang)"},
+        {"formula": "order_rate>40", "text": "Peringkat melewati batas 40% ke arah belakang (CM [Champions Meetings] > 4, posisi ke-5 atau lebih belakang | LoH [League of Heroes] > 5, posisi ke-6 atau lebih belakang)"},
+        {"formula": "order_rate_in20_continue==1", "text": "Konsisten bertahan di 20% pelari terdepan hingga titik ini", "note": "Lima detik pertama balapan tidak dihitung."},
+        {"formula": "order_rate_out50_continue==1", "text": "Konsisten berada di luar 50% pelari terdepan hingga titik ini", "note": "Lima detik pertama balapan tidak dihitung."},
+        {"formula": "behind_near_lane_time_set1>=1", "note": "Ada pelari lain paling jauh 5 m di belakang Anda, dengan selisih maksimal 2,7 lajur."},
+        {"formula": "random_lot_shared==30", "text": "Peluang keberhasilan aktivasi 30% (undian acak)", "note": "Satu hasil undian dipakai bersama"},
+        {"formula": "is_popularity_top_character_activate_advantage_skill==-1", "text": "Kondisi dengan makna belum terverifikasi (is_popularity_top_character_activate_advantage_skill==-1)"},
+        {"formula": "is_goodstart==1", "text": "Kondisi dengan makna belum terverifikasi (is_goodstart==1)"},
+        {"formula": "is_used_skill_id_with_detail_one==123", "text": "Kondisi dengan makna belum terverifikasi (is_used_skill_id_with_detail_one==123)"}
+    ],
+    "preconditions": [
+        {
+            "name": "Gluttonous Ruler",
+            "formula": "running_style==2@running_style==3",
+            "branches": [["running_style==2"], ["running_style==3"]]
+        },
+        {
+            "name": "Alternatif dengan catatan",
+            "formula": "random_lot_shared==30@order_rate_in20_continue==1&order_rate_out50_continue==1",
+            "branches": [["random_lot_shared==30"], ["order_rate_in20_continue==1", "order_rate_out50_continue==1"]]
+        }
+    ]
+}

@@ -124,7 +124,7 @@ class SkillConditionTranslatorTest extends TestCase
         $this->assertStringContainsString('CM [Champions Meetings] <= 6 | LoH [League of Heroes] <= 8', $seventyPercent['text']);
 
         $inclusive = SkillConditionTranslator::translateClause('order_rate>=50');
-        $this->assertSame('Peringkat di 50% pelari belakang (CM [Champions Meetings] >= 5 | LoH [League of Heroes] >= 6)', $inclusive['text']);
+        $this->assertSame('Peringkat pada batas 50% atau lebih belakang (CM [Champions Meetings] >= 5, posisi ke-5 atau lebih belakang | LoH [League of Heroes] >= 6, posisi ke-6 atau lebih belakang)', $inclusive['text']);
 
         $strict = SkillConditionTranslator::translateClause('order_rate>50');
         $this->assertStringContainsString('CM [Champions Meetings] > 5, posisi ke-6 atau lebih belakang', $strict['text']);
@@ -132,6 +132,41 @@ class SkillConditionTranslatorTest extends TestCase
 
         $roundsToZero = SkillConditionTranslator::translateClause('order_rate<=1');
         $this->assertStringContainsString('CM [Champions Meetings] <= 0 | LoH [League of Heroes] <= 0', $roundsToZero['text']);
+    }
+
+    public function test_activation_conditions_match_shared_regression_fixture(): void
+    {
+        $fixture = json_decode(File::get(base_path('tests/Fixtures/skill-condition-regressions.json')), true, flags: JSON_THROW_ON_ERROR);
+
+        foreach ($fixture['clauses'] as $example) {
+            $condition = SkillConditionTranslator::translateClause($example['formula']);
+            $this->assertSame($example['formula'], $condition['raw']);
+            if (isset($example['text'])) {
+                $this->assertSame($example['text'], $condition['text'], $example['formula']);
+            }
+            if (isset($example['note'])) {
+                $this->assertStringContainsString($example['note'], $condition['note'] ?? '', $example['formula']);
+            }
+        }
+
+        foreach ($fixture['preconditions'] as $example) {
+            $result = SkillConditionTranslator::translate($example['formula']);
+            $branches = array_map(fn (array $branch): array => array_column($branch['conditions'], 'raw'), $result['branches']);
+
+            $this->assertTrue($result['has_alternatives']);
+            $this->assertSame($example['branches'], $branches, $example['name']);
+        }
+    }
+
+    public function test_evolution_keeps_mood_event_requirement_and_its_alternative(): void
+    {
+        $service = app(GameToraSyncService::class);
+
+        $result = $service->formatEvolutionConditions([[['e_ev', 'mo', 5], ['stat', 2, 600]]]);
+
+        $this->assertCount(1, $result);
+        $this->assertCount(2, $result[0]);
+        $this->assertSame('Trigger at least 5 training events that raise mood', $result[0][0]);
     }
 
     /**

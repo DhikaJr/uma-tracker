@@ -361,26 +361,35 @@ export default function SkillDetailModal({ skill: rawSkill, onClose, onFindSkill
                                                     <div className="p-2 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-purple-200 dark:border-purple-900/60 shadow-2xs leading-relaxed">
                                                         {parsedPrecondition.summary}
                                                     </div>
-                                                    {parsedPrecondition.branches?.[0]?.conditions?.length > 1 && (
-                                                        <div className="space-y-1.5 pl-1">
-                                                            {parsedPrecondition.branches[0].conditions.map((item, iIdx) => (
-                                                                <div key={iIdx} className="space-y-0.5">
-                                                                    <div className="flex items-center gap-2 text-[11px] text-slate-700 dark:text-slate-300">
-                                                                        <ConditionCategoryIcon category={item.category} icon={item.icon} />
-                                                                        <span>{item.text}</span>
-                                                                        <span className="font-mono text-[10px] text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-950/80 px-1 rounded">
-                                                                            {item.raw}
-                                                                        </span>
-                                                                    </div>
-                                                                    {item.note && (
-                                                                        <p className="text-[10.5px] text-purple-800/80 dark:text-purple-300/80 pl-5 font-normal">
-                                                                            {item.note}
-                                                                        </p>
-                                                                    )}
+                                                    {parsedPrecondition.branches.map((branch, branchIndex) => (
+                                                        <div key={branchIndex} className="space-y-1.5 rounded-lg border border-purple-200/80 p-2 dark:border-purple-800/60">
+                                                            {parsedPrecondition.hasAlternatives && (
+                                                                <div className="text-[11px] font-bold">
+                                                                    {branchIndex > 0 && 'ATAU · '}Opsi {branchIndex + 1}
                                                                 </div>
-                                                            ))}
+                                                            )}
+                                                            <ul className="space-y-1.5">
+                                                                {branch.conditions.map((item, iIdx) => (
+                                                                    <li key={iIdx} className="flex items-start gap-2 text-[11px] text-slate-700 dark:text-slate-300">
+                                                                        <div className="mt-0.5 shrink-0">
+                                                                            <ConditionCategoryIcon category={item.category} icon={item.icon} />
+                                                                        </div>
+                                                                        <div className="min-w-0 space-y-0.5">
+                                                                            <div>{item.text}</div>
+                                                                            <code className="break-all rounded bg-purple-100 px-1 text-[10px] text-purple-700 dark:bg-purple-950/80 dark:text-purple-300">
+                                                                                {item.raw}
+                                                                            </code>
+                                                                            {item.note && (
+                                                                                <p className="text-[10.5px] font-normal text-purple-800 dark:text-purple-300">
+                                                                                    {item.note}
+                                                                                </p>
+                                                                            )}
+                                                                        </div>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
                                                         </div>
-                                                    )}
+                                                    ))}
                                                 </div>
                                             )}
                                         </div>

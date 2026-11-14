@@ -1408,6 +1408,13 @@ class GameToraSyncService
 
                 return "Trigger the 「{$evName}」 training event with high mood";
 
+            case 'e_ev':
+                if (($c[1] ?? null) === 'mo' && isset($c[2])) {
+                    return "Trigger at least {$c[2]} training events that raise mood";
+                }
+
+                return '';
+
             case 'cond_e':
             case 'cond':
                 $statusId = $c[1] ?? 'status';

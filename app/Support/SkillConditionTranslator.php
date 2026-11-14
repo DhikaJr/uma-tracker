@@ -354,14 +354,17 @@ class SkillConditionTranslator
                 if ($op === '<=') {
                     return self::makeClauseResult($raw, $field, $op, $val, "Peringkat di {$val}% pelari terdepan (CM [Champions Meetings] <= {$cmVal} | LoH [League of Heroes] <= {$lohVal})", 'position', 'percent');
                 }
-                if ($op === '>=') {
-                    return self::makeClauseResult($raw, $field, $op, $val, "Peringkat di {$val}% pelari belakang (CM [Champions Meetings] >= {$cmVal} | LoH [League of Heroes] >= {$lohVal})", 'position', 'percent');
-                }
+                $offset = $op === '>' ? 1 : 0;
+                $behind = in_array($op, ['>', '>='], true);
+                $cmPosition = $behind ? ', posisi ke-'.($cmVal + $offset).' atau lebih belakang' : '';
+                $lohPosition = $behind ? ', posisi ke-'.($lohVal + $offset).' atau lebih belakang' : '';
+                $threshold = match ($op) {
+                    '>' => "Peringkat melewati batas {$val}% ke arah belakang",
+                    '>=' => "Peringkat pada batas {$val}% atau lebih belakang",
+                    default => "Peringkat persentase {$op} {$val}%",
+                };
 
-                $cmPosition = $op === '>' ? ', posisi ke-'.($cmVal + 1).' atau lebih belakang' : '';
-                $lohPosition = $op === '>' ? ', posisi ke-'.($lohVal + 1).' atau lebih belakang' : '';
-
-                return self::makeClauseResult($raw, $field, $op, $val, "Peringkat persentase {$op} {$val}% (CM [Champions Meetings] {$op} {$cmVal}{$cmPosition} | LoH [League of Heroes] {$op} {$lohVal}{$lohPosition})", 'position', 'percent');
+                return self::makeClauseResult($raw, $field, $op, $val, "{$threshold} (CM [Champions Meetings] {$op} {$cmVal}{$cmPosition} | LoH [League of Heroes] {$op} {$lohVal}{$lohPosition})", 'position', 'percent');
 
             case 'order_rate_in20_continue':
             case 'order_rate_in40_continue':
@@ -370,7 +373,7 @@ class SkillConditionTranslator
                 preg_match('/in(\d+)/', $field, $pm);
                 $pct = $pm[1] ?? '50';
 
-                return self::makeClauseResult($raw, $field, $op, $val, "Konsisten bertahan di {$pct}% pelari terdepan sepanjang balapan hingga titik ini", 'position', 'shield');
+                return self::makeClauseResult($raw, $field, $op, $val, "Konsisten bertahan di {$pct}% pelari terdepan hingga titik ini", 'position', 'shield', 'Lima detik pertama balapan tidak dihitung.');
 
             case 'order_rate_out20_continue':
             case 'order_rate_out40_continue':
@@ -379,7 +382,7 @@ class SkillConditionTranslator
                 preg_match('/out(\d+)/', $field, $pm);
                 $pct = $pm[1] ?? '50';
 
-                return self::makeClauseResult($raw, $field, $op, $val, "Konsisten berada di luar {$pct}% pelari terdepan sepanjang balapan hingga titik ini", 'position', 'shield');
+                return self::makeClauseResult($raw, $field, $op, $val, "Konsisten berada di luar {$pct}% pelari terdepan hingga titik ini", 'position', 'shield', 'Lima detik pertama balapan tidak dihitung.');
 
                 // ================= OVERTAKE & COMPETITION =================
             case 'change_order_onetime':
@@ -408,7 +411,9 @@ class SkillConditionTranslator
                 return self::makeClauseResult($raw, $field, $op, $val, "Sedang mengejar lawan tanpa berhasil naik peringkat selama minimal {$val} detik", 'action', 'clock');
 
             case 'overtake_target_time':
-                return self::makeClauseResult($raw, $field, $op, $val, "Sedang menargetkan lawan untuk disalip selama minimal {$val} detik", 'action', 'clock');
+                $duration = $op === '>=' ? 'minimal' : $op;
+
+                return self::makeClauseResult($raw, $field, $op, $val, "Anda menjadi target salip pelari lain selama {$duration} {$val} detik", 'action', 'clock');
 
             case 'compete_fight_count':
                 return self::makeClauseResult($raw, $field, $op, $val, "Telah beradu kecepatan sengit (Showdown / Kurasoi) minimal {$val} kali", 'action', 'swords');
@@ -513,7 +518,10 @@ class SkillConditionTranslator
                 } elseif ($op === '>') {
                     $text = "Terdapat pelari lain tepat di belakang selama lebih dari {$val} detik";
                 }
-                $note = 'Catatan: "Tepat di belakang" berarti tidak lebih dari 2,5 meter di belakang dan tidak lebih dari 1 lajur ke samping (1/18 lebar lintasan). Tidak harus pelari yang sama (asalkan ada minimal satu), namun timer akan reset jika peringkat Anda berubah.';
+                $range = $field === 'behind_near_lane_time_set1'
+                    ? 'Ada pelari lain paling jauh 5 m di belakang Anda, dengan selisih maksimal 2,7 lajur.'
+                    : 'Ada pelari lain paling jauh 2,5 meter di belakang Anda, dengan selisih maksimal 1 lajur (1/18 lebar lintasan).';
+                $note = "{$range} Pelarinya boleh berganti. Hitungan waktu diulang jika peringkat Anda berubah.";
 
                 return self::makeClauseResult($raw, $field, $op, $val, $text, 'action', 'clock', $note);
 
@@ -711,9 +719,6 @@ class SkillConditionTranslator
 
                 return self::makeClauseResult($raw, $field, $op, $val, $text, 'status', 'play');
 
-            case 'is_goodstart':
-                return self::makeClauseResult($raw, $field, $op, $val, 'Melakukan start yang sempurna (good start)', 'status', 'play');
-
                 // ================= SKILLS ACTIVATION COUNTERS =================
             case 'activate_count_middle':
                 return self::makeClauseResult($raw, $field, $op, $val, "Telah mengaktifkan minimal {$val} skill selama Fase Pertengahan (Mid-Race)", 'skill', 'sparkles');
@@ -758,7 +763,6 @@ class SkillConditionTranslator
                 return self::makeClauseResult($raw, $field, $op, $val, 'Baru saja mengaktifkan skill pemulihan stamina', 'skill', 'heart');
 
             case 'is_used_skill_id':
-            case 'is_used_skill_id_with_detail_one':
                 return self::makeClauseResult($raw, $field, $op, $val, "Telah menggunakan skill khusus (ID: {$val}) pada balapan ini", 'skill', 'award');
 
                 // ================= RANDOM POINT ACTIVATIONS =================
@@ -847,11 +851,130 @@ class SkillConditionTranslator
 
                 return self::makeClauseResult($raw, $field, $op, $val, $text, 'track', 'globe');
 
-            default:
-                // Format camel/snake-case fallback
-                $readableField = ucwords(str_replace('_', ' ', $field));
+            case 'furlong':
+                $furlong = $intVal + 1;
+                $start = $intVal * 200;
+                $end = $furlong * 200;
 
-                return self::makeClauseResult($raw, $field, $op, $val, "{$readableField} {$op} {$val}", 'other', 'info');
+                return self::makeClauseResult($raw, $field, $op, $val, "Berada pada furlong ke-{$furlong} (sekitar {$start}–{$end} m sejak start)", 'progress', 'milestone');
+
+            case 'grade':
+                $grade = match ($intVal) {
+                    100 => 'G1',
+                    200 => 'G2',
+                    300 => 'G3',
+                    400 => 'Open (OP)',
+                    700 => 'Pre-OP',
+                    800 => 'Maiden',
+                    900 => 'Debut',
+                    999 => 'Balapan harian',
+                    default => "Grade {$val}",
+                };
+
+                return self::makeClauseResult($raw, $field, $op, $val, "Grade kompetisi balapan {$op} {$grade}", 'track', 'trophy');
+
+            case 'is_dirtgrade':
+                $isExchangeRace = ($op === '==' && $intVal === 1) || ($op === '!=' && $intVal === 0);
+                $text = $isExchangeRace ? 'Exchange race di sirkuit lokal' : 'Bukan exchange race di sirkuit lokal';
+
+                return self::makeClauseResult($raw, $field, $op, $val, $text, 'track', 'trophy');
+
+            case 'is_tight_track':
+                return self::makeClauseResult($raw, $field, $op, $val, 'Balapan di lintasan dengan tikungan tajam/sempit', 'track', 'corner');
+
+            case 'is_finalcorner_random':
+                return self::makeClauseResult($raw, $field, $op, $val, 'Terpilih pada titik acak di tikungan terakhir (Final Corner)', 'random', 'shuffle');
+
+            case 'phase_corner_random':
+            case 'phase_first_half_straight_random':
+            case 'phase_latter_half_straight_random':
+            case 'phase_straight_random':
+                $phase = ['Fase Awal', 'Fase Pertengahan', 'Fase Akhir', 'Last Spurt'][$intVal] ?? "Fase {$val}";
+                $segment = match ($field) {
+                    'phase_corner_random' => 'tikungan saat',
+                    'phase_first_half_straight_random' => 'lintasan lurus paruh pertama',
+                    'phase_latter_half_straight_random' => 'lintasan lurus paruh kedua',
+                    default => 'lintasan lurus saat',
+                };
+
+                return self::makeClauseResult($raw, $field, $op, $val, "Terpilih pada titik acak di {$segment} {$phase}", 'random', 'shuffle');
+
+            case 'up_slope_random_later_half':
+                return self::makeClauseResult($raw, $field, $op, $val, 'Terpilih pada titik acak di tanjakan paruh kedua balapan', 'random', 'shuffle');
+
+            case 'lastspurt':
+                $text = match ($intVal) {
+                    0 => 'Stamina tidak mencukupi untuk mempertahankan kecepatan dasar di sprint akhir',
+                    1 => 'Memiliki stamina yang cukup untuk berlari di atas kecepatan dasar saat sprint akhir',
+                    2 => 'Memiliki stamina yang cukup untuk sprint akhir (Last Spurt) dengan kecepatan penuh',
+                    default => "Mode pacuan sprint akhir (Last Spurt) bernilai {$val}",
+                };
+
+                return self::makeClauseResult($raw, $field, $op, $val, $text, 'status', 'zap');
+
+            case 'is_move_lane':
+                $text = match ($intVal) {
+                    1 => 'Baru saja bergerak mendekat ke sisi pagar dalam (inner fence)',
+                    2 => 'Baru saja bergerak menjauh dari sisi pagar dalam',
+                    default => 'Baru saja berpindah lajur lintasan',
+                };
+
+                return self::makeClauseResult($raw, $field, $op, $val, $text, 'action', 'arrow-right-left');
+
+            case 'is_exist_chara_id':
+                return self::makeClauseResult($raw, $field, $op, $val, "Terdapat karakter spesifik (ID {$val}) dalam balapan", 'other', 'users', 'Semua varian kostum karakter tersebut dihitung.');
+
+            case 'is_exist_skill_id':
+                return self::makeClauseResult($raw, $field, $op, $val, "Terdapat pelari dalam balapan yang memiliki skill spesifik (ID {$val})", 'skill', 'zap');
+
+            case 'is_other_character_activate_advantage_skill':
+                $skillType = $intVal === 9 ? 'pemulihan stamina' : "yang menguntungkan (tipe {$val})";
+
+                return self::makeClauseResult($raw, $field, $op, $val, "Pelari lain baru saja mengaktifkan skill {$skillType}", 'skill', 'zap');
+
+            case 'random_lot':
+            case 'random_lot_shared':
+                $note = $field === 'random_lot_shared' ? 'Satu hasil undian dipakai bersama oleh semua kondisi random_lot_shared pada skill yang sama.' : '';
+
+                return self::makeClauseResult($raw, $field, $op, $val, "Peluang keberhasilan aktivasi {$val}% (undian acak)", 'random', 'shuffle', $note);
+
+            case 'succession_skill_count':
+                return self::makeClauseResult($raw, $field, $op, $val, "Jumlah skill warisan (Inherited Skill) {$op} {$val}", 'skill', 'sparkles');
+
+            case 'same_skill_horse_count':
+                $text = $op === '==' && $intVal === 1
+                    ? 'Tidak ada pelari lain yang memiliki skill yang sama'
+                    : "Jumlah pelari yang memiliki skill yang sama {$op} {$val}";
+
+                return self::makeClauseResult($raw, $field, $op, $val, $text, 'skill', 'users', 'Hitungan mencakup pemilik skill sendiri.');
+
+            case 'running_style_count_same':
+                return self::makeClauseResult($raw, $field, $op, $val, "Jumlah pelari dengan strategi lari yang sama {$op} {$val}", 'strategy', 'users', 'Hitungan mencakup Anda.');
+
+            case 'running_style_count_same_rate':
+                return self::makeClauseResult($raw, $field, $op, $val, "Proporsi pelari dengan strategi lari yang sama {$op} {$val}%", 'strategy', 'users', 'Hitungan mencakup Anda.');
+
+            case 'running_style_count_nige_otherself':
+            case 'running_style_count_senko_otherself':
+            case 'running_style_count_sashi_otherself':
+            case 'running_style_count_oikomi_otherself':
+                $style = match ($field) {
+                    'running_style_count_nige_otherself' => 'Front Runner',
+                    'running_style_count_senko_otherself' => 'Pace Chaser',
+                    'running_style_count_sashi_otherself' => 'Late Surger',
+                    default => 'End Closer',
+                };
+
+                return self::makeClauseResult($raw, $field, $op, $val, "Jumlah pelari {$style} selain Anda {$op} {$val}", 'strategy', 'users');
+
+                // GameTora Skill Condition Viewer marks these conditions as under investigation.
+            case 'is_goodstart':
+            case 'is_used_skill_id_with_detail_one':
+            case 'is_popularity_top_character_activate_advantage_skill':
+                return self::makeClauseResult($raw, $field, $op, $val, "Kondisi dengan makna belum terverifikasi ({$raw})", 'other', 'info');
+
+            default:
+                return self::makeClauseResult($raw, $field, $op, $val, "Kondisi belum dikenali ({$raw})", 'other', 'info');
         }
     }
 

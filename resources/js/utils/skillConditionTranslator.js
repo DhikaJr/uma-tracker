@@ -264,12 +264,14 @@ export function translateClause(clause) {
             if (op === '<=') {
                 return makeResult(trimmed, field, op, val, `Peringkat di ${val}% pelari terdepan (CM [Champions Meetings] <= ${cm} | LoH [League of Heroes] <= ${loh})`, 'position', 'percent');
             }
-            if (op === '>=') {
-                return makeResult(trimmed, field, op, val, `Peringkat di ${val}% pelari belakang (CM [Champions Meetings] >= ${cm} | LoH [League of Heroes] >= ${loh})`, 'position', 'percent');
-            }
-            const cmPosition = op === '>' ? `, posisi ke-${cm + 1} atau lebih belakang` : '';
-            const lohPosition = op === '>' ? `, posisi ke-${loh + 1} atau lebih belakang` : '';
-            return makeResult(trimmed, field, op, val, `Peringkat persentase ${op} ${val}% (CM [Champions Meetings] ${op} ${cm}${cmPosition} | LoH [League of Heroes] ${op} ${loh}${lohPosition})`, 'position', 'percent');
+            const offset = op === '>' ? 1 : 0;
+            const behind = op === '>' || op === '>=';
+            const cmPosition = behind ? `, posisi ke-${cm + offset} atau lebih belakang` : '';
+            const lohPosition = behind ? `, posisi ke-${loh + offset} atau lebih belakang` : '';
+            const threshold = op === '>' ? `Peringkat melewati batas ${val}% ke arah belakang`
+                : op === '>=' ? `Peringkat pada batas ${val}% atau lebih belakang`
+                    : `Peringkat persentase ${op} ${val}%`;
+            return makeResult(trimmed, field, op, val, `${threshold} (CM [Champions Meetings] ${op} ${cm}${cmPosition} | LoH [League of Heroes] ${op} ${loh}${lohPosition})`, 'position', 'percent');
         }
 
         case 'order_rate_in20_continue':
@@ -278,7 +280,7 @@ export function translateClause(clause) {
         case 'order_rate_in80_continue': {
             const m = field.match(/in(\d+)/);
             const pct = m ? m[1] : '50';
-            return makeResult(trimmed, field, op, val, `Konsisten bertahan di ${pct}% pelari terdepan sepanjang balapan hingga titik ini`, 'position', 'shield');
+            return makeResult(trimmed, field, op, val, `Konsisten bertahan di ${pct}% pelari terdepan hingga titik ini`, 'position', 'shield', 'Lima detik pertama balapan tidak dihitung.');
         }
 
         case 'order_rate_out20_continue':
@@ -287,7 +289,7 @@ export function translateClause(clause) {
         case 'order_rate_out70_continue': {
             const m = field.match(/out(\d+)/);
             const pct = m ? m[1] : '50';
-            return makeResult(trimmed, field, op, val, `Konsisten berada di luar ${pct}% pelari terdepan sepanjang balapan hingga titik ini`, 'position', 'shield');
+            return makeResult(trimmed, field, op, val, `Konsisten berada di luar ${pct}% pelari terdepan hingga titik ini`, 'position', 'shield', 'Lima detik pertama balapan tidak dihitung.');
         }
 
         // ================= OVERTAKE & ACTIONS =================
@@ -317,7 +319,7 @@ export function translateClause(clause) {
             return makeResult(trimmed, field, op, val, `Sedang mengejar lawan tanpa berhasil naik peringkat selama minimal ${val} detik`, 'action', 'clock');
 
         case 'overtake_target_time':
-            return makeResult(trimmed, field, op, val, `Sedang menargetkan lawan untuk disalip selama minimal ${val} detik`, 'action', 'clock');
+            return makeResult(trimmed, field, op, val, `Anda menjadi target salip pelari lain selama ${op === '>=' ? 'minimal' : op} ${val} detik`, 'action', 'clock');
 
         case 'compete_fight_count':
             return makeResult(trimmed, field, op, val, `Telah beradu kecepatan sengit (Showdown / Kurasoi) minimal ${val} kali`, 'action', 'swords');
@@ -421,7 +423,10 @@ export function translateClause(clause) {
             } else if (op === '>') {
                 text = `Terdapat pelari lain tepat di belakang selama lebih dari ${val} detik`;
             }
-            const note = 'Catatan: "Tepat di belakang" berarti tidak lebih dari 2,5 meter di belakang dan tidak lebih dari 1 lajur ke samping (1/18 lebar lintasan). Tidak harus pelari yang sama (asalkan ada minimal satu), namun timer akan reset jika peringkat Anda berubah.';
+            const range = field === 'behind_near_lane_time_set1'
+                ? 'Ada pelari lain paling jauh 5 m di belakang Anda, dengan selisih maksimal 2,7 lajur.'
+                : 'Ada pelari lain paling jauh 2,5 meter di belakang Anda, dengan selisih maksimal 1 lajur (1/18 lebar lintasan).';
+            const note = `${range} Pelarinya boleh berganti. Hitungan waktu diulang jika peringkat Anda berubah.`;
             return makeResult(trimmed, field, op, val, text, 'action', 'clock', note);
         }
 
@@ -443,7 +448,7 @@ export function translateClause(clause) {
             if (intVal === 1) {
                 text = 'Baru saja bergerak mendekat ke sisi pagar dalam (inner fence)';
             } else if (intVal === 2) {
-                text = 'Baru saja bergerak menjauh dari sisi pagar dalam (outer fence)';
+                text = 'Baru saja bergerak menjauh dari sisi pagar dalam';
             }
             return makeResult(trimmed, field, op, val, text, 'action', 'arrow-right-left');
         }
@@ -593,9 +598,6 @@ export function translateClause(clause) {
                 'play'
             );
 
-        case 'is_goodstart':
-            return makeResult(trimmed, field, op, val, 'Melakukan start yang sempurna (good start)', 'status', 'play');
-
         // ================= SKILLS ACTIVATION COUNTERS =================
         case 'activate_count_middle':
             return makeResult(trimmed, field, op, val, `Telah mengaktifkan minimal ${val} skill selama Fase Pertengahan (Mid-Race)`, 'skill', 'sparkles');
@@ -741,7 +743,7 @@ export function translateClause(clause) {
                 field,
                 op,
                 val,
-                `Berada pada furlong ke-${val} (sekitar ${(Number(val) - 1) * 200}–${Number(val) * 200} meter awal balapan)`,
+                `Berada pada furlong ke-${intVal + 1} (sekitar ${intVal * 200}–${(intVal + 1) * 200} m sejak start)`,
                 'progress',
                 'milestone'
             );
@@ -753,12 +755,17 @@ export function translateClause(clause) {
                 300: 'G3',
                 400: 'Open (OP)',
                 700: 'Pre-OP',
+                800: 'Maiden',
+                900: 'Debut',
+                999: 'Balapan harian',
             };
             return makeResult(trimmed, field, op, val, `Grade kompetisi balapan ${op} ${gradeNames[intVal] || `Grade ${val}`}`, 'track', 'trophy');
         }
 
-        case 'is_dirtgrade':
-            return makeResult(trimmed, field, op, val, 'Balapan berkategori grade Dirt resmi (Jpn1, Jpn2, Jpn3)', 'track', 'trophy');
+        case 'is_dirtgrade': {
+            const isExchangeRace = (op === '==' && intVal === 1) || (op === '!=' && intVal === 0);
+            return makeResult(trimmed, field, op, val, isExchangeRace ? 'Exchange race di sirkuit lokal' : 'Bukan exchange race di sirkuit lokal', 'track', 'trophy');
+        }
 
         // ================= ADDITIONAL RANDOM & PROGRESS =================
         case 'is_finalcorner_random':
@@ -889,20 +896,25 @@ export function translateClause(clause) {
         }
 
         case 'random_lot':
-        case 'random_lot_shared':
             return makeResult(trimmed, field, op, val, `Peluang keberhasilan aktivasi ${val}% (undian acak)`, 'random', 'shuffle');
 
+        case 'random_lot_shared':
+            return makeResult(trimmed, field, op, val, `Peluang keberhasilan aktivasi ${val}% (undian acak)`, 'random', 'shuffle', 'Satu hasil undian dipakai bersama oleh semua kondisi random_lot_shared pada skill yang sama.');
+
         case 'succession_skill_count':
-            return makeResult(trimmed, field, op, val, `Memiliki minimal ${val} skill warisan (Inherited Skill)`, 'skill', 'sparkles');
+            return makeResult(trimmed, field, op, val, `Jumlah skill warisan (Inherited Skill) ${op} ${val}`, 'skill', 'sparkles');
 
         case 'same_skill_horse_count':
-            return makeResult(trimmed, field, op, val, `Terdapat ${op} ${val} pelari lain dalam balapan yang memiliki skill ini`, 'skill', 'users');
+            return makeResult(trimmed, field, op, val, op === '==' && intVal === 1
+                ? 'Tidak ada pelari lain yang memiliki skill yang sama'
+                : `Jumlah pelari yang memiliki skill yang sama ${op} ${val}`,
+            'skill', 'users', 'Hitungan mencakup pemilik skill sendiri.');
 
         case 'running_style_count_same':
-            return makeResult(trimmed, field, op, val, `Terdapat ${op} ${val} pelari lain dengan strategi lari yang sama`, 'strategy', 'users');
+            return makeResult(trimmed, field, op, val, `Jumlah pelari dengan strategi lari yang sama ${op} ${val}`, 'strategy', 'users', 'Hitungan mencakup Anda.');
 
         case 'running_style_count_same_rate':
-            return makeResult(trimmed, field, op, val, `Proporsi pelari dengan strategi lari yang sama ${op} ${val}%`, 'strategy', 'users');
+            return makeResult(trimmed, field, op, val, `Proporsi pelari dengan strategi lari yang sama ${op} ${val}%`, 'strategy', 'users', 'Hitungan mencakup Anda.');
 
         case 'running_style_count_nige_otherself':
             return makeResult(trimmed, field, op, val, `Terdapat ${op} ${val} Runner (pelari depan) lain selain diri sendiri`, 'strategy', 'users');
@@ -917,7 +929,7 @@ export function translateClause(clause) {
             return makeResult(trimmed, field, op, val, `Terdapat ${op} ${val} Chaser (pelari belakang) lain selain diri sendiri`, 'strategy', 'users');
 
         case 'is_exist_chara_id':
-            return makeResult(trimmed, field, op, val, `Terdapat karakter spesifik (ID ${val}) dalam balapan`, 'other', 'users');
+            return makeResult(trimmed, field, op, val, `Terdapat karakter spesifik (ID ${val}) dalam balapan`, 'other', 'users', 'Semua varian kostum karakter tersebut dihitung.');
 
         case 'is_exist_skill_id':
             return makeResult(trimmed, field, op, val, `Terdapat pelari dalam balapan yang memiliki skill spesifik (ID ${val})`, 'skill', 'zap');
@@ -925,19 +937,18 @@ export function translateClause(clause) {
         case 'is_used_skill_id':
             return makeResult(trimmed, field, op, val, `Telah mengaktifkan skill spesifik (ID ${val}) dalam balapan ini`, 'skill', 'zap');
 
+        case 'is_goodstart':
         case 'is_used_skill_id_with_detail_one':
-            return makeResult(trimmed, field, op, val, `Telah mengaktifkan trigger pertama skill spesifik (ID ${val})`, 'skill', 'zap');
-
         case 'is_popularity_top_character_activate_advantage_skill':
-            return makeResult(trimmed, field, op, val, 'Pelari terpopuler (favorit 1) baru saja mengaktifkan skill keunggulan', 'skill', 'zap');
+            return makeResult(trimmed, field, op, val, `Kondisi dengan makna belum terverifikasi (${trimmed})`, 'other', 'info');
 
-        case 'is_other_character_activate_advantage_skill':
-            return makeResult(trimmed, field, op, val, 'Pelari lain dalam balapan baru saja mengaktifkan skill keunggulan', 'skill', 'zap');
-
-        default: {
-            const readable = field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            return makeResult(trimmed, field, op, val, `${readable} ${op} ${val}`, 'other', 'info');
+        case 'is_other_character_activate_advantage_skill': {
+            const skillType = intVal === 9 ? 'pemulihan stamina' : `yang menguntungkan (tipe ${val})`;
+            return makeResult(trimmed, field, op, val, `Pelari lain baru saja mengaktifkan skill ${skillType}`, 'skill', 'zap');
         }
+
+        default:
+            return makeResult(trimmed, field, op, val, `Kondisi belum dikenali (${trimmed})`, 'other', 'info');
     }
 }
 

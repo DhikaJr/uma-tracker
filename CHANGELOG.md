@@ -2,6 +2,14 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.11] - 14 November 2026
+
+### Syarat aktivasi dan evolusi skill
+
+- Perbaiki penjelasan posisi, salipan, dan syarat aktivasi lainnya. Kondisi yang masih diteliti ditandai bersama formula aslinya.
+- Modal detail skill menampilkan semua opsi syarat awal beserta catatannya, termasuk aturan lima detik pertama dan undian bersama.
+- Syarat evolusi yang meminta event latihan peningkat mood kini menampilkan jumlah event yang diperlukan.
+
 ## [Versi 3.3.10] - 14 November 2026
 
 ### Detail Koleksi dari banner aktif Dasbor
