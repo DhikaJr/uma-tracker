@@ -2,6 +2,13 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.12] - 17 November 2026
+
+### Daring Tact dan pemulihan evolusi skill JP
+
+- Daring Tact tersedia di Koleksi Karakter, dan banner debutnya ditandai sebagai Premium dengan total rate ★3 sebesar 4,5%.
+- Sinkronisasi dataset `evolutions` GameTora memulihkan 641 skill evolusi JP beserta syaratnya di katalog dan detail karakter.
+
 ## [Versi 3.3.11] - 14 November 2026
 
 ### Syarat aktivasi dan evolusi skill

@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\AppSetting;
 use App\Models\GachaBanner;
+use App\Models\GachaPull;
 use App\Models\UmaCatalogItem;
 use App\Services\CircleTrackerService;
 use App\Services\CygamesNewsService;
@@ -111,7 +112,7 @@ class CygamesNewsSyncTest extends TestCase
             'character-cards' => 'cards', 'characters' => 'characters', 'support-cards' => 'support',
             'racetracks' => 'tracks', 'racetracks_extended' => 'extended',
         ];
-        AppSetting::setValue('gametora_manifest_hash', implode('|', ['characters', 'cards', 'support', '', '', '', '', '', '', '', 'tracks', 'extended', '2']));
+        AppSetting::setValue('gametora_manifest_hash', implode('|', ['characters', 'cards', 'support', '', '', '', '', '', '', '', 'tracks', 'extended', '', '4']));
         GachaBanner::create(['name' => 'Example', 'start_date' => '2026-11-13']);
         Http::fake([
             GameToraSyncService::MANIFEST_URL => Http::response($manifest),
@@ -498,6 +499,164 @@ class CygamesNewsSyncTest extends TestCase
         $this->assertSame('select_rate_up', $banner->category);
         $this->assertCount(10, $banner->featured_items);
         $this->assertSame('https://umamusume.jp/news/detail?id=3490', $banner->getProvenanceUrl());
+    }
+
+    public function test_sync_repairs_daring_tact_banner_and_imports_the_character(): void
+    {
+        $this->travelTo(now()->setDate(2026, 11, 17));
+        $name = 'Daring Tact [白光のレガリア]';
+        $banner = GachaBanner::create([
+            'gametora_id' => 41001,
+            'banner_type' => 'character',
+            'category' => 'standard',
+            'name' => "Pickup Pretty Derby Gacha: {$name}",
+            'featured_items' => [$name],
+            'base_rate' => 3.0,
+            'start_date' => '2026-11-16',
+            'end_date' => '2026-12-21',
+        ]);
+        GachaPull::create([
+            'gacha_banner_id' => $banner->id,
+            'banner_type' => 'character',
+            'pull_type' => 'single',
+            'item_name' => $name,
+            'rarity' => 'SSR',
+            'is_rate_up' => true,
+            'pity_count_at_pull' => 1,
+            'pulled_at' => now(),
+        ]);
+        UmaCatalogItem::create(['type' => 'character', 'name' => 'Special Week [Original]']);
+        AppSetting::setValue('gametora_manifest_hash', implode('|', ['bases', 'cards', 'supports', '', '', 'banners', '', '', '', '', '', '', '2']));
+
+        Http::preventStrayRequests();
+        Http::fake([
+            GameToraSyncService::MANIFEST_URL => Http::response([
+                'characters' => 'bases',
+                'character-cards' => 'cards',
+                'support-cards' => 'supports',
+                'gacha/char-standard' => 'banners',
+            ]),
+            GameToraSyncService::DATA_BASE_URL.'/characters.bases.json' => Http::response([
+                ['id' => 1075, 'en_name' => 'Daring Tact'],
+            ]),
+            GameToraSyncService::DATA_BASE_URL.'/character-cards.cards.json' => Http::response([
+                ['id' => 107501, 'card_id' => 107501, 'char_id' => 1075, 'name_en' => 'Daring Tact', 'title_jp' => '白光のレガリア', 'rarity' => 3],
+                ['id' => 100101, 'card_id' => 100101, 'char_id' => 1001, 'name_en' => 'Special Week', 'title' => 'Original', 'rarity' => 3],
+            ]),
+            GameToraSyncService::DATA_BASE_URL.'/support-cards.supports.json' => Http::response([]),
+            GameToraSyncService::DATA_BASE_URL.'/gacha/char-standard.banners.json' => Http::response([
+                ['id' => 41001, 'start' => strtotime('2026-11-16T12:00:00+09:00'), 'end' => strtotime('2026-12-21T11:59:00+09:00'), 'pickups' => [[107501]]],
+                ['id' => 41002, 'start' => strtotime('2026-11-16T12:00:00+09:00'), 'end' => strtotime('2026-11-30T11:59:00+09:00'), 'pickups' => [[100101]]],
+            ]),
+            'https://umapyoi.net/api/v1/news/search/twinkle' => Http::response([]),
+            'https://umamusume.jp/api/ajax/pr_info_index*' => Http::response([]),
+        ]);
+
+        $this->postJson('/api/gacha/sync-gametora')
+            ->assertOk()
+            ->assertJsonPath('is_up_to_date', false);
+
+        $this->assertSame("Premium Pretty Derby Gacha: {$name}", $banner->refresh()->name);
+        $this->assertSame(0.75, $banner->getRateUpPerItem());
+        $this->assertSame(3.0, GachaBanner::where('gametora_id', 41002)->firstOrFail()->base_rate);
+        $this->assertDatabaseHas('uma_catalog_items', ['type' => 'base_uma', 'name' => 'Daring Tact']);
+        $this->getJson('/api/gacha/stats?rate_pool=boosted')
+            ->assertOk()
+            ->assertJsonPath('total_pulls', 1)
+            ->assertJsonFragment(['id' => $banner->id, 'category' => 'premium', 'base_rate' => 4.5]);
+
+        $character = UmaCatalogItem::where('type', 'character')->where('name', $name)->firstOrFail();
+        $this->getJson('/api/collection/characters')
+            ->assertOk()
+            ->assertJsonFragment(['name' => $name, 'uma_catalog_item_id' => $character->id]);
+        $activeBanners = $this->getJson('/api/dashboard/summary')->assertOk()->json('active_banners');
+        $activeBanner = collect($activeBanners)->firstWhere('id', $banner->id);
+        $this->assertEquals(4.5, $activeBanner['base_rate']);
+        $this->assertSame($character->id, $activeBanner['featured_items'][0]['catalog_id']);
+        $this->getJson('/api/collection/characters/detail?id='.$character->id)
+            ->assertOk()
+            ->assertJsonPath('character.name', $name)
+            ->assertJsonPath('character.costume_title', '白光のレガリア');
+    }
+
+    public function test_sync_restores_jp_evolutions_from_separate_dataset_in_collection_endpoints(): void
+    {
+        $character = UmaCatalogItem::create([
+            'type' => 'character',
+            'name' => 'Daiwa Scarlet [陣風の花紺青]',
+            'raw_data' => ['card_id' => 100903],
+            'skills' => ['evolve' => [['id' => 100903211, 'name_en' => 'Behold the Scarlet Gale']]],
+        ]);
+        GachaBanner::create(['name' => 'Existing banner', 'start_date' => '2026-11-16', 'banner_type' => 'character', 'category' => 'standard']);
+        $oldHash = implode('|', ['bases', 'cards', 'supports', 'skills', '', '', '', '', '', '', '', '', '3']);
+        AppSetting::setValue('gametora_manifest_hash', $oldHash);
+
+        $this->getJson('/api/collection/skills?rarity=evolved')->assertOk()
+            ->assertJsonPath('skills.0.rarity', 6);
+        $this->getJson('/api/collection/skill-sources?q=Behold&rarity=evolved')->assertOk()
+            ->assertJsonPath('skills.0.skill.rarity', 6);
+
+        Http::preventStrayRequests();
+        Http::fake([
+            GameToraSyncService::MANIFEST_URL => Http::response([
+                'characters' => 'bases',
+                'character-cards' => 'cards',
+                'support-cards' => 'supports',
+                'skills' => 'skills',
+                'evolutions' => 'evolutions-test',
+            ]),
+            GameToraSyncService::DATA_BASE_URL.'/characters.bases.json' => Http::response([]),
+            GameToraSyncService::DATA_BASE_URL.'/character-cards.cards.json' => Http::response([
+                ['card_id' => 100903, 'name_en' => 'Daiwa Scarlet', 'title_jp' => '陣風の花紺青'],
+            ]),
+            GameToraSyncService::DATA_BASE_URL.'/support-cards.supports.json' => Http::response([]),
+            GameToraSyncService::DATA_BASE_URL.'/skills.skills.json' => Http::response([
+                ['id' => 203201, 'enname' => 'Quick Work', 'rarity' => 2],
+                ['id' => 203381, 'enname' => "The Fight's Not Over Yet!", 'rarity' => 2],
+                ['id' => 100903111, 'enname' => 'A Feat Unheard of Even in Myth', 'rarity' => 6],
+                ['id' => 100903211, 'enname' => 'Behold the Scarlet Gale', 'rarity' => 6],
+                ['id' => 100903999, 'enname' => 'Non-JP fixture evolution', 'rarity' => 6],
+            ]),
+            GameToraSyncService::DATA_BASE_URL.'/evolutions.evolutions-test.json' => Http::sequence()
+                ->push([], 503)
+                ->push([
+                    ['card_id' => 100903, 'evolutions' => [
+                        ['new' => 100903111, 'old' => 203201, 'servers' => ['ja'], 'conditions' => [[['cond_e', 7], ['stat', 2, 600]], [['e_skill', 'speed', 3]]]],
+                        ['new' => 100903211, 'old' => 203381, 'servers' => ['ja'], 'conditions' => [[['stat', 3, 800]]]],
+                        ['new' => 100903999, 'old' => 203381, 'servers' => ['ko'], 'conditions' => []],
+                    ]],
+                ]),
+            'https://umapyoi.net/api/v1/news/search/twinkle' => Http::response([]),
+            'https://umamusume.jp/api/ajax/pr_info_index*' => Http::response([]),
+        ]);
+
+        $originalStorage = storage_path();
+        $isolatedStorage = storage_path('framework/testing/'.uniqid('evolutions-'));
+        $this->app->useStoragePath($isolatedStorage);
+        try {
+            $this->postJson('/api/gacha/sync-gametora')->assertStatus(500);
+            $this->assertSame($oldHash, AppSetting::getValue('gametora_manifest_hash'));
+            $this->assertSame(100903211, $character->refresh()->skills['evolve'][0]['id']);
+
+            $this->postJson('/api/gacha/sync-gametora')->assertOk()->assertJsonPath('is_up_to_date', false);
+        } finally {
+            $this->app->useStoragePath($originalStorage);
+            File::deleteDirectory($isolatedStorage);
+        }
+
+        $this->getJson('/api/collection/skills?rarity=evolved')->assertOk()
+            ->assertJsonCount(2, 'skills')
+            ->assertJsonFragment(['id' => 100903111]);
+        $this->getJson('/api/collection/characters')->assertOk()
+            ->assertJsonCount(2, 'characters.0.skills.evolve');
+        $this->getJson('/api/collection/characters/detail?id='.$character->id)->assertOk()
+            ->assertJsonPath('character.skills.evolve.0.base_skill_name', 'Quick Work')
+            ->assertJsonPath('character.skills.evolve.0.evolution_conditions', [
+                ['Have Fast Learner (切れ者) at the end of training', 'Have at least 600 Stamina'],
+                ['Get at least 3 Speed-type skills'],
+            ]);
+        $this->getJson('/api/collection/skill-sources?q=Behold&rarity=evolved')->assertOk()
+            ->assertJsonPath('skills.0.characters.0.catalog_id', $character->id);
     }
 
     public function test_article_detail_failure_on_first_sync_is_retried_and_saved_on_second_sync(): void

@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Log;
 
 class GameToraSyncService
 {
-    private const CATALOG_FORMAT_VERSION = '2';
+    private const CATALOG_FORMAT_VERSION = '4';
 
     private const EVOLUTION_STATUS_EFFECTS = [
         7 => 'Fast Learner (切れ者)',
@@ -90,7 +90,8 @@ class GameToraSyncService
             $racetracksHash = $manifest['racetracks'] ?? '';
             $racetracksExtHash = $manifest['racetracks_extended'] ?? '';
 
-            $combinedHash = "{$charBaseHash}|{$charCardHash}|{$supportHash}|{$skillsHash}|{$objHash}|{$charStdHash}|{$suppStdHash}|{$specialHash}|{$charBannersHash}|{$suppBannersHash}|{$racetracksHash}|{$racetracksExtHash}|".self::CATALOG_FORMAT_VERSION;
+            $evolutionsHash = $manifest['evolutions'] ?? null;
+            $combinedHash = "{$charBaseHash}|{$charCardHash}|{$supportHash}|{$skillsHash}|{$objHash}|{$charStdHash}|{$suppStdHash}|{$specialHash}|{$charBannersHash}|{$suppBannersHash}|{$racetracksHash}|{$racetracksExtHash}|{$evolutionsHash}|".self::CATALOG_FORMAT_VERSION;
             $savedHash = (string) AppSetting::getValue('gametora_manifest_hash', '');
 
             if (! $force && $savedHash === $combinedHash && UmaCatalogItem::count() > 0 && GachaBanner::count() > 0) {
@@ -137,6 +138,10 @@ class GameToraSyncService
 
             // 5. Fetch Skills, Evo Strings, Races, Objectives & Support Effects Datasets
             $skillsById = $skillsHash ? $this->loadSkillsLookup($skillsHash) : [];
+            $evolutionsByCard = $evolutionsHash ? $this->loadCharacterEvolutions($evolutionsHash) : null;
+            if ($evolutionsByCard !== null && $skillsById === []) {
+                throw new Exception('Dataset skill GameTora tidak tersedia. Sinkronisasi evolusi belum dapat dilanjutkan.');
+            }
             $objectivesLookup = $this->loadObjectivesLookup($objHash);
             $evoHash = $manifest['static/evo_strings'] ?? null;
             $evoLookup = $this->loadEvoStringsLookup($evoHash);
@@ -223,6 +228,9 @@ class GameToraSyncService
 
                 $charId = $c['char_id'] ?? null;
                 $cardId = $c['card_id'] ?? $c['id'] ?? null;
+                if ($evolutionsByCard !== null) {
+                    $c['skills_evo'] = array_values($evolutionsByCard[(int) $cardId] ?? []);
+                }
                 $imageUrl = ($charId && $cardId)
                     ? "https://gametora.com/images/umamusume/characters/thumb/chara_stand_{$charId}_{$cardId}.png"
                     : null;
@@ -243,7 +251,7 @@ class GameToraSyncService
                     ['type' => 'character', 'name' => $fullName],
                     [
                         'rarity' => $rarity,
-                        'gametora_id' => $c['id'] ?? null,
+                        'gametora_id' => $c['id'] ?? $cardId,
                         'raw_data' => $c,
                         'aptitudes' => $aptitudes,
                         'skills' => $skills,
@@ -584,6 +592,12 @@ class GameToraSyncService
                         $cat = 'premium';
                         $prefix = 'Stay Gold登場! Premium Pretty Derby Gacha';
                         $baseRate = 4.50;
+                    } elseif ($startDate === '2026-11-16' && count($items) === 1
+                        && ($items[0] === 'Daring Tact' || str_starts_with($items[0], 'Daring Tact ['))) {
+                        // https://umamusume.jp/news/detail?id=3547
+                        $cat = 'premium';
+                        $prefix = 'Premium Pretty Derby Gacha';
+                        $baseRate = GachaBanner::BOOSTED_BASE_RATE;
                     } elseif ($startDate === '2024-06-13') {
                         $cat = 'premium';
                         $prefix = '劇場版『ウマ娘』公開記念 プリティーダービーガチャ';
@@ -996,6 +1010,43 @@ class GameToraSyncService
 
             return [];
         }
+    }
+
+    /**
+     * @return array<int, array<int, array<string, mixed>>>
+     */
+    private function loadCharacterEvolutions(string $hash): array
+    {
+        $response = VerifiedHttp::request()->timeout(30)->get(self::DATA_BASE_URL."/evolutions.{$hash}.json");
+        if (! $response->successful()) {
+            throw new Exception("Gagal mengunduh evolusi GameTora: HTTP {$response->status()}");
+        }
+
+        $rows = $response->json();
+        if (! is_array($rows) || ! array_is_list($rows)) {
+            throw new Exception('Struktur dataset evolusi GameTora tidak valid.');
+        }
+
+        $lookup = [];
+        foreach ($rows as $row) {
+            $cardId = (int) ($row['card_id'] ?? 0);
+            if ($cardId <= 0) {
+                continue;
+            }
+
+            foreach ($row['evolutions'] ?? [] as $evolution) {
+                $skillId = (int) ($evolution['new'] ?? 0);
+                if ($skillId > 0 && in_array('ja', $evolution['servers'] ?? [], true)) {
+                    $lookup[$cardId][$skillId] = $evolution;
+                }
+            }
+        }
+
+        if ($lookup === []) {
+            throw new Exception('Dataset evolusi GameTora tidak berisi relasi skill untuk kartu karakter JP.');
+        }
+
+        return $lookup;
     }
 
     private function readSkillSnapshot(string $path): array
@@ -2398,13 +2449,12 @@ class GameToraSyncService
 
             if ($newRaw) {
                 $jaConditions = $evoLookup[$cardId][$newId]['ja'] ?? null;
-                $rawEvoCond = $newRaw['evo_cond'] ?? [];
+                $rawEvoCond = $evo['conditions'] ?? $newRaw['evo_cond'] ?? [];
 
                 $conditionsEn = $this->formatEvolutionConditions($rawEvoCond, $racesById, $skillsById, $jaConditions);
                 $conditions = ! empty($conditionsEn) ? $conditionsEn : ($jaConditions ?? []);
 
-                $enriched = $this->enrichSkillData($newRaw, $skillsById);
-                $enriched['rarity_label'] = 'Evolved';
+                $enriched = $this->enrichSkillData(array_replace($newRaw, ['rarity' => 6]), $skillsById);
                 $enriched['base_skill_id'] = $oldId;
                 $enriched['base_skill_name'] = $oldRaw ? ($oldRaw['name_en'] ?? $oldRaw['enname'] ?? $oldRaw['jpname'] ?? "Skill {$oldId}") : "Skill {$oldId}";
                 $enriched['base_skill_name_jp'] = $oldRaw['jpname'] ?? null;

@@ -1836,6 +1836,7 @@ class UmaTrackerApiTest extends TestCase
 
         // Playable characters must be present
         $this->assertContains('Daring Heart', $presets);
+        $this->assertContains('Daring Tact', $presets);
         $this->assertContains('Special Week', $presets);
         $this->assertContains('Almond Eye', $presets);
         $this->assertContains('Rose Kingdom', $presets);
@@ -1843,7 +1844,6 @@ class UmaTrackerApiTest extends TestCase
         // Unreleased/unplayable lore, support-only, & NPC characters must NEVER be present
         $unplayables = [
             'Blast Onepiece',
-            'Daring Tact',
             'Contrail',
             'Equinox',
             'Efforia',

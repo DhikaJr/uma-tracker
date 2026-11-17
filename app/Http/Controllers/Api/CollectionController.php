@@ -29,12 +29,12 @@ class CollectionController extends Controller
      */
     public static ?string $deckPresetsFilePath = null;
 
-    public const ALL_SKILLS_CACHE_KEY = 'collection_all_skills_list_v3';
+    public const ALL_SKILLS_CACHE_KEY = 'collection_all_skills_list_v4';
 
     /**
      * Cache key for indexed catalog skills lookup map.
      */
-    public const INDEXED_SKILLS_CACHE_KEY = 'collection_indexed_skills_map_v1';
+    public const INDEXED_SKILLS_CACHE_KEY = 'collection_indexed_skills_map_v2';
 
     public static function clearSkillCatalogCache(): void
     {
@@ -254,6 +254,10 @@ class CollectionController extends Controller
                 } elseif (isset($val[0]) && is_array($val[0])) {
                     foreach ($val as &$subSkill) {
                         if (is_array($subSkill)) {
+                            if ($key === 'evolve') {
+                                $subSkill['rarity'] = 6;
+                                $subSkill['rarity_label'] = 'Evolved';
+                            }
                             $subSkill = $sanitizeSkill($subSkill);
                         }
                     }
@@ -1010,7 +1014,7 @@ class CollectionController extends Controller
 
             $skillsMap = [];
 
-            $addSkill = function (mixed $sk, string $sourceType) use (&$skillsMap) {
+            $addSkill = function (mixed $sk, string $sourceType, bool $evolved = false) use (&$skillsMap) {
                 if (! is_array($sk)) {
                     return;
                 }
@@ -1038,7 +1042,7 @@ class CollectionController extends Controller
                         'id' => $id,
                         'name_en' => $nameEn,
                         'name_ja' => $nameJa,
-                        'rarity' => $sk['rarity'] ?? 1,
+                        'rarity' => $evolved ? 6 : ($sk['rarity'] ?? 1),
                         'icon_id' => $sk['icon_id'] ?? $sk['icon'] ?? null,
                         'description_en' => $sk['description_en'] ?? $sk['description'] ?? $sk['desc_en'] ?? $sk['desc_jp'] ?? '',
                         'distance_types' => $tactical['distance_types'],
@@ -1049,6 +1053,9 @@ class CollectionController extends Controller
                         'chars_count' => 0,
                     ];
                 } else {
+                    if ($evolved) {
+                        $skillsMap[$key]['rarity'] = 6;
+                    }
                     if (! in_array('all', $tactical['distance_types'], true)) {
                         $skillsMap[$key]['distance_types'] = array_values(array_unique(array_merge(
                             array_diff($skillsMap[$key]['distance_types'], ['all']),
@@ -1101,7 +1108,7 @@ class CollectionController extends Controller
                     $addSkill($sk, 'char');
                 }
                 foreach ($sData['evolve'] ?? [] as $sk) {
-                    $addSkill($sk, 'char');
+                    $addSkill($sk, 'char', evolved: true);
                 }
             }
 
@@ -1492,6 +1499,10 @@ class CollectionController extends Controller
             return;
         }
 
+        if ($category === 'evolved') {
+            $sk['rarity'] = 6;
+            $sk['rarity_label'] = 'Evolved';
+        }
         $sRarity = $resolveRarity($sk['rarity'] ?? 1);
         if ($rarityFilter !== 'all' && $sRarity !== $rarityFilter) {
             return;
@@ -1768,7 +1779,9 @@ class CollectionController extends Controller
                     $record($sk);
                 }
                 foreach ($sData['evolve'] ?? [] as $sk) {
-                    $record($sk);
+                    if (is_array($sk)) {
+                        $record(array_replace($sk, ['rarity' => 6]));
+                    }
                 }
             }
 
