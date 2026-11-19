@@ -673,14 +673,11 @@ class BackupVerificationTest extends TestCase
         $this->assertNotNull($creek);
         $this->assertEquals($catalogSuperCreek->id, $creek->uma_catalog_item_id);
 
-        // Verifikasi Case D & E: Dangling banner ID diset null dengan aman tanpa melanggar FK
-        $pity = GachaPity::first();
-        $this->assertNotNull($pity);
-        $this->assertNull($pity->gacha_banner_id);
-
-        $pull = GachaPull::where('item_name', 'Vodka')->first();
-        $this->assertNotNull($pull);
-        $this->assertNull($pull->gacha_banner_id);
+        // Verifikasi Case D & E: Lewati pull dan pity dengan referensi banner yang tidak ditemukan.
+        $this->assertSame(0, $result['restored']['gacha_pities']);
+        $this->assertSame(0, $result['restored']['gacha_pulls']);
+        $this->assertDatabaseCount('gacha_pities', 0);
+        $this->assertDatabaseMissing('gacha_pulls', ['item_name' => 'Vodka']);
 
         // Verifikasi catatan unresolved references
         $this->assertNotEmpty($result['unresolved_references']);

@@ -82,6 +82,12 @@ class BackupController extends Controller
             }
         } elseif ($request->has('data')) {
             $backupData = $request->input('data');
+            if ($request->isJson() && isset($backupData['data']['uma_catalog_items'])) {
+                // Keep the catalog identical to the uploaded-file path, including empty strings.
+                $payload = json_decode($request->getContent(), true);
+                $backupData['data']['uma_catalog_items'] = $payload['data']['data']['uma_catalog_items']
+                    ?? $backupData['data']['uma_catalog_items'];
+            }
         } elseif ($request->isJson()) {
             $backupData = $request->json()->all();
         }

@@ -307,27 +307,18 @@ class CollectionController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Deduplicate any orphan duplicate records with missing brackets
-        $catalogItems = $rawCatalogItems->reject(function ($item) use ($rawCatalogItems) {
-            $cardId = $item->raw_data['card_id'] ?? null;
-            if (! $cardId) {
-                return false;
-            }
-            if (! str_contains($item->name, '[')) {
-                return $rawCatalogItems->contains(function ($other) use ($cardId) {
-                    return ($other->raw_data['card_id'] ?? null) === $cardId && str_contains($other->name, '[');
-                });
-            }
-
-            return false;
-        })->keyBy('name');
+        [$ownershipByIdentity, $legacyCharacters] = UserCharacter::characterOwnershipIndexes();
+        $ownershipFor = fn (UmaCatalogItem $item): ?UserCharacter => $ownershipByIdentity->get($item->characterIdentityKey());
+        $catalogItems = $rawCatalogItems
+            ->groupBy(fn (UmaCatalogItem $item) => $item->characterIdentityKey())
+            ->map(fn ($aliases) => $aliases->first(fn (UmaCatalogItem $item) => $ownershipFor($item)?->uma_catalog_item_id === $item->id)
+                ?? $aliases->first(fn (UmaCatalogItem $item) => str_contains($item->name, '['))
+                ?? $aliases->first())
+            ->sortBy('name')->keyBy('name');
 
         $characterNames = $catalogItems->isNotEmpty()
             ? $catalogItems->keys()->all()
             : UmaCatalog::getCharacters();
-
-        // 2. Fetch user's saved character states
-        $userCharacters = UserCharacter::all()->keyBy('name');
 
         // 3. Build combined collection list
         $collection = [];
@@ -338,7 +329,7 @@ class CollectionController extends Controller
 
         foreach ($characterNames as $name) {
             $catalogItem = $catalogItems->get($name);
-            $userChar = $userCharacters->get($name);
+            $userChar = $catalogItem ? $ownershipFor($catalogItem) : $legacyCharacters->get($name);
             $costumeTitle = UmaCatalog::characterCostumeTitle($name, $catalogItem?->raw_data ?? []);
 
             $baseStars = $userChar?->base_stars ?? $this->resolveBaseStars($name, $catalogItem);
@@ -408,7 +399,11 @@ class CollectionController extends Controller
 
         $query = UmaCatalogItem::where('type', 'character');
         if ($id) {
-            $catalogItem = (clone $query)->where('id', $id)->first();
+            $catalogItem = UmaCatalogItem::withRelocatedAliases()->where('type', 'character')->where('id', $id)->first();
+            if ($catalogItem?->isRelocatedAlias()) {
+                $catalogItem = UmaCatalogItem::charactersWithExternalId($catalogItem->characterExternalId())
+                    ->first(fn (UmaCatalogItem $alias) => ! $alias->isRelocatedAlias());
+            }
         } elseif ($name) {
             $catalogItem = (clone $query)->where('name', $name)->first();
             if (! $catalogItem) {
@@ -423,7 +418,7 @@ class CollectionController extends Controller
             return response()->json(['success' => false, 'message' => 'Karakter tidak ditemukan.'], 404);
         }
 
-        $userChar = UserCharacter::where('name', $catalogItem->name)->first();
+        $userChar = UserCharacter::findForCatalogCharacter($catalogItem, $catalogItem->name);
         $baseStars = $userChar?->base_stars ?? $this->resolveBaseStars($catalogItem->name, $catalogItem);
         $currentStars = $userChar ? max($baseStars, (int) $userChar->current_stars) : $baseStars;
         $imageUrl = $this->resolveCharacterImageUrl($catalogItem);
@@ -464,10 +459,10 @@ class CollectionController extends Controller
         $catalogItem = UmaCatalogItem::where('type', 'character')->where('name', $name)->first();
         $baseStars = $this->resolveBaseStars($name, $catalogItem);
 
-        $userChar = UserCharacter::firstOrNew(['name' => $name]);
+        $userChar = UserCharacter::findForCatalogCharacter($catalogItem, $name) ?? new UserCharacter(['name' => $name]);
+        $userChar->uma_catalog_item_id ??= $catalogItem?->id;
 
         if (! $userChar->exists) {
-            $userChar->uma_catalog_item_id = $catalogItem?->id;
             $userChar->base_stars = $baseStars;
             $userChar->current_stars = $baseStars;
             $userChar->is_owned = $validated['is_owned'] ?? true;
@@ -482,7 +477,7 @@ class CollectionController extends Controller
             }
         }
 
-        $userChar->save();
+        $userChar->saveCharacterState($catalogItem, ['is_owned']);
 
         return response()->json([
             'success' => true,
@@ -491,7 +486,7 @@ class CollectionController extends Controller
                 : "{$name} dihapus dari koleksi.",
             'character' => [
                 'id' => $userChar->id,
-                'name' => $userChar->name,
+                'name' => $name,
                 'base_stars' => $userChar->base_stars,
                 'current_stars' => $userChar->current_stars,
                 'is_owned' => $userChar->is_owned,
@@ -527,22 +522,22 @@ class CollectionController extends Controller
             ], 422);
         }
 
-        $userChar = UserCharacter::firstOrNew(['name' => $name]);
-        $userChar->uma_catalog_item_id = $catalogItem?->id;
+        $userChar = UserCharacter::findForCatalogCharacter($catalogItem, $name) ?? new UserCharacter(['name' => $name]);
+        $userChar->uma_catalog_item_id ??= $catalogItem?->id;
         $userChar->base_stars = $baseStars;
         $userChar->current_stars = $newStars;
         $userChar->is_owned = true; // Setting stars automatically marks character as owned
         if (! $userChar->obtained_at) {
             $userChar->obtained_at = now();
         }
-        $userChar->save();
+        $userChar->saveCharacterState($catalogItem, ['base_stars', 'current_stars', 'is_owned']);
 
         return response()->json([
             'success' => true,
             'message' => "Bintang {$name} berhasil diubah menjadi {$newStars}★!",
             'character' => [
                 'id' => $userChar->id,
-                'name' => $userChar->name,
+                'name' => $name,
                 'base_stars' => $userChar->base_stars,
                 'current_stars' => $userChar->current_stars,
                 'is_owned' => $userChar->is_owned,
@@ -575,15 +570,15 @@ class CollectionController extends Controller
             foreach ($catalogItems as $item) {
                 $baseStars = $this->resolveBaseStars($item->name, $item);
                 if ($baseStars <= 2) {
-                    $userChar = UserCharacter::firstOrNew(['name' => $item->name]);
-                    $userChar->uma_catalog_item_id = $item->id;
+                    $userChar = UserCharacter::findForCatalogCharacter($item, $item->name) ?? new UserCharacter(['name' => $item->name]);
+                    $userChar->uma_catalog_item_id ??= $item->id;
                     $userChar->base_stars = $baseStars;
                     if (! $userChar->exists || empty($userChar->current_stars)) {
                         $userChar->current_stars = $baseStars;
                     }
                     $userChar->is_owned = true;
                     $userChar->obtained_at ??= now();
-                    $userChar->save();
+                    $userChar->saveCharacterState($item, ['base_stars', 'is_owned']);
                     $updatedCount++;
                 }
             }
@@ -600,16 +595,15 @@ class CollectionController extends Controller
                 $catalogItem = UmaCatalogItem::where('type', 'character')->where('name', $name)->first();
                 $baseStars = $this->resolveBaseStars($name, $catalogItem);
 
-                UserCharacter::updateOrCreate(
-                    ['name' => $name],
-                    [
-                        'uma_catalog_item_id' => $catalogItem?->id,
-                        'base_stars' => $baseStars,
-                        'current_stars' => $baseStars,
-                        'is_owned' => $isOwned,
-                        'obtained_at' => $isOwned ? now() : null,
-                    ]
-                );
+                $userChar = UserCharacter::findForCatalogCharacter($catalogItem, $name) ?? new UserCharacter(['name' => $name]);
+                $userChar->uma_catalog_item_id ??= $catalogItem?->id;
+                $userChar->fill([
+                    'base_stars' => $baseStars,
+                    'current_stars' => $baseStars,
+                    'is_owned' => $isOwned,
+                    'obtained_at' => $isOwned ? now() : null,
+                ]);
+                $userChar->saveCharacterState($catalogItem, ['base_stars', 'current_stars', 'is_owned', 'obtained_at']);
             }
         }
 
@@ -1183,7 +1177,6 @@ class CollectionController extends Controller
         $needle = $q !== '' ? mb_strtolower($q) : null;
 
         // Fetch ownership maps
-        $userCharacters = UserCharacter::query()->get()->keyBy('name');
         $userSupportCards = UserSupportCard::query()->get()->keyBy('name');
 
         $skillsIndex = [];
@@ -1328,25 +1321,33 @@ class CollectionController extends Controller
 
         // 2. Scan Characters (Unique, Innate, Awakening, Evolved)
         if ($sourceTypeFilter === 'all' || $sourceTypeFilter === 'character') {
-            $charItems = UmaCatalogItem::where('type', 'character')->get();
+            [$ownershipByIdentity] = UserCharacter::characterOwnershipIndexes();
+            $charItems = UmaCatalogItem::withRelocatedAliases()->where('type', 'character')->orderBy('id')->get();
+            $publicAliases = $charItems->reject(fn (UmaCatalogItem $item) => $item->isRelocatedAlias())
+                ->groupBy(fn (UmaCatalogItem $item) => $item->characterIdentityKey());
 
             foreach ($charItems as $charItem) {
-                $baseStars = $this->resolveBaseStars($charItem->name, $charItem);
-                $userChar = $userCharacters->get($charItem->name);
+                $identity = $charItem->characterIdentityKey();
+                $published = $charItem->isRelocatedAlias() ? $publicAliases->get($identity)?->first() : $charItem;
+                if ($published === null) {
+                    continue;
+                }
+                $userChar = $ownershipByIdentity->get($identity);
+                $baseStars = $userChar?->base_stars ?? $this->resolveBaseStars($published->name, $published);
                 $isOwned = $userChar ? (bool) $userChar->is_owned : false;
-                $currentStars = $userChar && $userChar->current_stars ? (int) $userChar->current_stars : $baseStars;
+                $currentStars = $userChar ? max($baseStars, (int) $userChar->current_stars) : $baseStars;
 
                 if ($ownedOnly && ! $isOwned) {
                     continue;
                 }
 
                 $charSummary = [
-                    'id' => $userChar?->id ?? $charItem->id,
-                    'catalog_id' => $charItem->id,
-                    'gametora_id' => $charItem->gametora_id,
-                    'name' => $charItem->name,
+                    'id' => $userChar?->id ?? $published->id,
+                    'catalog_id' => $published->id,
+                    'gametora_id' => $published->characterExternalId(),
+                    'name' => $published->name,
                     'base_stars' => $baseStars,
-                    'image_url' => $this->resolveCharacterImageUrl($charItem),
+                    'image_url' => $this->resolveCharacterImageUrl($published),
                     'is_owned' => $isOwned,
                     'current_stars' => $currentStars,
                 ];
@@ -1527,7 +1528,7 @@ class CollectionController extends Controller
             ];
         }
 
-        $charId = $charSummary['catalog_id'];
+        $charId = $charSummary['gametora_id'] ?? 'catalog-'.$charSummary['catalog_id'];
         $skillsIndex[$sKey]['characters'][$charId] = array_merge($charSummary, [
             'skill_category' => $category,
         ]);

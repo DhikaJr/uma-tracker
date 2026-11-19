@@ -19,6 +19,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tests\TestCase;
 
 class BackupRoundTripTest extends TestCase
@@ -32,6 +33,365 @@ class BackupRoundTripTest extends TestCase
         parent::setUp();
         DB::statement('PRAGMA foreign_keys = ON;');
         $this->backupService = new BackupService;
+    }
+
+    #[TestWith([false])]
+    #[TestWith([true])]
+    public function test_banner_identity_overwrite_preserves_same_title_game_tora_references(bool $reverse): void
+    {
+        $backup = $this->exportSameTitleBannerBackup();
+        if ($reverse) {
+            foreach (['gacha_banners', 'gacha_pulls', 'gacha_pities'] as $entity) {
+                $backup['data'][$entity] = array_reverse($backup['data'][$entity]);
+            }
+        }
+
+        $this->postJson('/api/backup/import', ['mode' => 'overwrite', 'data' => $backup])
+            ->assertOk()->assertJsonPath('unresolved_references', []);
+
+        $this->assertSameTitleBannerReferences();
+    }
+
+    public function test_banner_identity_merge_maps_backup_ids_to_existing_local_ids(): void
+    {
+        $backup = $this->exportSameTitleBannerBackup();
+        $sourceIds = [];
+        foreach ($backup['data']['gacha_banners'] as &$row) {
+            $sourceIds[$row['id']] = $row['id'] + 1000;
+            $row['id'] = $sourceIds[$row['id']];
+        }
+        unset($row);
+        foreach (['gacha_pulls', 'gacha_pities'] as $entity) {
+            foreach ($backup['data'][$entity] as &$row) {
+                $row['gacha_banner_id'] = $sourceIds[$row['gacha_banner_id']];
+            }
+            unset($row);
+        }
+
+        $this->postJson('/api/backup/import', ['mode' => 'merge', 'data' => $backup])
+            ->assertOk()->assertJsonPath('unresolved_references', []);
+
+        $this->assertSameTitleBannerReferences();
+        $this->assertSame([], GachaBanner::whereIn('id', array_values($sourceIds))->pluck('id')->all());
+    }
+
+    public function test_banner_identity_round_trip_preserves_pull_and_pity_metadata(): void
+    {
+        $backup = $this->exportSameTitleBannerBackup();
+        $this->postJson('/api/backup/import', ['mode' => 'overwrite', 'data' => $backup])
+            ->assertOk()->assertJsonPath('unresolved_references', []);
+        $restored = $this->getJson('/api/backup/export')->assertOk()->assertJsonPath('version', '2.0')->json();
+
+        $semanticGacha = function (array $data): array {
+            $bannerIds = array_column($data['gacha_banners'], 'gametora_id', 'id');
+            $ids = array_values($bannerIds);
+            sort($ids, SORT_NUMERIC);
+            $dependent = [];
+            foreach (['gacha_pulls', 'gacha_pities'] as $entity) {
+                $dependent[$entity] = [];
+                foreach ($data[$entity] as $row) {
+                    $identity = $bannerIds[$row['gacha_banner_id']] ?? null;
+                    unset($row['id'], $row['gacha_banner_id'], $row['created_at'], $row['updated_at']);
+                    $dependent[$entity][] = ['gametora_id' => $identity] + $row;
+                }
+                usort($dependent[$entity], fn (array $left, array $right) => [$left['gametora_id'], $left['item_name'] ?? '']
+                    <=> [$right['gametora_id'], $right['item_name'] ?? '']);
+            }
+
+            return [$ids, $dependent];
+        };
+
+        $this->assertSame($semanticGacha($backup['data']), $semanticGacha($restored['data']));
+    }
+
+    #[TestWith([false])]
+    #[TestWith([true])]
+    public function test_banner_identity_legacy_title_fallback_requires_one_candidate(bool $ambiguous): void
+    {
+        $attributes = [
+            'name' => 'SAME TITLE', 'banner_type' => 'character', 'base_rate' => 3.0, 'start_date' => '2026-08-01',
+        ];
+        $banner = GachaBanner::create(['gametora_id' => 41555] + $attributes);
+        if ($ambiguous) {
+            GachaBanner::create(['gametora_id' => 41556] + $attributes);
+        }
+        $response = $this->postJson('/api/backup/import', ['mode' => 'merge', 'data' => ['version' => '1.0', 'data' => [
+            'gacha_banners' => [['id' => 70001] + $attributes],
+            'gacha_pulls' => [[
+                'gacha_banner_id' => 70001, 'banner_type' => 'character', 'item_name' => 'Pull legacy',
+                'rarity' => 'SSR', 'pulled_at' => '2026-08-02',
+            ]],
+            'gacha_pities' => [['gacha_banner_id' => 70001, 'banner_type' => 'character', 'current_pity' => 35]],
+        ]]])->assertOk();
+
+        if ($ambiguous) {
+            $response->assertJsonCount(2, 'unresolved_references')->assertJsonPath('conflicts.0.entity', 'gacha_banners');
+            $this->assertDatabaseMissing('gacha_pulls', ['item_name' => 'Pull legacy']);
+            $this->assertDatabaseMissing('gacha_pities', ['current_pity' => 35]);
+            $this->assertSame([41555, 41556], GachaBanner::where('name', 'SAME TITLE')->orderBy('gametora_id')->pluck('gametora_id')->all());
+        } else {
+            $response->assertJsonPath('unresolved_references', []);
+            $this->assertSame($banner->id, GachaPull::where('item_name', 'Pull legacy')->sole()->gacha_banner_id);
+            $this->assertSame($banner->id, GachaPity::where('current_pity', 35)->sole()->gacha_banner_id);
+            $this->assertSame(41555, $banner->refresh()->gametora_id);
+        }
+        $this->assertSame([], DB::select('PRAGMA foreign_key_check'));
+    }
+
+    #[TestWith([false, false])]
+    #[TestWith([true, false])]
+    #[TestWith([false, true])]
+    public function test_local_banner_merge_preserves_source_identities(bool $reverse, bool $identicalDates): void
+    {
+        $backup = $this->exportMixedBannerBackupForEmptyDestination($identicalDates);
+        if ($reverse) {
+            $backup['data']['gacha_banners'] = array_reverse($backup['data']['gacha_banners']);
+        }
+
+        $this->postJson('/api/backup/import', ['mode' => 'merge', 'data' => $backup])
+            ->assertOk()->assertJsonPath('conflicts', [])->assertJsonPath('unresolved_references', []);
+
+        $this->assertMixedBannerReferences($identicalDates);
+
+        $this->postJson('/api/backup/import', ['mode' => 'merge', 'data' => $backup])
+            ->assertOk()->assertJsonPath('conflicts', [])->assertJsonPath('unresolved_references', []);
+
+        $this->assertMixedBannerReferences($identicalDates);
+    }
+
+    #[TestWith([false, 2])]
+    #[TestWith([true, 2])]
+    #[TestWith([false, 3])]
+    public function test_repeated_local_banner_merge_preserves_pull_and_pity_attribution(bool $reverse, int $merges): void
+    {
+        $backup = $this->exportMixedBannerBackupForEmptyDestination(localPair: true);
+        if ($reverse) {
+            foreach (['gacha_banners', 'gacha_pulls', 'gacha_pities'] as $entity) {
+                $backup['data'][$entity] = array_reverse($backup['data'][$entity]);
+            }
+        }
+        $state = fn (): array => [
+            GachaBanner::orderBy('id')->get()->toArray(),
+            GachaPull::orderBy('id')->get()->toArray(),
+            GachaPity::orderBy('id')->get()->toArray(),
+        ];
+
+        $this->postJson('/api/backup/import', ['mode' => 'merge', 'data' => $backup])
+            ->assertOk()->assertJsonPath('conflicts', [])->assertJsonPath('unresolved_references', []);
+        $afterFirst = $state();
+        $this->assertSame([2, 2, 2], array_map('count', $afterFirst));
+        $bannerA = GachaBanner::whereDate('end_date', '2026-08-19')->sole();
+        $bannerB = GachaBanner::whereDate('end_date', '2026-08-12')->sole();
+        $this->assertSame([$bannerA->id, $bannerB->id], GachaPull::orderBy('item_name')->pluck('gacha_banner_id')->all());
+        $this->assertSame([$bannerA->id, $bannerB->id], GachaPity::orderByDesc('current_pity')->pluck('gacha_banner_id')->all());
+        $this->assertSame([32, 12], GachaPity::orderByDesc('current_pity')->pluck('current_pity')->all());
+
+        for ($attempt = 2; $attempt <= $merges; $attempt++) {
+            $this->postJson('/api/backup/import', ['mode' => 'merge', 'data' => $backup])
+                ->assertOk()->assertJsonCount(2, 'conflicts')->assertJsonCount(4, 'unresolved_references');
+            $this->assertSame($afterFirst, $state());
+        }
+        $this->assertSame([], DB::select('PRAGMA foreign_key_check'));
+    }
+
+    #[TestWith([false])]
+    #[TestWith([true])]
+    public function test_local_banner_merge_keeps_legacy_fallback_unique(bool $ambiguous): void
+    {
+        $attributes = [
+            'name' => 'SAME TITLE', 'banner_type' => 'character', 'base_rate' => 3.0, 'start_date' => '2026-08-01',
+        ];
+        $banner = GachaBanner::create($attributes);
+        if ($ambiguous) {
+            GachaBanner::create($attributes);
+        }
+        $unrelatedPity = $ambiguous
+            ? GachaPity::create(['banner_type' => 'character', 'current_pity' => 7, 'total_sparks' => 1])->refresh()
+            : null;
+
+        $response = $this->postJson('/api/backup/import', ['mode' => 'merge', 'data' => ['version' => '1.0', 'data' => [
+            'gacha_banners' => [['id' => 70001] + $attributes],
+            'gacha_pulls' => [[
+                'gacha_banner_id' => 70001, 'banner_type' => 'character', 'item_name' => 'Pull L',
+                'rarity' => 'SSR', 'pulled_at' => '2026-08-02',
+            ]],
+            'gacha_pities' => [['gacha_banner_id' => 70001, 'banner_type' => 'character', 'current_pity' => 32]],
+        ]]])->assertOk();
+
+        $response->assertJsonCount($ambiguous ? 1 : 0, 'conflicts')
+            ->assertJsonCount($ambiguous ? 2 : 0, 'unresolved_references');
+        if ($unrelatedPity !== null) {
+            $response->assertJsonPath('summary.gacha_pulls', 0)->assertJsonPath('summary.gacha_pities', 0);
+            $this->assertDatabaseMissing('gacha_pulls', ['item_name' => 'Pull L']);
+            $this->assertDatabaseCount('gacha_pities', 1);
+            $this->assertSame($unrelatedPity->getAttributes(), $unrelatedPity->fresh()->getAttributes());
+        } else {
+            $this->assertSame($banner->id, GachaPull::where('item_name', 'Pull L')->sole()->gacha_banner_id);
+            $this->assertSame($banner->id, GachaPity::where('current_pity', 32)->sole()->gacha_banner_id);
+        }
+        $this->assertSame($ambiguous ? 2 : 1, GachaBanner::where('name', 'SAME TITLE')->count());
+    }
+
+    #[TestWith([false])]
+    #[TestWith([true])]
+    public function test_local_banner_merge_preserves_local_identity_with_pre_existing_game_tora_banner(bool $legacySibling): void
+    {
+        $backup = $this->exportMixedBannerBackupForEmptyDestination();
+        $gameToraBanner = GachaBanner::create([
+            'gametora_id' => 41555, 'name' => 'SAME TITLE', 'banner_type' => 'character', 'base_rate' => 3.0,
+            'start_date' => '2026-08-01', 'end_date' => '2026-08-12',
+        ]);
+        if ($legacySibling) {
+            $backup['version'] = '1.0';
+            unset($backup['data']['gacha_banners'][0]['gametora_id']);
+        } else {
+            foreach (['gacha_banners', 'gacha_pulls', 'gacha_pities'] as $entity) {
+                $backup['data'][$entity] = [$backup['data'][$entity][0]];
+            }
+        }
+
+        $this->postJson('/api/backup/import', ['mode' => 'merge', 'data' => $backup])
+            ->assertOk()->assertJsonPath('conflicts', [])->assertJsonPath('unresolved_references', []);
+
+        if ($legacySibling) {
+            $this->assertMixedBannerReferences(false);
+        } else {
+            $local = GachaBanner::whereNull('gametora_id')->sole();
+            $this->assertSame('2026-08-19', $local->end_date->toDateString());
+            $this->assertSame($local->id, GachaPull::where('item_name', 'Pull L')->sole()->gacha_banner_id);
+            $this->assertSame($local->id, GachaPity::where('current_pity', 32)->sole()->gacha_banner_id);
+        }
+        $this->assertSame(41555, $gameToraBanner->refresh()->gametora_id);
+        $this->assertSame('2026-08-12', $gameToraBanner->end_date->toDateString());
+    }
+
+    public function test_local_banner_overwrite_preserves_source_identities(): void
+    {
+        $backup = $this->exportMixedBannerBackupForEmptyDestination();
+
+        $this->postJson('/api/backup/import', ['mode' => 'overwrite', 'data' => $backup])
+            ->assertOk()->assertJsonPath('conflicts', [])->assertJsonPath('unresolved_references', []);
+
+        $this->assertMixedBannerReferences(false);
+    }
+
+    public function test_local_banner_round_trip_preserves_exported_attribution(): void
+    {
+        $backup = $this->exportMixedBannerBackupForEmptyDestination();
+        $semanticGacha = function (array $data): array {
+            $identities = [];
+            $banners = [];
+            foreach ($data['gacha_banners'] as $row) {
+                $identity = $row['gametora_id'] ?? 'local';
+                $identities[$row['id']] = $identity;
+                unset($row['id'], $row['created_at'], $row['updated_at']);
+                $banners[$identity] = $row;
+            }
+            ksort($banners);
+            $dependents = [];
+            foreach (['gacha_pulls', 'gacha_pities'] as $entity) {
+                $dependents[$entity] = [];
+                foreach ($data[$entity] as $row) {
+                    $identity = $identities[$row['gacha_banner_id']] ?? null;
+                    unset($row['id'], $row['gacha_banner_id'], $row['created_at'], $row['updated_at']);
+                    $dependents[$entity][] = ['banner_identity' => $identity] + $row;
+                }
+                usort($dependents[$entity], fn (array $left, array $right) => strcmp((string) $left['banner_identity'], (string) $right['banner_identity']));
+            }
+
+            return [$banners, $dependents];
+        };
+        $expected = $semanticGacha($backup['data']);
+        foreach (['gacha_banners', 'gacha_pulls', 'gacha_pities'] as $entity) {
+            $backup['data'][$entity] = array_reverse($backup['data'][$entity]);
+        }
+
+        $this->postJson('/api/backup/import', ['mode' => 'merge', 'data' => $backup])
+            ->assertOk()->assertJsonPath('conflicts', [])->assertJsonPath('unresolved_references', []);
+        $exported = $this->getJson('/api/backup/export')->assertOk()->assertJsonPath('version', '2.0')->json('data');
+
+        $this->assertSame($expected, $semanticGacha($exported));
+        $this->assertMixedBannerReferences(false);
+    }
+
+    private function exportMixedBannerBackupForEmptyDestination(bool $identicalDates = false, bool $localPair = false): array
+    {
+        GachaBanner::query()->delete();
+        $banners = $localPair
+            ? [[null, 'A', 32, '2026-08-19'], [null, 'B', 12, '2026-08-12']]
+            : [[null, 'L', 32, $identicalDates ? '2026-08-12' : '2026-08-19'], [41555, 'G', 12, '2026-08-12']];
+        foreach ($banners as [$identity, $suffix, $pity, $endDate]) {
+            $banner = GachaBanner::create([
+                'gametora_id' => $identity, 'name' => 'SAME TITLE', 'banner_type' => 'character', 'base_rate' => 3.0,
+                'category' => 'standard', 'featured_items' => ['Shared Pickup'], 'is_active' => true,
+                'start_date' => '2026-08-01', 'end_date' => $endDate,
+            ]);
+            GachaPull::create([
+                'gacha_banner_id' => $banner->id, 'banner_type' => 'character', 'item_name' => 'Pull '.$suffix,
+                'rarity' => 'SSR', 'pull_type' => 'single', 'pity_count_at_pull' => $pity, 'pulled_at' => '2026-08-02 12:00:00',
+            ]);
+            GachaPity::create([
+                'gacha_banner_id' => $banner->id, 'banner_type' => 'character', 'current_pity' => $pity,
+            ]);
+        }
+        $backup = $this->getJson('/api/backup/export')->assertOk()->assertJsonPath('version', '2.0')->json();
+        GachaPull::query()->delete();
+        GachaPity::query()->delete();
+        GachaBanner::query()->delete();
+
+        return $backup;
+    }
+
+    private function assertMixedBannerReferences(bool $identicalDates): void
+    {
+        $pulls = GachaPull::with('banner')->orderBy('item_name')->get();
+        $pities = GachaPity::with('banner')->orderBy('current_pity')->get();
+        $banners = GachaBanner::orderBy('gametora_id')->get();
+        $this->assertSame([], DB::select('PRAGMA foreign_key_check'));
+        $this->assertSame(
+            [['Pull G' => 41555, 'Pull L' => 'local'], [12 => 41555, 32 => 'local'], [null, 41555]],
+            [$pulls->mapWithKeys(fn (GachaPull $pull) => [$pull->item_name => $pull->banner->gametora_id ?? 'local'])->all(),
+                $pities->mapWithKeys(fn (GachaPity $pity) => [$pity->current_pity => $pity->banner->gametora_id ?? 'local'])->all(),
+                $banners->pluck('gametora_id')->all()],
+        );
+        $this->assertSame([$banners[1]->id, $banners[0]->id], $pulls->pluck('gacha_banner_id')->all());
+        $this->assertSame([$banners[1]->id, $banners[0]->id], $pities->pluck('gacha_banner_id')->all());
+        $this->assertSame([$identicalDates ? '2026-08-12' : '2026-08-19', '2026-08-12'], $banners->map->end_date->map->toDateString()->all());
+    }
+
+    private function exportSameTitleBannerBackup(): array
+    {
+        foreach ([41555 => ['A', 12], 41556 => ['B', 32]] as $gameToraId => [$suffix, $pity]) {
+            $banner = GachaBanner::create([
+                'gametora_id' => $gameToraId, 'name' => 'SAME TITLE', 'banner_type' => 'character', 'base_rate' => 3.0,
+                'start_date' => '2026-08-01', 'end_date' => '2026-08-12',
+            ]);
+            GachaPull::create([
+                'gacha_banner_id' => $banner->id, 'banner_type' => 'character', 'item_name' => 'Pull '.$suffix,
+                'rarity' => 'SSR', 'pull_type' => 'single', 'is_rate_up' => $suffix === 'A',
+                'pity_count_at_pull' => $pity, 'pulled_at' => '2026-08-02 12:00:00',
+            ]);
+            GachaPity::create([
+                'gacha_banner_id' => $banner->id, 'banner_type' => 'character', 'current_pity' => $pity,
+                'total_sparks' => $suffix === 'A' ? 0 : 1, 'last_reset_at' => '2026-08-01 12:00:00',
+            ]);
+        }
+
+        return $this->getJson('/api/backup/export')->assertOk()->assertJsonPath('version', '2.0')->json();
+    }
+
+    private function assertSameTitleBannerReferences(): void
+    {
+        $pulls = GachaPull::with('banner')->orderBy('item_name')->get();
+        $this->assertSame([], DB::select('PRAGMA foreign_key_check'));
+        $this->assertSame(['Pull A' => 41555, 'Pull B' => 41556], $pulls->mapWithKeys(fn (GachaPull $pull) => [
+            $pull->item_name => $pull->banner?->gametora_id,
+        ])->all());
+        $this->assertNotSame($pulls[0]->gacha_banner_id, $pulls[1]->gacha_banner_id);
+        $this->assertSame([41555, 41556], GachaBanner::where('name', 'SAME TITLE')->orderBy('gametora_id')->pluck('gametora_id')->all());
+        $this->assertSame([41555, 41556], GachaPity::with('banner')->orderBy('current_pity')->get()->map(
+            fn (GachaPity $pity) => $pity->banner?->gametora_id,
+        )->all());
     }
 
     /**
@@ -704,6 +1064,13 @@ class BackupRoundTripTest extends TestCase
                         'pity_count_at_pull' => 5,
                         'pulled_at' => '2026-03-01',
                     ],
+                    [
+                        'banner_type' => 'character',
+                        'gacha_banner_id' => null,
+                        'item_name' => 'Intentionally Unlinked Pull',
+                        'rarity' => 'R',
+                        'pulled_at' => '2026-03-01',
+                    ],
                 ],
                 'gacha_pities' => [
                     [
@@ -712,6 +1079,7 @@ class BackupRoundTripTest extends TestCase
                         'current_pity' => 15,
                         'total_sparks' => 0,
                     ],
+                    ['banner_type' => 'character', 'gacha_banner_id' => null, 'current_pity' => 7],
                 ],
                 'user_characters' => [
                     [
@@ -741,13 +1109,12 @@ class BackupRoundTripTest extends TestCase
         $this->assertEquals(1, $res['restored']['user_characters']);
         $this->assertEquals(1, $res['restored']['user_support_cards']);
 
-        $pull = GachaPull::where('item_name', 'Standalone Pull Without Banner')->first();
-        $this->assertNotNull($pull);
-        $this->assertNull($pull->gacha_banner_id);
-
-        $pity = GachaPity::where('banner_type', 'character')->first();
-        $this->assertNotNull($pity);
-        $this->assertNull($pity->gacha_banner_id);
+        $this->assertDatabaseMissing('gacha_pulls', ['item_name' => 'Standalone Pull Without Banner']);
+        $this->assertDatabaseMissing('gacha_pities', ['current_pity' => 15]);
+        $this->assertNull(GachaPull::where('item_name', 'Intentionally Unlinked Pull')->sole()->gacha_banner_id);
+        $this->assertNull(GachaPity::where('current_pity', 7)->sole()->gacha_banner_id);
+        $this->assertContains('gacha_pulls', array_column($res['unresolved_references'], 'entity'));
+        $this->assertContains('gacha_pities', array_column($res['unresolved_references'], 'entity'));
 
         $userChar = UserCharacter::where('name', 'Completely Uncataloged Uma')->first();
         $this->assertNotNull($userChar);

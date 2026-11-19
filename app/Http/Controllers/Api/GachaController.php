@@ -861,7 +861,7 @@ class GachaController extends Controller
     public function syncCatalog(Request $request, GameToraSyncService $service): JsonResponse
     {
         $force = $request->boolean('force');
-        $result = $service->sync($force);
+        $result = $service->sync($force, allowEvolutionRemovals: $request->boolean('allow_evolution_removals'));
 
         return response()->json($result, $result['success'] ? 200 : 500);
     }

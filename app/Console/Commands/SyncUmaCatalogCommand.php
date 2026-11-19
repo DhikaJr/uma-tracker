@@ -14,7 +14,9 @@ class SyncUmaCatalogCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'uma:sync-catalog {--force : Paksa perbarui katalog meskipun hash GameTora belum berubah}';
+    protected $signature = 'uma:sync-catalog
+        {--force : Paksa perbarui katalog meskipun hash GameTora belum berubah}
+        {--allow-evolution-removals : Terapkan penghapusan evolusi setelah kelengkapan dataset dipastikan}';
 
     /**
      * The aliases of the console command.
@@ -39,7 +41,7 @@ class SyncUmaCatalogCommand extends Command
 
         $this->info('Memeriksa dan menyinkronkan data katalog dari GameTora...');
 
-        $result = $service->sync($force);
+        $result = $service->sync($force, allowEvolutionRemovals: (bool) $this->option('allow-evolution-removals'));
 
         if (! $result['success']) {
             $this->error($result['message']);

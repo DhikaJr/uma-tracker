@@ -471,16 +471,27 @@ class UmaAffinityService
         $targetCharId = $this->resolveCharId($targetId) ?? $targetId;
         $targetMeta = $this->getCharacterMetadata($targetCharId);
 
-        $ownedUserChars = UserCharacter::where('is_owned', true)
-            ->with('catalogItem')
-            ->get();
+        $catalog = UmaCatalogItem::characterCatalog()->orderBy('id')->get(['id', 'name', 'gametora_id', 'raw_data']);
+        [$ownershipByIdentity, $legacyByName, $identityByOwner] = UserCharacter::characterOwnershipIndexes($catalog);
+        $aliases = $catalog->groupBy(fn (UmaCatalogItem $item) => $item->characterIdentityKey());
+        $ownedUserChars = $ownershipByIdentity->map(function (UserCharacter $owner, string $identity) use ($aliases): array {
+            $published = $aliases[$identity]->reject(fn (UmaCatalogItem $item) => $item->isRelocatedAlias());
+
+            return [$owner, $published->firstWhere('id', $owner->uma_catalog_item_id) ?? $published->first()];
+        })->values()->concat(
+            $legacyByName->reject(fn (UserCharacter $owner) => $identityByOwner->has($owner->id))
+                ->map(fn (UserCharacter $owner) => [$owner, null])
+        );
 
         /** @var array<int, array<string, mixed>> $pool */
         $pool = [];
-        foreach ($ownedUserChars as $uc) {
-            $cid = $uc->catalogItem?->raw_data['char_id'] ?? null;
+        foreach ($ownedUserChars as [$uc, $card]) {
+            if (! $uc->is_owned) {
+                continue;
+            }
+            $cid = $card?->raw_data['char_id'] ?? null;
             if (! $cid) {
-                $cid = $this->resolveCharId($uc->name);
+                $cid = $this->resolveCharId($card?->name ?? $uc->name);
             }
 
             if (! $cid || (int) $cid === $targetCharId) {
@@ -492,12 +503,12 @@ class UmaAffinityService
                 $pool[$cid] = [
                     'char_id' => $cid,
                     'user_character_id' => $uc->id,
-                    'catalog_id' => $uc->uma_catalog_item_id,
-                    'name' => $uc->catalogItem?->raw_data['name_en'] ?? $uc->name,
-                    'name_ja' => $uc->catalogItem?->raw_data['name_jp'] ?? $uc->name,
-                    'title' => $uc->catalogItem?->raw_data['title_en_gl'] ?? ($uc->catalogItem?->raw_data['title_jp'] ?? ''),
-                    'image_url' => $uc->catalogItem?->raw_data['thumb'] ?? ($uc->catalogItem?->raw_data['image_url'] ?? null),
-                    'rarity' => $uc->current_stars ?: ($uc->base_stars ?: 3),
+                    'catalog_id' => $card?->id,
+                    'name' => $card?->raw_data['name_en'] ?? $card?->name ?? $uc->name,
+                    'name_ja' => $card?->raw_data['name_jp'] ?? $card?->name ?? $uc->name,
+                    'title' => $card?->raw_data['title_en_gl'] ?? ($card?->raw_data['title_jp'] ?? ''),
+                    'image_url' => $card?->raw_data['thumb'] ?? ($card?->raw_data['image_url'] ?? null),
+                    'rarity' => max($uc->current_stars, $uc->base_stars),
                 ];
             }
         }

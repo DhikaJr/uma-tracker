@@ -15,8 +15,10 @@ use App\Models\GachaPull;
 use App\Models\UmaCatalogItem;
 use App\Models\UserCharacter;
 use App\Models\UserSupportCard;
+use App\Support\CharacterCatalogPlan;
 use App\Support\UmaCatalog;
 use Database\Seeders\CompetitionEventSeeder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -46,7 +48,7 @@ class BackupService
             'career_runs' => CareerRun::count(),
             'circle_snapshots' => CircleSnapshot::count(),
             'app_settings' => AppSetting::count(),
-            'uma_catalog_items' => UmaCatalogItem::count(),
+            'uma_catalog_items' => UmaCatalogItem::withRelocatedAliases()->count(),
             'gacha_banners' => GachaBanner::count(),
             'user_characters' => UserCharacter::count(),
             'user_support_cards' => UserSupportCard::count(),
@@ -168,7 +170,7 @@ class BackupService
             'gacha_banners' => GachaBanner::query()->get()->toArray(),
             'gacha_pities' => GachaPity::query()->get()->toArray(),
             'gacha_pulls' => GachaPull::query()->get()->toArray(),
-            'uma_catalog_items' => UmaCatalogItem::query()->get()->toArray(),
+            'uma_catalog_items' => UmaCatalogItem::withRelocatedAliases()->get()->toArray(),
             'user_characters' => UserCharacter::query()->get()->toArray(),
             'user_support_cards' => UserSupportCard::query()->get()->toArray(),
         ];
@@ -607,30 +609,41 @@ class BackupService
         ?int $gametoraId,
         string $parentEntity,
         array $catalogIds,
-        array &$unresolvedReferences
+        array &$unresolvedReferences,
+        bool $allowNameFallback = true,
+        bool $mappedHasStableIdentity = true,
+        ?UmaCatalogItem $characterNameMatch = null,
+        bool $trustCharacterSourceForeignKey = false,
     ): ?int {
         $mapped = $catalogIds[$providedCatalogId] ?? null;
-        if ($mapped && $mapped->type === $type
-            && ($mapped->name === $entityName || ($gametoraId !== null && $mapped->gametora_id === $gametoraId))) {
-            return (int) $mapped->id;
+        $isCharacter = $type === 'character';
+        $hasExternalId = $gametoraId !== null && $gametoraId > 0;
+        $mappedExternalId = null;
+        if ($mapped && $mapped->type === $type) {
+            $mappedExternalId = $isCharacter ? $mapped->characterExternalId() : $mapped->gametora_id;
+            $matches = $isCharacter
+                ? ($hasExternalId ? $mappedExternalId === $gametoraId
+                    : ($trustCharacterSourceForeignKey || ($mappedHasStableIdentity && $mappedExternalId !== null) || ($allowNameFallback && $mapped->name === $entityName)))
+                : ($mapped->name === $entityName || ($gametoraId !== null && $mappedExternalId === $gametoraId));
+            if ($matches) {
+                return (int) $mapped->id;
+            }
         }
 
-        // 1. If gametora_id is provided, search by stable gametora_id first
-        if ($gametoraId !== null && $gametoraId > 0) {
-            $byGametora = UmaCatalogItem::where('type', $type)
-                ->where('gametora_id', $gametoraId)
-                ->first();
+        if ($hasExternalId && (! $isCharacter || $mappedExternalId === null)) {
+            $byGametora = $isCharacter
+                ? UmaCatalogItem::charactersWithExternalId($gametoraId)->first()
+                : UmaCatalogItem::where('type', $type)->where('gametora_id', $gametoraId)->first();
             if ($byGametora) {
                 return (int) $byGametora->id;
             }
         }
 
-        // 2. Exact match by name (['type', 'name'] is unique in uma_catalog_items)
-        $byName = UmaCatalogItem::where('type', $type)
-            ->where('name', $entityName)
-            ->first();
-        if ($byName) {
-            return (int) $byName->id;
+        if ($allowNameFallback && (! $isCharacter || ! $hasExternalId)) {
+            $byName = $isCharacter ? $characterNameMatch : UmaCatalogItem::where('type', $type)->where('name', $entityName)->first();
+            if ($byName) {
+                return (int) $byName->id;
+            }
         }
 
         // Identity cannot be established with certainty.
@@ -646,13 +659,359 @@ class BackupService
         return null;
     }
 
+    /** @param array<string, mixed> $row */
+    private function backupCharacterExternalId(array $row): ?int
+    {
+        $externalId = (int) ($row['gametora_id'] ?? 0);
+
+        return $externalId > 0 ? $externalId : UmaCatalogItem::gameToraCharacterId($this->backupRawData($row) ?? []);
+    }
+
+    /** @param array<string, mixed> $row */
+    private function backupRawData(array $row): ?array
+    {
+        $raw = $row['raw_data'] ?? null;
+
+        return is_string($raw) ? json_decode($raw, true) : $raw;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @param  Collection<int, UmaCatalogItem>  $catalog
+     * @param  array<string, array<string, true>>  $nameClaims
+     * @param  list<array<string, mixed>>  $conflicts
+     * @return array{list<array{row: array<string, mixed>, fullName: string, externalId: ?int, sourceRows: list<array<string, mixed>>, claimNames: list<string>}>, array<int, UmaCatalogItem>, int}
+     */
+    private function backupCharacterEntries(array $rows, Collection $catalog, array $nameClaims, array &$conflicts): array
+    {
+        $groups = collect($rows)->where('type', 'character')->groupBy(function (array $row): string {
+            $externalId = $this->backupCharacterExternalId($row);
+
+            return $externalId === null ? 'name-'.$row['name'] : 'gametora-'.$externalId;
+        });
+        $entries = [];
+        $historicalIds = [];
+        $historicalCount = 0;
+        $byName = $catalog->keyBy('name');
+        $byIdentity = $catalog->groupBy(fn (UmaCatalogItem $item) => $item->characterIdentityKey());
+        foreach ($groups->sortKeys() as $aliases) {
+            $sourceRows = $aliases->sortBy('name', SORT_STRING)->values()->all();
+            $row = array_find($sourceRows, fn (array $source) => ! UmaCatalogItem::isRelocatedAliasData($this->backupRawData($source))) ?? $sourceRows[0];
+            $fullName = $row['name'];
+            $externalId = $this->backupCharacterExternalId($row);
+            $claims = $nameClaims[$fullName] ?? [];
+            if ($externalId === null && count($claims) > 1) {
+                $conflicts[] = [
+                    'entity' => 'uma_catalog_items',
+                    'record_name' => $fullName,
+                    'reason' => 'Entri katalog lama dilewati karena namanya pernah dipakai kartu lain.',
+                ];
+
+                continue;
+            }
+            if ($externalId === null && ! $byName->has($fullName) && count($claims) === 1) {
+                $existing = $byIdentity->get(array_key_first($claims))->first();
+                if (isset($row['id'])) {
+                    $historicalIds[(int) $row['id']] = $existing;
+                }
+                $historicalCount++;
+
+                continue;
+            }
+            $claimNames = [];
+            foreach ($sourceRows as $sourceRow) {
+                $sourceRaw = $this->backupRawData($sourceRow);
+                if (! UmaCatalogItem::isRelocatedAliasData($sourceRaw)) {
+                    $claimNames[] = $sourceRow['name'];
+                }
+                array_push($claimNames, ...UmaCatalogItem::characterNameHistory($sourceRaw));
+            }
+            $claimNames = array_values(array_unique($claimNames));
+            $entries[] = compact('row', 'fullName', 'externalId', 'sourceRows', 'claimNames');
+        }
+
+        return [$entries, $historicalIds, $historicalCount];
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $sources
+     * @param  list<UmaCatalogItem>  $storedAliases
+     */
+    private function preserveBackupCharacterEvolutions(UmaCatalogItem $item, array $sources, array $storedAliases): void
+    {
+        foreach (['raw_data' => ['skills_evo', 'new'], 'skills' => ['evolve', 'id']] as $column => [$field, $id]) {
+            $data = $item->{$column} ?? [];
+            $stored = [];
+            foreach (array_reverse($storedAliases) as $alias) {
+                $stored = $this->overlayBackupEvolutionRelations($stored, $alias->getOriginal($column)[$field] ?? [], $id);
+            }
+            $stored = $this->overlayBackupEvolutionRelations($stored, $item->getOriginal($column)[$field] ?? [], $id);
+            $relations = $stored;
+            foreach (array_reverse($sources) as $sourceRow) {
+                $source = $sourceRow[$column] ?? null;
+                $source = is_string($source) ? json_decode($source, true) : $source;
+                $relations = $this->overlayBackupEvolutionRelations($relations, $source[$field] ?? [], $id);
+            }
+            $relations = $this->overlayBackupEvolutionRelations($relations, $data[$field] ?? [], $id);
+            if ($relations !== []) {
+                $data[$field] = array_values($relations);
+                $item->{$column} = $data;
+            }
+        }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $stored
+     * @return array<int, array<string, mixed>>
+     */
+    private function overlayBackupEvolutionRelations(array $stored, mixed $incoming, string $identity): array
+    {
+        if (! is_array($incoming)) {
+            return $stored;
+        }
+        foreach ($incoming as $relation) {
+            $id = filter_var($relation[$identity] ?? null, FILTER_VALIDATE_INT);
+            if ($id > 0) {
+                $stored[$id] = $this->mergeBackupEvolutionFields($stored[$id] ?? [], $relation);
+            }
+        }
+
+        return $stored;
+    }
+
+    /**
+     * @param  array<string, mixed>  $stored
+     * @param  array<string, mixed>  $incoming
+     * @return array<string, mixed>
+     */
+    private function mergeBackupEvolutionFields(array $stored, array $incoming): array
+    {
+        foreach ($incoming as $field => $value) {
+            $previous = $stored[$field] ?? null;
+            // Objects support sparse updates. Lists are ordered values, including an explicit empty list.
+            $stored[$field] = is_array($previous) && ! array_is_list($previous)
+                && is_array($value) && ! array_is_list($value)
+                ? $this->mergeBackupEvolutionFields($previous, $value)
+                : $value;
+        }
+
+        return $stored;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{catalog: list<string>, banners: list<string>}
+     */
+    private function gameToraManifestSnapshot(array $data): array
+    {
+        return [
+            'catalog' => empty($data['uma_catalog_items']) ? [] : $this->gameToraCatalogSnapshot(),
+            'banners' => empty($data['gacha_banners']) ? [] : $this->gameToraBannerSnapshot(),
+        ];
+    }
+
+    /** @return list<string> */
+    private function gameToraCatalogSnapshot(): array
+    {
+        $state = [];
+        $catalog = UmaCatalogItem::withoutGlobalScopes()->whereIn('type', ['character', 'base_uma', 'support_card']);
+        foreach ($catalog->cursor() as $item) {
+            $raw = $item->upstreamRawData();
+            $projection = [
+                'type' => $item->type,
+                'name' => $item->name,
+                'external_id' => $item->gametora_id,
+                'rarity' => $item->rarity,
+                'raw_data' => $raw,
+            ];
+            if ($item->type === 'character') {
+                $projection = $this->gameToraCharacterProjection($item, $raw, $projection);
+            } elseif ($item->type === 'support_card') {
+                $projection['details'] = $item->details;
+            }
+            $state[] = hash('sha256', serialize(GameToraSyncService::canonicalizeCatalogJson($projection)));
+        }
+        sort($state, SORT_STRING);
+
+        return $state;
+    }
+
+    /** @return list<string> */
+    private function gameToraBannerSnapshot(): array
+    {
+        $state = [];
+        foreach (GachaBanner::where('gametora_id', '>', 0)->cursor() as $banner) {
+            $projection = [
+                'gametora_id' => $banner->gametora_id,
+                'banner_type' => $banner->banner_type,
+                'category' => $banner->getRawOriginal('category'),
+                'name' => $banner->name,
+                'base_rate' => $banner->base_rate,
+                'start_date' => $banner->start_date?->toDateString(),
+                'end_date' => $banner->end_date?->toDateString(),
+                'featured_items' => $banner->featured_items ?? [],
+                'is_active' => $banner->is_active,
+            ];
+            $state[] = hash('sha256', serialize(GameToraSyncService::canonicalizeCatalogJson($projection)));
+        }
+        sort($state, SORT_STRING);
+
+        return $state;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $raw
+     * @param  array<string, mixed>  $projection
+     * @return array<string, mixed>
+     */
+    private function gameToraCharacterProjection(UmaCatalogItem $item, ?array $raw, array $projection): array
+    {
+        $externalId = $item->characterExternalId();
+        foreach (['id', 'card_id'] as $key) {
+            if ($externalId !== null && UmaCatalogItem::gameToraCharacterId([$key => $raw[$key] ?? null]) === $externalId) {
+                unset($raw[$key]);
+            }
+        }
+
+        $skills = $item->skills;
+        if (is_array($skills['evolve'] ?? null)) {
+            foreach ($skills['evolve'] as $index => $skill) {
+                if (is_array($skill)) {
+                    // Supplemental backup metadata is outside the skill fields published by sync.
+                    unset($skills['evolve'][$index]['metadata']);
+                }
+            }
+        }
+
+        if ($item->isRelocatedAlias()) {
+            // Sync refreshes evolution on these aliases without publishing their storage names.
+            return [
+                'type' => $item->type,
+                'external_id' => $externalId,
+                'raw_evolution' => $raw['skills_evo'] ?? null,
+                'evolution' => $skills['evolve'] ?? null,
+            ];
+        }
+
+        return array_replace($projection, [
+            'external_id' => $externalId,
+            'raw_data' => $raw ?: null,
+            'aptitudes' => $item->aptitudes,
+            'skills' => $skills,
+            'objectives' => $item->objectives,
+        ]);
+    }
+
+    /**
+     * @param  list<array{row: array<string, mixed>, catalog: ?UmaCatalogItem}>  $records
+     * @param  list<array<string, mixed>>  $conflicts
+     * @return list<array{row: array<string, mixed>, catalog: ?UmaCatalogItem}>
+     */
+    private function reconcileBackupCharacterOwnership(array $records, array &$conflicts): array
+    {
+        $groups = collect($records)->groupBy(fn (array $record) => $record['catalog']?->characterIdentityKey() ?? 'legacy-'.$record['row']['name'])->sortKeys();
+        $selected = [];
+        foreach ($groups as $group) {
+            $ranked = $group->sortBy(fn (array $record) => [
+                ! (bool) ($record['row']['is_owned'] ?? true),
+                -max((int) ($record['row']['current_stars'] ?? 0), (int) ($record['row']['base_stars'] ?? 3)),
+                $record['row']['name'],
+            ]);
+            $winner = $ranked->first();
+            if ($group->count() > 1) {
+                $starMaximum = $group->max(fn (array $record) => max((int) ($record['row']['current_stars'] ?? 0), (int) ($record['row']['base_stars'] ?? 0)));
+                if ($starMaximum > 0) {
+                    $winner['row']['current_stars'] = $starMaximum;
+                }
+                $ownedStates = array_column($group->pluck('row')->all(), 'is_owned');
+                if ($ownedStates !== []) {
+                    $winner['row']['is_owned'] = array_any($ownedStates, fn (mixed $owned) => (bool) $owned);
+                }
+                $conflicts[] = [
+                    'entity' => 'user_characters',
+                    'gametora_id' => $winner['catalog']?->characterExternalId(),
+                    'selected_name' => $winner['row']['name'],
+                    'record_names' => $ranked->pluck('row.name')->values()->all(),
+                    'reason' => 'Beberapa catatan backup merujuk kartu yang sama. Status dimiliki dan bintang tertinggi digabungkan dari seluruh catatan.',
+                ];
+            }
+            $selected[] = $winner;
+        }
+
+        return $selected;
+    }
+
+    /** @param array<string, mixed> $row */
+    private function backupBannerStartDate(array $row): ?string
+    {
+        return $row['start_date'] ?? (isset($row['created_at']) ? Carbon::parse($row['created_at'])->toDateString() : null);
+    }
+
+    /**
+     * @param  array<array-key, array<string, mixed>>  $legacy
+     * @param  array<array-key, array<string, mixed>>  $identified
+     * @param  list<array<string, mixed>>  $conflicts
+     * @return array<array-key, ?GachaBanner>
+     */
+    private function planLegacyBannerMatches(array $legacy, array $identified, bool $isV2, array &$conflicts): array
+    {
+        $sourceGameToraIds = [];
+        foreach ($identified as $row) {
+            $sourceGameToraIds[$row['banner_type'] ?? 'character'][(int) $row['gametora_id']] = true;
+        }
+
+        $matches = [];
+        $claims = [];
+        foreach ($legacy as $index => $row) {
+            $bannerType = $row['banner_type'] ?? 'character';
+            $query = GachaBanner::where('banner_type', $bannerType)->where('name', $row['name']);
+            if ($isV2 || array_key_exists('gametora_id', $row)) {
+                $query->where(fn ($candidate) => $candidate->whereNull('gametora_id')->orWhere('gametora_id', '<=', 0));
+            }
+            $startDate = $this->backupBannerStartDate($row);
+            if ($startDate !== null) {
+                $query->whereDate('start_date', Carbon::parse($startDate)->toDateString());
+            }
+            $candidates = $query->limit(2)->get();
+            if ($candidates->count() > 1) {
+                $conflicts[] = [
+                    'entity' => 'gacha_banners',
+                    'record_name' => $row['name'],
+                    'provided_id' => isset($row['id']) ? (int) $row['id'] : null,
+                    'reason' => 'Nama banner tanpa ID GameTora cocok dengan lebih dari satu banner.',
+                ];
+
+                continue;
+            }
+
+            $match = $candidates->first();
+            if ($match?->gametora_id > 0 && isset($sourceGameToraIds[$bannerType][$match->gametora_id])) {
+                $match = null;
+            }
+            $matches[$index] = $match;
+            if ($match !== null) {
+                $claims[$match->id][] = $index;
+            }
+        }
+
+        foreach ($claims as $indices) {
+            if (count($indices) > 1) {
+                foreach ($indices as $index) {
+                    $matches[$index] = null;
+                }
+            }
+        }
+
+        return $matches;
+    }
+
     /**
      * @param  array<int, int>  $bannerIds
      * @param  array<int, array<string, mixed>>  $unresolvedReferences
      */
     private function resolveBannerId(?int $sourceId, array $bannerIds, string $entity, string $recordName, array &$unresolvedReferences): ?int
     {
-        if (! $sourceId) {
+        if ($sourceId === null) {
             return null;
         }
 
@@ -692,6 +1051,7 @@ class BackupService
         $this->validate($backupData, $mode);
 
         $data = $backupData['data'];
+        $isV2 = $backupData['version'] === '2.0';
         $results = [
             'mode' => $mode,
             'restored' => [],
@@ -699,7 +1059,13 @@ class BackupService
             'conflicts' => [],
         ];
 
-        DB::transaction(function () use ($data, $mode, &$results) {
+        DB::transaction(function () use ($data, $mode, $isV2, &$results) {
+            $manifestSnapshot = $mode === 'merge'
+                && (! empty($data['uma_catalog_items']) || ! empty($data['gacha_banners']))
+                && AppSetting::getValue(GameToraSyncService::MANIFEST_CHECKPOINT_KEY) !== null
+                    ? $this->gameToraManifestSnapshot($data)
+                    : null;
+
             // If overwrite mode, truncate/clear tables in strict reverse dependency order
             if ($mode === 'overwrite') {
                 UserCharacter::query()->delete();
@@ -707,7 +1073,7 @@ class BackupService
                 GachaPull::query()->delete();
                 GachaPity::query()->delete();
                 GachaBanner::query()->delete();
-                UmaCatalogItem::query()->delete();
+                UmaCatalogItem::withRelocatedAliases()->delete();
                 CareerRun::query()->delete();
                 CircleSnapshot::query()->delete();
                 AppSetting::query()->delete();
@@ -718,6 +1084,9 @@ class BackupService
                 $count = 0;
                 foreach ($data['app_settings'] as $row) {
                     $key = (string) $row['key'];
+                    if ($key === GameToraSyncService::MANIFEST_CHECKPOINT_KEY) {
+                        continue;
+                    }
                     $value = $row['value'] ?? null;
 
                     AppSetting::updateOrCreate(
@@ -735,30 +1104,30 @@ class BackupService
             // 2. Gacha Banners (must be imported before Gacha Pulls & Pities due to foreign keys)
             if (isset($data['gacha_banners']) && is_array($data['gacha_banners'])) {
                 $count = 0;
-                foreach ($data['gacha_banners'] as $row) {
-                    $bannerId = isset($row['id']) ? (int) $row['id'] : null;
-
+                [$identified, $legacy] = collect($data['gacha_banners'])->partition(fn (array $row) => (int) ($row['gametora_id'] ?? 0) > 0);
+                $legacyMatches = $mode === 'merge' && $legacy->isNotEmpty()
+                    ? $this->planLegacyBannerMatches($legacy->all(), $identified->all(), $isV2, $results['conflicts'])
+                    : [];
+                foreach ($identified->union($legacy) as $index => $row) {
+                    $sourceId = isset($row['id']) ? (int) $row['id'] : null;
+                    $externalId = isset($row['gametora_id']) ? (int) $row['gametora_id'] : null;
                     $bannerType = $row['banner_type'] ?? 'character';
-                    $startDate = $row['start_date'] ?? (isset($row['created_at']) ? Carbon::parse($row['created_at'])->toDateString() : null);
+                    $startDate = $this->backupBannerStartDate($row);
                     $banner = null;
 
-                    if ($mode === 'overwrite') {
-                        $banner = ($bannerId ? GachaBanner::find($bannerId) : null)
-                            ?? GachaBanner::where('name', $row['name'])->first();
-                    } elseif (! empty($row['gametora_id'])) {
-                        $banner = GachaBanner::where('banner_type', $bannerType)->where('gametora_id', $row['gametora_id'])->first();
-                    } else {
-                        $query = GachaBanner::where('banner_type', $bannerType)->where('name', $row['name']);
-                        if ($startDate !== null) {
-                            $query->whereDate('start_date', Carbon::parse($startDate)->toDateString());
+                    if ($externalId > 0) {
+                        $banner = GachaBanner::where('banner_type', $bannerType)->where('gametora_id', $externalId)->first();
+                    } elseif ($mode === 'merge') {
+                        if (! array_key_exists($index, $legacyMatches)) {
+                            continue;
                         }
-                        $banner = $query->first();
+                        $banner = $legacyMatches[$index];
                     }
 
                     if (! $banner) {
                         $banner = new GachaBanner;
-                        if ($mode === 'overwrite' && $bannerId) {
-                            $banner->id = $bannerId;
+                        if ($mode === 'overwrite' && $sourceId && ! GachaBanner::whereKey($sourceId)->exists()) {
+                            $banner->id = $sourceId;
                         }
                     }
 
@@ -768,8 +1137,8 @@ class BackupService
 
                     $banner->fill([
                         'name' => $row['name'],
-                        'gametora_id' => isset($row['gametora_id']) ? (int) $row['gametora_id'] : null,
-                        'banner_type' => $row['banner_type'] ?? 'character',
+                        'gametora_id' => $externalId > 0 ? $externalId : ($banner->gametora_id ?? $externalId),
+                        'banner_type' => $bannerType,
                         'category' => $row['category'] ?? 'standard',
                         'base_rate' => (float) $row['base_rate'],
                         'start_date' => $startDate ?? $banner->start_date ?? now()->toDateString(),
@@ -786,8 +1155,8 @@ class BackupService
                     }
 
                     $banner->save();
-                    if ($bannerId !== null) {
-                        $bannerIds[$bannerId] = $banner->id;
+                    if ($sourceId !== null) {
+                        $bannerIds[$sourceId] = $banner->id;
                     }
                     $count++;
                 }
@@ -801,14 +1170,13 @@ class BackupService
                     $bannerType = (string) $row['banner_type'];
                     $sourceBannerId = isset($row['gacha_banner_id']) ? (int) $row['gacha_banner_id'] : null;
                     $bannerId = $this->resolveBannerId($sourceBannerId, $bannerIds, 'gacha_pities', $bannerType, $results['unresolved_references']);
+                    if ($sourceBannerId !== null && $bannerId === null) {
+                        continue;
+                    }
 
                     $pity = GachaPity::where('banner_type', $bannerType)
                         ->where('gacha_banner_id', $bannerId)
                         ->first();
-
-                    if ($mode === 'merge' && $pity && $sourceBannerId && $bannerId === null) {
-                        continue;
-                    }
 
                     if (! $pity) {
                         $pity = new GachaPity;
@@ -844,6 +1212,9 @@ class BackupService
                 foreach ($data['gacha_pulls'] as $row) {
                     $sourceBannerId = isset($row['gacha_banner_id']) ? (int) $row['gacha_banner_id'] : null;
                     $bannerId = $this->resolveBannerId($sourceBannerId, $bannerIds, 'gacha_pulls', $row['item_name'], $results['unresolved_references']);
+                    if ($sourceBannerId !== null && $bannerId === null) {
+                        continue;
+                    }
 
                     $pull = null;
                     if ($mode === 'overwrite' && isset($row['id'])) {
@@ -862,10 +1233,6 @@ class BackupService
                             $query->where('pulled_at', Carbon::parse($pulledAt)->toDateTimeString());
                         }
                         $pull = $query->first();
-
-                        if ($pull && $sourceBannerId && $bannerId === null) {
-                            continue;
-                        }
                     }
 
                     if (! $pull) {
@@ -1057,12 +1424,33 @@ class BackupService
             }
 
             // 7. Uma Catalog Items (Characters & Support Cards - full json fields: raw_data, aptitudes, skills, details)
+            $sourcesWithStableId = [];
             if (isset($data['uma_catalog_items']) && is_array($data['uma_catalog_items'])) {
                 $count = 0;
-                foreach ($data['uma_catalog_items'] as $row) {
-                    $catalogItem = null;
-                    if ($mode === 'overwrite' && isset($row['id'])) {
-                        $catalogItem = UmaCatalogItem::find($row['id']);
+                $rows = $data['uma_catalog_items'];
+                $renames = [];
+                if ($mode === 'merge') {
+                    $catalog = UmaCatalogItem::characterCatalog()->orderBy('id')->get();
+                    $nameClaims = UmaCatalogItem::characterNameClaims($catalog);
+                    [$entries, $historicalIds, $count] = $this->backupCharacterEntries($rows, $catalog, $nameClaims, $results['conflicts']);
+                    $catalogIds += $historicalIds;
+                    $plan = CharacterCatalogPlan::resolve($entries, $catalog, $nameClaims);
+                    $renames = CharacterCatalogPlan::stageRenames($plan, $catalog, $nameClaims);
+                    $writes = [...$plan, ...collect($rows)->where('type', '!=', 'character')->map(fn (array $row) => ['row' => $row])->values()->all()];
+                } else {
+                    $writes = array_map(fn (array $row) => ['row' => $row], $rows);
+                }
+
+                foreach ($writes as $write) {
+                    $row = $write['row'];
+                    $rawData = $this->backupRawData($row);
+                    $externalId = isset($row['gametora_id']) ? (int) $row['gametora_id'] : null;
+                    $catalogItem = $write['item'] ?? null;
+                    $sourceRows = $write['sourceRows'] ?? [$row];
+                    if ($catalogItem) {
+                        $externalId = $write['externalId'] ?? $catalogItem->characterExternalId();
+                    } elseif ($mode === 'overwrite' && isset($row['id'])) {
+                        $catalogItem = UmaCatalogItem::withRelocatedAliases()->find($row['id']);
                     }
                     if (! $catalogItem) {
                         $catalogItem = UmaCatalogItem::where('type', $row['type'])
@@ -1081,14 +1469,12 @@ class BackupService
                         }
                     }
 
-                    $catalogItem->fill([
+                    $attributes = [
                         'type' => $row['type'],
                         'name' => $row['name'],
                         'rarity' => $row['rarity'] ?? null,
-                        'gametora_id' => isset($row['gametora_id']) ? (int) $row['gametora_id'] : null,
-                        'raw_data' => is_string($row['raw_data'] ?? null)
-                            ? json_decode($row['raw_data'], true)
-                            : ($row['raw_data'] ?? null),
+                        'gametora_id' => $externalId,
+                        'raw_data' => $rawData,
                         'aptitudes' => is_string($row['aptitudes'] ?? null)
                             ? json_decode($row['aptitudes'], true)
                             : ($row['aptitudes'] ?? null),
@@ -1101,7 +1487,21 @@ class BackupService
                         'details' => is_string($row['details'] ?? null)
                             ? json_decode($row['details'], true)
                             : ($row['details'] ?? null),
-                    ]);
+                    ];
+                    if ($mode === 'merge') {
+                        $attributes = array_intersect_key($attributes, $row);
+                        if ($externalId !== null) {
+                            $attributes['gametora_id'] = $externalId;
+                        }
+                        if (! array_key_exists('raw_data', $attributes) && $catalogItem->isRelocatedAlias()) {
+                            $attributes['raw_data'] = $catalogItem->upstreamRawData();
+                        }
+                        $skills = $attributes['skills'] ?? null;
+                        if ($row['type'] === 'character' && is_array($skills) && ! array_is_list($skills)) {
+                            $attributes['skills'] = array_replace($catalogItem->skills ?? [], $skills);
+                        }
+                    }
+                    $catalogItem->fill($attributes);
 
                     if (isset($row['created_at'])) {
                         $catalogItem->created_at = Carbon::parse($row['created_at']);
@@ -1110,22 +1510,41 @@ class BackupService
                         $catalogItem->updated_at = Carbon::parse($row['updated_at']);
                     }
 
-                    $catalogItem->save();
-                    if (isset($row['id'])) {
-                        $catalogIds[(int) $row['id']] = $catalogItem;
+                    if (isset($write['item'])) {
+                        $this->preserveBackupCharacterEvolutions($catalogItem, $sourceRows, $write['aliases']);
+                        $catalogItem->rememberCharacterNames($write['claimNames']);
                     }
-                    $count++;
+                    $catalogItem->save();
+                    foreach ($sourceRows as $sourceRow) {
+                        if (isset($sourceRow['id'])) {
+                            $catalogIds[(int) $sourceRow['id']] = $catalogItem;
+                            if ($row['type'] === 'character' && $this->backupCharacterExternalId($sourceRow) !== null) {
+                                $sourcesWithStableId[(int) $sourceRow['id']] = true;
+                            }
+                        }
+                    }
+                    $count += count($sourceRows);
                 }
+                CharacterCatalogPlan::finishRenames($renames);
                 $results['restored']['uma_catalog_items'] = $count;
             }
 
             // 8. User Characters (with strict entity identity and foreign key validation)
             if (isset($data['user_characters']) && is_array($data['user_characters'])) {
                 $count = 0;
+                $catalog = UmaCatalogItem::characterCatalog()->get(['id', 'name', 'gametora_id', 'raw_data'])->keyBy('id');
+                $catalogByName = $catalog->keyBy('name');
+                $catalogByIdentity = $catalog->groupBy(fn (UmaCatalogItem $item) => $item->characterIdentityKey());
+                $nameClaims = UmaCatalogItem::characterNameClaims($catalog);
+                $records = [];
                 foreach ($data['user_characters'] as $row) {
                     $name = (string) $row['name'];
                     $providedCatalogId = isset($row['uma_catalog_item_id']) ? (int) $row['uma_catalog_item_id'] : null;
                     $gametoraId = isset($row['gametora_id']) ? (int) $row['gametora_id'] : null;
+                    $claims = $nameClaims[$name] ?? [];
+                    $ambiguousName = count($claims) > 1;
+                    $nameMatch = $ambiguousName ? null
+                        : ($catalogByName->get($name) ?? $catalogByIdentity->get(array_key_first($claims))?->first());
 
                     $catalogItemId = $this->resolveCatalogItem(
                         'character',
@@ -1134,14 +1553,40 @@ class BackupService
                         $gametoraId,
                         'user_characters',
                         $catalogIds,
-                        $results['unresolved_references']
+                        $results['unresolved_references'],
+                        allowNameFallback: ! $ambiguousName,
+                        mappedHasStableIdentity: isset($sourcesWithStableId[$providedCatalogId]),
+                        characterNameMatch: $nameMatch,
+                        trustCharacterSourceForeignKey: $isV2,
                     );
+                    if ($catalogItemId === null && ($gametoraId > 0 || $ambiguousName)) {
+                        $last = array_key_last($results['unresolved_references']);
+                        $results['unresolved_references'][$last]['reason'] = "Kepemilikan '{$name}' dilewati karena identitas GameTora tidak terverifikasi atau nama telah dipakai kartu lain.";
 
+                        continue;
+                    }
+
+                    $records[] = ['row' => $row, 'catalog' => $catalog->get($catalogItemId)];
+                }
+
+                if ($mode === 'merge') {
+                    $records = $this->reconcileBackupCharacterOwnership($records, $results['conflicts']);
+                }
+                [$ownershipByIdentity, $legacyByName, , $localStarsByIdentity] = UserCharacter::characterOwnershipIndexes($catalog);
+                foreach ($records as ['row' => $row, 'catalog' => $catalogItem]) {
+                    $name = (string) $row['name'];
+                    $catalogItemId = $catalogItem?->id;
                     $userChar = null;
                     if ($mode === 'overwrite' && isset($row['id'])) {
                         $userChar = UserCharacter::find($row['id']);
                     }
-                    if (! $userChar) {
+                    if ($mode === 'merge') {
+                        $userChar = $catalogItem ? $ownershipByIdentity->get($catalogItem->characterIdentityKey()) : $legacyByName->get($name);
+                        $name = $catalogItem?->name ?? $name;
+                        if ($catalogItem === null && $userChar === null && UserCharacter::where('name', $name)->exists()) {
+                            throw new InvalidArgumentException("Konflik identitas kepemilikan karakter '{$name}' pada backup.");
+                        }
+                    } elseif (! $userChar) {
                         $userChar = UserCharacter::where('name', $name)->first();
                     }
                     if (! $userChar) {
@@ -1151,14 +1596,22 @@ class BackupService
                         }
                     }
 
+                    $baseStars = (int) ($row['base_stars'] ?? $userChar->base_stars ?? 3);
+                    $currentStars = (int) ($row['current_stars'] ?? $userChar->current_stars ?? $baseStars);
+                    $isOwned = (bool) ($row['is_owned'] ?? $userChar->is_owned ?? true);
+                    if ($mode === 'merge' && $userChar->exists) {
+                        $localMaximum = $catalogItem === null ? 0 : $localStarsByIdentity->get($catalogItem->characterIdentityKey(), 0);
+                        $currentStars = max($currentStars, $userChar->current_stars, $userChar->base_stars, $baseStars, $localMaximum);
+                        $isOwned = $isOwned || $userChar->is_owned;
+                    }
                     $userChar->fill([
-                        'uma_catalog_item_id' => $catalogItemId,
-                        'name' => $name,
-                        'base_stars' => (int) ($row['base_stars'] ?? 3),
-                        'current_stars' => (int) ($row['current_stars'] ?? ($row['base_stars'] ?? 3)),
-                        'is_owned' => (bool) ($row['is_owned'] ?? true),
-                        'obtained_at' => $row['obtained_at'] ?? null,
-                        'notes' => $row['notes'] ?? null,
+                        'uma_catalog_item_id' => $mode === 'merge' ? ($userChar->uma_catalog_item_id ?? $catalogItemId) : $catalogItemId,
+                        'name' => $mode === 'merge' ? ($userChar->name ?? $name) : $name,
+                        'base_stars' => $baseStars,
+                        'current_stars' => $currentStars,
+                        'is_owned' => $isOwned,
+                        'obtained_at' => array_key_exists('obtained_at', $row) ? $row['obtained_at'] : $userChar->obtained_at,
+                        'notes' => array_key_exists('notes', $row) ? $row['notes'] : $userChar->notes,
                     ]);
 
                     if (isset($row['created_at'])) {
@@ -1168,7 +1621,7 @@ class BackupService
                         $userChar->updated_at = Carbon::parse($row['updated_at']);
                     }
 
-                    $userChar->save();
+                    $userChar->saveForCatalogCharacter($mode === 'merge' ? $catalogItem : null);
                     $count++;
                 }
                 $results['restored']['user_characters'] = $count;
@@ -1234,6 +1687,9 @@ class BackupService
             // Guarantee official Cygames competition schedule is never missing/empty within the same atomic transaction
             if (CompetitionEvent::count() === 0) {
                 (new CompetitionEventSeeder)->run();
+            }
+            if ($manifestSnapshot !== null && $manifestSnapshot !== $this->gameToraManifestSnapshot($data)) {
+                AppSetting::where('key', GameToraSyncService::MANIFEST_CHECKPOINT_KEY)->delete();
             }
         });
 

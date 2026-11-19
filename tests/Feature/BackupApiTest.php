@@ -363,9 +363,10 @@ class BackupApiTest extends TestCase
 
         $this->postJson('/api/backup/import', ['data' => $payload, 'mode' => 'merge'])
             ->assertOk()
-            ->assertJsonPath('unresolved_references.0.provided_id', $banner->id);
+            ->assertJsonPath('unresolved_references.0.provided_id', $banner->id)
+            ->assertJsonPath('summary.gacha_pulls', 0);
 
-        $this->assertDatabaseHas('gacha_pulls', ['item_name' => 'Gold Ship', 'gacha_banner_id' => null]);
+        $this->assertDatabaseMissing('gacha_pulls', ['item_name' => 'Gold Ship']);
     }
 
     public function test_import_rejects_invalid_json(): void

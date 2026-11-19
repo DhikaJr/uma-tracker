@@ -9,6 +9,7 @@ use App\Models\AppSetting;
 use App\Models\GachaBanner;
 use App\Models\UmaCatalogItem;
 use App\Support\AtomicJsonFile;
+use App\Support\CharacterCatalogPlan;
 use App\Support\CompetitionRacetrackHelper;
 use App\Support\SkillConditionTranslator;
 use App\Support\SupportCardUniqueEffectFormatter;
@@ -16,15 +17,34 @@ use App\Support\UmaCatalog;
 use App\Support\VerifiedHttp;
 use Exception;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class GameToraSyncService
 {
-    private const CATALOG_FORMAT_VERSION = '4';
+    private const CATALOG_FORMAT_VERSION = '5';
 
     private const EVOLUTION_STATUS_EFFECTS = [
         7 => 'Fast Learner (切れ者)',
     ];
+
+    private const EVOLUTION_STAT_NAMES = [
+        1 => 'Speed', 'speed' => 'Speed',
+        2 => 'Stamina', 'stamina' => 'Stamina',
+        3 => 'Power', 'power' => 'Power',
+        4 => 'Guts', 'guts' => 'Guts',
+        5 => 'Wit', 'wisdom' => 'Wit', 'wit' => 'Wit',
+    ];
+
+    private const EVOLUTION_APTITUDE_NAMES = [
+        'dist' => [0 => 'Short', 1 => 'Mile', 2 => 'Medium', 3 => 'Long', 4 => 'Dirt'],
+        'strat' => [1 => 'Runner', 2 => 'Leader', 3 => 'Betweener', 4 => 'Chaser'],
+        'trn' => [1 => 'Turf', 2 => 'Dirt'],
+    ];
+
+    private const EVOLUTION_APTITUDE_CATEGORIES = ['trn', 'dist', 'strat'];
+
+    public const MANIFEST_CHECKPOINT_KEY = 'gametora_manifest_hash';
 
     public const MANIFEST_URL = 'https://gametora.com/data/manifests/umamusume.json';
 
@@ -59,7 +79,7 @@ class GameToraSyncService
      *
      * @return array{success: bool, is_up_to_date: bool, message: string, stats?: array<string, mixed>}
      */
-    public function sync(bool $force = false): array
+    public function sync(bool $force = false, bool $allowEvolutionRemovals = false): array
     {
         try {
             // 1. Fetch manifest
@@ -92,9 +112,9 @@ class GameToraSyncService
 
             $evolutionsHash = $manifest['evolutions'] ?? null;
             $combinedHash = "{$charBaseHash}|{$charCardHash}|{$supportHash}|{$skillsHash}|{$objHash}|{$charStdHash}|{$suppStdHash}|{$specialHash}|{$charBannersHash}|{$suppBannersHash}|{$racetracksHash}|{$racetracksExtHash}|{$evolutionsHash}|".self::CATALOG_FORMAT_VERSION;
-            $savedHash = (string) AppSetting::getValue('gametora_manifest_hash', '');
+            $savedHash = (string) AppSetting::getValue(self::MANIFEST_CHECKPOINT_KEY, '');
 
-            if (! $force && $savedHash === $combinedHash && UmaCatalogItem::count() > 0 && GachaBanner::count() > 0) {
+            if (! $force && ! $allowEvolutionRemovals && $savedHash === $combinedHash && UmaCatalogItem::count() > 0 && GachaBanner::count() > 0) {
                 if (CompetitionRacetrackHelper::readRuntimeCatalog("{$racetracksHash}|{$racetracksExtHash}") === []) {
                     $this->syncRacetracks($manifest);
                 }
@@ -137,10 +157,14 @@ class GameToraSyncService
             $rawSupportCards = $supportCardsRes->json() ?? [];
 
             // 5. Fetch Skills, Evo Strings, Races, Objectives & Support Effects Datasets
-            $skillsById = $skillsHash ? $this->loadSkillsLookup($skillsHash) : [];
+            $skillsById = $skillsHash ? $this->loadSkillsLookup($skillsHash, useCache: false) : [];
             $evolutionsByCard = $evolutionsHash ? $this->loadCharacterEvolutions($evolutionsHash) : null;
-            if ($evolutionsByCard !== null && $skillsById === []) {
-                throw new Exception('Dataset skill GameTora tidak tersedia. Sinkronisasi evolusi belum dapat dilanjutkan.');
+            if ($allowEvolutionRemovals && $evolutionsByCard === null) {
+                throw new Exception('Konfirmasi penghapusan evolusi memerlukan dataset evolusi terpisah pada manifest GameTora.');
+            }
+            if ($evolutionsByCard !== null) {
+                $this->validateEvolutionSkillReferences($evolutionsByCard, $skillsById);
+                $this->validateEvolutionGraph($evolutionsByCard);
             }
             $objectivesLookup = $this->loadObjectivesLookup($objHash);
             $evoHash = $manifest['static/evo_strings'] ?? null;
@@ -149,6 +173,8 @@ class GameToraSyncService
             $racesById = $this->loadRacesLookup($racesHash);
             $effHash = $manifest['support_effects'] ?? null;
             $effectsMap = $this->loadSupportEffectsLookup($effHash);
+
+            $newCharCount = $this->syncCharacters($rawCharCards, $evolutionsByCard, $skillsById, $evoLookup, $racesById, $objectivesLookup, $allowEvolutionRemovals);
 
             // Build map of playable base names from character cards
             $playableBaseNames = [];
@@ -203,65 +229,8 @@ class GameToraSyncService
                 }
             }
 
-            // Keep existing names used by ownership records when only the display title was missing.
-            $catalogNames = UmaCatalogItem::whereIn('type', ['character', 'support_card'])
-                ->get(['type', 'name', 'gametora_id'])
-                ->groupBy('type');
-            $characterNames = $catalogNames->get('character', collect())->keyBy('name');
-            $supportNames = $catalogNames->get('support_card', collect())->keyBy('name');
-
-            // Process & Upsert Character Variants (Alt Costumes)
-            $newCharCount = 0;
-            foreach ($rawCharCards as $c) {
-                $nameEn = trim($c['name_en'] ?? '');
-                if ($nameEn === '' || in_array($nameEn, UmaCatalog::NON_PLAYABLE_NAMES, true)) {
-                    continue;
-                }
-
-                $title = UmaCatalog::gameToraTitles($c)[0] ?? '';
-                $fullName = $title !== '' ? "{$nameEn} [{$title}]" : $nameEn;
-                if ($title !== '' && isset($c['id']) && ! $characterNames->has($fullName)
-                    && $characterNames->get($nameEn)?->gametora_id === (int) $c['id']) {
-                    $fullName = $nameEn;
-                }
-                $rarity = ($c['rarity'] ?? 3) === 3 ? 'SSR' : (($c['rarity'] ?? 2) === 2 ? 'SR' : 'R');
-
-                $charId = $c['char_id'] ?? null;
-                $cardId = $c['card_id'] ?? $c['id'] ?? null;
-                if ($evolutionsByCard !== null) {
-                    $c['skills_evo'] = array_values($evolutionsByCard[(int) $cardId] ?? []);
-                }
-                $imageUrl = ($charId && $cardId)
-                    ? "https://gametora.com/images/umamusume/characters/thumb/chara_stand_{$charId}_{$cardId}.png"
-                    : null;
-                $imageFull = ($charId && $cardId)
-                    ? "https://gametora.com/images/umamusume/characters/chara_stand_{$charId}_{$cardId}.png"
-                    : null;
-                $c['image_url'] = $imageUrl;
-                $c['image_full'] = $imageFull;
-                $c['icon'] = $imageUrl;
-                $c['thumb'] = $imageUrl;
-
-                $aptitudes = $this->parseCharacterAptitudes($c);
-                $skills = $this->parseCharacterSkills($c, $skillsById, $evoLookup, $racesById);
-                $rawObjectives = $charId ? ($objectivesLookup[(int) $charId] ?? []) : [];
-                $objectives = ! empty($rawObjectives) ? $this->formatCharacterObjectives($rawObjectives, $nameEn) : null;
-
-                UmaCatalogItem::updateOrCreate(
-                    ['type' => 'character', 'name' => $fullName],
-                    [
-                        'rarity' => $rarity,
-                        'gametora_id' => $c['id'] ?? $cardId,
-                        'raw_data' => $c,
-                        'aptitudes' => $aptitudes,
-                        'skills' => $skills,
-                        'objectives' => $objectives,
-                    ]
-                );
-                $newCharCount++;
-            }
-
             // Process & Upsert Support Cards
+            $supportNames = UmaCatalogItem::where('type', 'support_card')->get(['name', 'gametora_id'])->keyBy('name');
             $newSupportCount = 0;
             foreach ($rawSupportCards as $s) {
                 $charName = trim($s['char_name'] ?? '');
@@ -322,7 +291,7 @@ class GameToraSyncService
             }
 
             // Save sync hashes and timestamp
-            AppSetting::setValue('gametora_manifest_hash', $combinedHash);
+            AppSetting::setValue(self::MANIFEST_CHECKPOINT_KEY, $combinedHash);
             AppSetting::setValue('gametora_last_synced_at', now()->toIso8601String());
 
             // Reset in-memory cache in UmaCatalog
@@ -346,6 +315,109 @@ class GameToraSyncService
                 'stats' => $this->getStatus(),
             ];
         }
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $cards
+     * @param  array<int, array<int, array<string, mixed>>>|null  $evolutionsByCard
+     * @param  array<int, array<string, mixed>>  $skillsById
+     * @param  array<int, array<int, array<string, mixed>>>  $evoLookup
+     * @param  array<int, array<string, mixed>>  $racesById
+     * @param  array<int, array<string, mixed>>  $objectivesLookup
+     */
+    private function syncCharacters(array $cards, ?array $evolutionsByCard, array $skillsById, array $evoLookup, array $racesById, array $objectivesLookup, bool $allowEvolutionRemovals): int
+    {
+        return DB::transaction(function () use ($cards, $evolutionsByCard, $skillsById, $evoLookup, $racesById, $objectivesLookup, $allowEvolutionRemovals): int {
+            $catalog = UmaCatalogItem::characterCatalog()->orderBy('id')->get();
+            $nameClaims = UmaCatalogItem::characterNameClaims($catalog);
+            $plan = CharacterCatalogPlan::resolve($this->characterSyncEntries($cards), $catalog, $nameClaims);
+            $embeddedGraph = [];
+            foreach ($plan as $index => ['card' => $card, 'externalId' => $externalId, 'item' => $item, 'aliases' => $aliases]) {
+                $cardId = $externalId ?? $item->characterExternalId();
+                $embedded = $this->indexCharacterEvolutions($card['skills_evo'] ?? [], (int) $cardId, embedded: true);
+                $evolutions = $evolutionsByCard === null
+                    ? $embedded
+                    : ($evolutionsByCard[(int) $cardId] ?? []);
+                $this->validateEvolutionCoverage($aliases, $embedded, $evolutions, (int) $cardId, $allowEvolutionRemovals);
+                if ($evolutionsByCard === null && $evolutions !== []) {
+                    $this->validateEvolutionSkillReferences([(int) $cardId => $evolutions], $skillsById);
+                    $embeddedGraph[] = $evolutions;
+                }
+                if ($evolutionsByCard !== null || array_key_exists('skills_evo', $card)) {
+                    $card['skills_evo'] = array_values($evolutions);
+                }
+                $skills = $this->parseCharacterSkills($card, $skillsById, $evoLookup, $racesById);
+                $this->validateEvolutionSemantics($aliases, $skills['evolve'], (int) $cardId);
+                $plan[$index]['card'] = $card;
+                $plan[$index]['skills'] = $skills;
+            }
+            $this->validateEvolutionGraph($embeddedGraph);
+
+            $ownershipRenames = CharacterCatalogPlan::stageRenames($plan, $catalog, $nameClaims);
+            foreach ($plan as ['card' => $card, 'name' => $name, 'fullName' => $fullName, 'externalId' => $externalId, 'item' => $item, 'aliases' => $aliases, 'skills' => $skills, 'claimNames' => $claimNames]) {
+                $charId = $card['char_id'] ?? null;
+                $cardId = $externalId ?? $item->characterExternalId();
+                $imageUrl = ($charId && $cardId)
+                    ? "https://gametora.com/images/umamusume/characters/thumb/chara_stand_{$charId}_{$cardId}.png"
+                    : null;
+                $imageFull = ($charId && $cardId)
+                    ? "https://gametora.com/images/umamusume/characters/chara_stand_{$charId}_{$cardId}.png"
+                    : null;
+                $card['image_url'] = $imageUrl;
+                $card['image_full'] = $imageFull;
+                $card['icon'] = $imageUrl;
+                $card['thumb'] = $imageUrl;
+
+                $rawObjectives = $charId ? ($objectivesLookup[(int) $charId] ?? []) : [];
+                $item->fill([
+                    'type' => 'character',
+                    'name' => $fullName,
+                    'rarity' => ($card['rarity'] ?? 3) === 3 ? 'SSR' : (($card['rarity'] ?? 2) === 2 ? 'SR' : 'R'),
+                    'gametora_id' => $externalId ?? $item->characterExternalId(),
+                    'raw_data' => $card,
+                    'aptitudes' => $this->parseCharacterAptitudes($card),
+                    'skills' => $skills,
+                    'objectives' => $rawObjectives !== [] ? $this->formatCharacterObjectives($rawObjectives, $name) : null,
+                ]);
+                $item->rememberCharacterNames($claimNames);
+                $item->save();
+
+                if ($evolutionsByCard !== null || $skills['evolve'] !== []) {
+                    foreach ($aliases as $alias) {
+                        if (! $alias->is($item)) {
+                            $alias->skills = array_replace($alias->skills ?? [], ['evolve' => $item->skills['evolve']]);
+                            $alias->raw_data = array_replace($alias->raw_data ?? [], ['skills_evo' => $card['skills_evo'] ?? []]);
+                            $alias->save();
+                        }
+                    }
+                }
+            }
+
+            CharacterCatalogPlan::finishRenames($ownershipRenames);
+
+            return count($plan);
+        });
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $cards
+     * @return list<array{card: array<string, mixed>, name: string, fullName: string, externalId: ?int}>
+     */
+    private function characterSyncEntries(array $cards): array
+    {
+        $entries = [];
+        foreach ($cards as $card) {
+            $name = trim($card['name_en'] ?? '');
+            if ($name === '' || in_array($name, UmaCatalog::NON_PLAYABLE_NAMES, true)) {
+                continue;
+            }
+            $title = UmaCatalog::gameToraTitles($card)[0] ?? '';
+            $fullName = $title !== '' ? "{$name} [{$title}]" : $name;
+            $externalId = UmaCatalogItem::gameToraCharacterId($card, rejectConflict: true);
+            $entries[] = compact('card', 'name', 'fullName', 'externalId');
+        }
+
+        return $entries;
     }
 
     /**
@@ -472,7 +544,7 @@ class GameToraSyncService
         // 1. Build lookup tables for character & support names
         $charCards = [];
         foreach ($rawCharCards as $c) {
-            $cardId = $c['card_id'] ?? null;
+            $cardId = $c['card_id'] ?? UmaCatalogItem::gameToraCharacterId($c);
             if ($cardId) {
                 $title = UmaCatalog::bannerTitle(UmaCatalog::gameToraTitles($c)[0] ?? '');
                 $charCards[$cardId] = $c['name_en'].($title !== '' ? " [{$title}]" : '');
@@ -957,7 +1029,7 @@ class GameToraSyncService
      *
      * @return array<int, array<string, mixed>>
      */
-    public function loadSkillsLookup(?string $skillsHash = null, bool $reportFailure = false): array
+    public function loadSkillsLookup(?string $skillsHash = null, bool $reportFailure = false, bool $useCache = true): array
     {
         try {
             if ($skillsHash === null) {
@@ -967,7 +1039,7 @@ class GameToraSyncService
                 }
 
                 // Installations synced before the local snapshot was introduced retain the manifest hash.
-                $savedManifest = (string) AppSetting::getValue('gametora_manifest_hash', '');
+                $savedManifest = (string) AppSetting::getValue(self::MANIFEST_CHECKPOINT_KEY, '');
                 $savedHash = explode('|', $savedManifest)[3] ?? '';
                 if ($savedHash !== '' && preg_match('/^[a-zA-Z0-9_-]+$/D', $savedHash)) {
                     $local = $this->readSkillSnapshot(storage_path("app/gametora_skills_{$savedHash}.json"));
@@ -985,14 +1057,14 @@ class GameToraSyncService
             }
 
             $cacheFile = storage_path("app/gametora_skills_{$skillsHash}.json");
-            $cached = $this->readSkillSnapshot($cacheFile);
+            $cached = $useCache ? $this->readSkillSnapshot($cacheFile) : [];
             if ($cached !== []) {
                 return $cached;
             }
 
             $response = VerifiedHttp::request()->timeout(45)->get(self::DATA_BASE_URL."/skills.{$skillsHash}.json");
             $lookup = $response->successful() ? $this->indexSkillSnapshot($response->json()) : [];
-            if ($lookup !== []) {
+            if ($useCache && $lookup !== []) {
                 try {
                     AtomicJsonFile::write($cacheFile, array_values($lookup));
                 } catch (\Throwable $e) {
@@ -1034,11 +1106,9 @@ class GameToraSyncService
                 continue;
             }
 
-            foreach ($row['evolutions'] ?? [] as $evolution) {
-                $skillId = (int) ($evolution['new'] ?? 0);
-                if ($skillId > 0 && in_array('ja', $evolution['servers'] ?? [], true)) {
-                    $lookup[$cardId][$skillId] = $evolution;
-                }
+            $relations = $this->indexCharacterEvolutions($row['evolutions'] ?? [], $cardId, $lookup[$cardId] ?? []);
+            if ($relations !== []) {
+                $lookup[$cardId] = $relations;
             }
         }
 
@@ -1047,6 +1117,324 @@ class GameToraSyncService
         }
 
         return $lookup;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $indexed
+     * @return array<int, array<string, mixed>>
+     */
+    private function indexCharacterEvolutions(mixed $rows, int $cardId, array $indexed = [], bool $embedded = false): array
+    {
+        if (! is_array($rows) || ! array_is_list($rows)) {
+            throw new Exception("Dataset evolusi GameTora memuat daftar relasi yang tidak valid untuk kartu {$cardId}.");
+        }
+        foreach ($rows as $evolution) {
+            if (! is_array($evolution)) {
+                throw new Exception("Dataset evolusi GameTora memuat relasi yang tidak valid untuk kartu {$cardId}.");
+            }
+            $servers = array_key_exists('servers', $evolution) ? $evolution['servers'] : ($embedded ? ['ja'] : []);
+            if (! is_array($servers) || ! array_is_list($servers)
+                || array_any($servers, fn (mixed $server) => ! is_string($server) || $server === '')) {
+                throw new Exception("Dataset evolusi GameTora memuat daftar server yang tidak valid untuk kartu {$cardId}.");
+            }
+            if (! in_array('ja', $servers, true)) {
+                continue;
+            }
+            $skillId = filter_var($evolution['new'] ?? null, FILTER_VALIDATE_INT);
+            $baseId = filter_var($evolution['old'] ?? null, FILTER_VALIDATE_INT);
+            if (! $skillId || $skillId < 0 || ! $baseId || $baseId < 0) {
+                throw new Exception("Dataset evolusi GameTora memuat ID skill yang tidak valid untuk kartu {$cardId}.");
+            }
+            if (isset($evolution['conditions'])) {
+                $this->validateEvolutionRequirements($evolution['conditions'], $cardId, $skillId);
+            }
+            $evolution['new'] = $skillId;
+            $evolution['old'] = $baseId;
+            // Servers identify availability by membership, independent of payload order.
+            $servers = array_values(array_unique($servers));
+            sort($servers, SORT_STRING);
+            $evolution['servers'] = $servers;
+            $evolution = self::canonicalizeCatalogJson($evolution);
+            if (isset($indexed[$skillId]) && $indexed[$skillId] !== $evolution) {
+                throw new Exception("Dataset evolusi GameTora memuat relasi yang bertentangan untuk kartu {$cardId} dan skill {$skillId}.");
+            }
+            $indexed[$skillId] ??= $evolution;
+        }
+
+        return $indexed;
+    }
+
+    public static function canonicalizeCatalogJson(array $value): array
+    {
+        if (! array_is_list($value)) {
+            ksort($value, SORT_STRING);
+        }
+        foreach ($value as $key => $part) {
+            if (is_array($part)) {
+                $value[$key] = self::canonicalizeCatalogJson($part);
+            }
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param  array<int, array<int, array<string, mixed>>>  $evolutionsByCard
+     * @param  array<int, array<string, mixed>>  $skillsById
+     */
+    private function validateEvolutionSkillReferences(array $evolutionsByCard, array $skillsById): void
+    {
+        foreach ($evolutionsByCard as $cardId => $evolutions) {
+            foreach ($evolutions as $newId => $evolution) {
+                $oldId = (int) ($evolution['old'] ?? 0);
+                if ($oldId <= 0 || ! isset($skillsById[$newId], $skillsById[$oldId])) {
+                    throw new Exception("Dataset evolusi GameTora merujuk ke skill yang tidak tersedia untuk kartu {$cardId} ({$oldId} → {$newId}).");
+                }
+                if (! isset($evolution['conditions'])) {
+                    $this->validateEvolutionRequirements($skillsById[$newId]['evo_cond'] ?? [], $cardId, $newId);
+                }
+
+                $groups = $skillsById[$newId]['condition_groups'] ?? [];
+                if (! is_array($groups) || ! array_is_list($groups)) {
+                    throw new Exception("Dataset skill GameTora memuat daftar grup aktivasi yang tidak valid untuk skill evolusi {$newId}.");
+                }
+                foreach ($groups as $group) {
+                    $effects = $group['effects'] ?? null;
+                    if (! is_array($group) || ! is_string($group['condition'] ?? null) || ! is_numeric($group['base_time'] ?? null)
+                        || ! is_array($effects) || ! array_is_list($effects)) {
+                        throw new Exception("Dataset skill GameTora memuat grup aktivasi yang tidak lengkap untuk skill evolusi {$newId}.");
+                    }
+                    foreach ($effects as $effect) {
+                        if (! is_array($effect) || ! is_numeric($effect['type'] ?? null) || ! is_numeric($effect['value'] ?? null)) {
+                            throw new Exception("Dataset skill GameTora memuat efek yang tidak lengkap untuk skill evolusi {$newId}.");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** @param array<int, array<int, array<string, mixed>>> $relationsByCard */
+    private function validateEvolutionGraph(array $relationsByCard): void
+    {
+        $targets = [];
+        $incomingCounts = [];
+        foreach ($relationsByCard as $relations) {
+            foreach ($relations as $relation) {
+                $source = $relation['old'];
+                $target = $relation['new'];
+                if (isset($targets[$source][$target])) {
+                    continue;
+                }
+                $targets[$source][$target] = true;
+                $incomingCounts[$source] ??= 0;
+                $incomingCounts[$target] = ($incomingCounts[$target] ?? 0) + 1;
+            }
+        }
+
+        $ready = array_keys(array_filter($incomingCounts, fn (int $count) => $count === 0));
+        for ($index = 0; $index < count($ready); $index++) {
+            foreach ($targets[$ready[$index]] ?? [] as $target => $_) {
+                if (--$incomingCounts[$target] === 0) {
+                    $ready[] = $target;
+                }
+            }
+        }
+
+        if (count($ready) !== count($incomingCounts)) {
+            throw new Exception('Dataset evolusi GameTora memuat siklus pada relasi antar-skill.');
+        }
+    }
+
+    private function validateEvolutionRequirements(mixed $requirements, int $cardId, int $skillId): void
+    {
+        $error = "Dataset evolusi GameTora memuat syarat yang tidak valid untuk kartu {$cardId} dan skill {$skillId}.";
+        if (! is_array($requirements) || ! array_is_list($requirements)) {
+            throw new Exception($error);
+        }
+        foreach ($requirements as $group) {
+            if (! is_array($group) || ! array_is_list($group)) {
+                throw new Exception($error);
+            }
+            foreach ($group as $condition) {
+                if (is_string($condition) && trim($condition) !== '') {
+                    continue;
+                }
+                if (! is_array($condition) || ! array_is_list($condition)
+                    || ! is_string($condition[0] ?? null) || $condition[0] === '') {
+                    throw new Exception($error);
+                }
+                $operands = match ($condition[0]) {
+                    'stat' => ['stat', 'uint'],
+                    'a_skill' => ['aptitude', 'aptitude_code', '?uint'],
+                    'e_skill' => ['text', '?uint'],
+                    'fan', 'cond', 'cond_e' => ['uint'],
+                    'skill' => ['id'],
+                    'race_w2', 'win', 'participate' => ['race'],
+                    'race_pn' => ['race', '?uint'],
+                    'win_all' => ['races'],
+                    'dt_gn_race_w' => ['distance_or_surface', 'aptitude_code', '?uint', '?uint'],
+                    'dt_race_w' => ['distance_or_surface', 'aptitude_code', '?uint'],
+                    'gn_race_w', 'any_race_pn' => ['?uint', '?uint'],
+                    'out_c', 'out_s', 'sc_out', 'rest' => ['?uint'],
+                    's_gn_race_w' => ['?strategy_code', '?uint', '?uint'],
+                    's_gn2_race_w' => ['?strategy_code', '?uint', '?uint', '?uint'],
+                    'rt_race_w' => ['id', '?uint'],
+                    'l_gn_race_w' => ['id', '?uint', '?uint'],
+                    's_fn_dt_gn_race_w' => ['?strategy_code', '?uint', '?unused', 'distance_code', '?uint', '?uint'],
+                    's_fn_gn_race_w' => ['?strategy_code', '?uint', '?uint', '?uint'],
+                    's_dt_gn_race_w' => ['?strategy_code', '?unused', 'distance_code', '?uint', '?uint'],
+                    'gn_race_pn' => ['?uint', '?uint', '?uint'],
+                    'y_gn_race_w' => ['?label', '?uint', '?uint'],
+                    'tc_gn_race_w' => ['?unused', '?uint', '?uint'],
+                    'ev', 'ev_cn_on', 'ev_ac_on', 'evn', 'p_ev_s', 'ev_trc_t' => ['text'],
+                    'mo_ev' => ['?unused', 'text'],
+                    'e_ev' => ($condition[1] ?? null) === 'mo' ? ['text', 'uint'] : ['text'],
+                    default => [],
+                };
+                $aptitudeCategory = self::evolutionAptitudeCategory($condition[1] ?? null);
+                foreach ($operands as $offset => $domain) {
+                    $position = $offset + 1;
+                    $optional = str_starts_with($domain, '?');
+                    if ($optional && ! array_key_exists($position, $condition)) {
+                        continue;
+                    }
+                    if (! $this->validEvolutionOperand(ltrim($domain, '?'), $condition[$position] ?? null, $aptitudeCategory)) {
+                        throw new Exception($error);
+                    }
+                }
+            }
+        }
+    }
+
+    private function validEvolutionOperand(string $domain, mixed $value, string $aptitudeCategory): bool
+    {
+        return match ($domain) {
+            'uint' => $this->isEvolutionInteger($value),
+            'id' => $this->isEvolutionInteger($value) && (int) $value > 0,
+            'stat' => (is_int($value) || is_string($value)) && isset(self::EVOLUTION_STAT_NAMES[$value]),
+            'aptitude' => isset(self::EVOLUTION_APTITUDE_NAMES[$aptitudeCategory]),
+            'distance_or_surface' => in_array($aptitudeCategory, ['dist', 'trn'], true),
+            'aptitude_code' => $this->isEvolutionInteger($value) && isset(self::EVOLUTION_APTITUDE_NAMES[$aptitudeCategory][(int) $value]),
+            'distance_code' => $this->isEvolutionInteger($value) && isset(self::EVOLUTION_APTITUDE_NAMES['dist'][(int) $value]),
+            'strategy_code' => $this->isEvolutionInteger($value) && isset(self::EVOLUTION_APTITUDE_NAMES['strat'][(int) $value]),
+            'text' => is_string($value) && trim($value) !== '',
+            'label' => is_int($value) || (is_string($value) && trim($value) !== ''),
+            'race' => $this->isEvolutionRaceReference($value),
+            'races' => is_array($value)
+                ? array_is_list($value) && $value !== [] && array_all($value, $this->isEvolutionRaceReference(...))
+                : $this->isEvolutionRaceReference($value),
+            'unused' => true,
+        };
+    }
+
+    private static function evolutionAptitudeCategory(mixed $value): string
+    {
+        if (is_int($value)) {
+            return self::EVOLUTION_APTITUDE_CATEGORIES[$value] ?? '';
+        }
+
+        return is_string($value) ? $value : '';
+    }
+
+    private function isEvolutionInteger(mixed $value): bool
+    {
+        return (is_int($value) || (is_string($value) && preg_match('/\A(?:0|[1-9][0-9]*)\z/', $value)))
+            && filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]) !== false;
+    }
+
+    private function isEvolutionRaceReference(mixed $value): bool
+    {
+        if (! is_int($value) && ! is_string($value)) {
+            return false;
+        }
+
+        $id = explode('|', (string) $value, 2)[0];
+
+        return $this->isEvolutionInteger($id) && (int) $id > 0;
+    }
+
+    /**
+     * @param  list<UmaCatalogItem>  $aliases
+     * @param  array<int, array<string, mixed>>  $embedded
+     * @param  array<int, array<string, mixed>>  $evolutions
+     */
+    private function validateEvolutionCoverage(array $aliases, array $embedded, array $evolutions, int $cardId, bool $allowRemovals): void
+    {
+        $expected = [];
+        $embeddedSources = [$embedded];
+        if (! $allowRemovals) {
+            foreach ($aliases as $alias) {
+                $expected = array_merge($expected, array_column($alias->skills['evolve'] ?? [], 'id'));
+                $embeddedSources[] = $alias->raw_data['skills_evo'] ?? [];
+            }
+        }
+        foreach ($embeddedSources as $source) {
+            foreach ($source as $relation) {
+                if (in_array('ja', $relation['servers'] ?? ['ja'], true)) {
+                    $expected[] = $relation['new'] ?? null;
+                }
+            }
+        }
+
+        foreach ($expected as $id) {
+            if ((int) $id > 0 && ! isset($evolutions[(int) $id])) {
+                throw new Exception("Dataset evolusi GameTora tidak memuat skill {$id} yang sudah dikenal untuk kartu {$cardId}.");
+            }
+        }
+    }
+
+    /**
+     * @param  list<UmaCatalogItem>  $aliases
+     * @param  list<array<string, mixed>>  $evolvedSkills
+     */
+    private function validateEvolutionSemantics(array $aliases, array $evolvedSkills, int $cardId): void
+    {
+        $incoming = array_column($evolvedSkills, null, 'id');
+        foreach ($aliases as $alias) {
+            foreach ($alias->raw_data['skills_evo'] ?? [] as $relation) {
+                $id = (int) ($relation['new'] ?? 0);
+                if (isset($incoming[$id]) && in_array('ja', $relation['servers'] ?? ['ja'], true)) {
+                    $this->requireEvolutionValue($relation['conditions'] ?? null, $incoming[$id]['evolution_conditions'], 'syarat evolusi', $cardId, $id);
+                }
+            }
+
+            foreach ($alias->skills['evolve'] ?? [] as $previous) {
+                $id = (int) ($previous['id'] ?? 0);
+                if (! isset($incoming[$id])) {
+                    continue;
+                }
+
+                $current = $incoming[$id];
+                $this->requireEvolutionValue(
+                    $previous['evolution_conditions'] ?? $previous['conditions'] ?? null,
+                    $current['evolution_conditions'],
+                    'syarat evolusi',
+                    $cardId,
+                    $id,
+                );
+                foreach (['effects' => 'efek', 'condition_groups' => 'grup aktivasi', 'condition' => 'kondisi aktivasi',
+                    'precondition' => 'prasyarat aktivasi', 'activation' => 'jenis aktivasi', 'description' => 'deskripsi'] as $field => $label) {
+                    $this->requireEvolutionValue($previous[$field] ?? null, $current[$field] ?? null, $label, $cardId, $id);
+                }
+            }
+        }
+    }
+
+    private function requireEvolutionValue(mixed $previous, mixed $current, string $field, int $cardId, int $skillId): void
+    {
+        if ($this->hasEvolutionValue($previous) && ! $this->hasEvolutionValue($current)) {
+            throw new Exception("Dataset evolusi GameTora kehilangan {$field} untuk kartu {$cardId} dan skill {$skillId}.");
+        }
+    }
+
+    private function hasEvolutionValue(mixed $value): bool
+    {
+        if (is_array($value)) {
+            return array_any($value, fn (mixed $part) => $this->hasEvolutionValue($part));
+        }
+
+        return $value !== null && (! is_string($value) || trim($value) !== '');
     }
 
     private function readSkillSnapshot(string $path): array
@@ -1219,30 +1607,21 @@ class GameToraSyncService
         $type = (string) ($c[0] ?? '');
         switch ($type) {
             case 'stat':
-                $statNames = [
-                    1 => 'Speed', 'speed' => 'Speed',
-                    2 => 'Stamina', 'stamina' => 'Stamina',
-                    3 => 'Power', 'power' => 'Power',
-                    4 => 'Guts', 'guts' => 'Guts',
-                    5 => 'Wit', 'wisdom' => 'Wit', 'wit' => 'Wit',
-                ];
-                $statName = $statNames[$c[1] ?? ''] ?? 'Unknown Stat';
-                $num = $c[2] ?? 0;
+                $statName = self::EVOLUTION_STAT_NAMES[$c[1]];
+                $num = $c[2];
 
                 return "Have at least {$num} {$statName}";
 
             case 'a_skill':
-                $cat = $c[1] ?? '';
+                $cat = self::evolutionAptitudeCategory($c[1] ?? null);
                 $id = (int) ($c[2] ?? 0);
                 $amount = (int) ($c[3] ?? 1);
-                $aptName = '???';
-                if ($cat === 'dist' || $cat === 1) {
-                    $aptName = [0 => 'Short', 1 => 'Mile', 2 => 'Medium', 3 => 'Long', 4 => 'Dirt'][$id] ?? 'Unknown Distance';
-                } elseif ($cat === 'strat' || $cat === 2) {
-                    $aptName = [1 => 'Runner', 2 => 'Leader', 3 => 'Betweener', 4 => 'Chaser'][$id] ?? 'Unknown Strategy';
-                } elseif ($cat === 'trn' || $cat === 0) {
-                    $aptName = [1 => 'Turf', 2 => 'Dirt'][$id] ?? 'Unknown Surface';
-                }
+                $aptName = self::EVOLUTION_APTITUDE_NAMES[$cat][$id] ?? match ($cat) {
+                    'dist' => 'Unknown Distance',
+                    'strat' => 'Unknown Strategy',
+                    'trn' => 'Unknown Surface',
+                    default => '???',
+                };
 
                 return $amount === 1
                     ? "Get any skill for {$aptName} aptitude"
@@ -1264,7 +1643,7 @@ class GameToraSyncService
                     : "Get at least {$amount} {$sTypeName} skills";
 
             case 'fan':
-                $fans = number_format((int) ($c[1] ?? 0));
+                $fans = number_format((int) $c[1]);
 
                 return "Have at least {$fans} fans";
 
@@ -1303,16 +1682,11 @@ class GameToraSyncService
                 return "Participate in the {$raceName}";
 
             case 'dt_gn_race_w':
-                $cat = $c[1] ?? '';
+                $cat = self::evolutionAptitudeCategory($c[1] ?? null);
                 $id = (int) ($c[2] ?? 0);
                 $grade = ($c[3] ?? '') == 100 ? 'G1' : (($c[3] ?? '') == 200 ? 'G2' : (($c[3] ?? '') == 300 ? 'G3' : 'graded'));
                 $count = (int) ($c[4] ?? 1);
-                $dtName = '';
-                if ($cat === 'dist' || $cat === 1) {
-                    $dtName = [0 => 'Short', 1 => 'Mile', 2 => 'Medium', 3 => 'Long', 4 => 'Dirt'][$id] ?? '';
-                } elseif ($cat === 'trn' || $cat === 0) {
-                    $dtName = [1 => 'Turf', 2 => 'Dirt'][$id] ?? '';
-                }
+                $dtName = self::EVOLUTION_APTITUDE_NAMES[$cat][$id] ?? '';
 
                 return $count === 1
                     ? "Win any {$grade} {$dtName} race"
@@ -1327,7 +1701,7 @@ class GameToraSyncService
                     : "Win {$count} {$grade} races";
 
             case 's_gn_race_w':
-                $strat = [1 => 'Runner', 2 => 'Leader', 3 => 'Betweener', 4 => 'Chaser'][(int) ($c[1] ?? 0)] ?? 'strategy';
+                $strat = self::EVOLUTION_APTITUDE_NAMES['strat'][(int) ($c[1] ?? 0)] ?? 'strategy';
                 $grade = ($c[2] ?? '') == 100 ? 'G1' : (($c[2] ?? '') == 200 ? 'G2' : (($c[2] ?? '') == 300 ? 'G3' : 'graded'));
                 $count = (int) ($c[3] ?? 1);
 
@@ -1336,7 +1710,7 @@ class GameToraSyncService
                     : "Win {$count} {$grade} races as {$strat}";
 
             case 's_gn2_race_w':
-                $strat = [1 => 'Runner', 2 => 'Leader', 3 => 'Betweener', 4 => 'Chaser'][(int) ($c[1] ?? 0)] ?? 'strategy';
+                $strat = self::EVOLUTION_APTITUDE_NAMES['strat'][(int) ($c[1] ?? 0)] ?? 'strategy';
                 $g1 = ($c[2] ?? '') == 100 ? 'G1' : (($c[2] ?? '') == 200 ? 'G2' : 'graded');
                 $g2 = ($c[3] ?? '') == 100 ? 'G1' : (($c[3] ?? '') == 200 ? 'G2' : 'graded');
                 $count = (int) ($c[4] ?? 1);
@@ -1346,10 +1720,10 @@ class GameToraSyncService
                     : "Win {$count} {$g1} or {$g2} races as {$strat}";
 
             case 'dt_race_w':
-                $cat = $c[1] ?? '';
+                $cat = self::evolutionAptitudeCategory($c[1] ?? null);
                 $id = (int) ($c[2] ?? 0);
                 $count = (int) ($c[3] ?? 1);
-                $dtName = [0 => 'Short', 1 => 'Mile', 2 => 'Medium', 3 => 'Long', 4 => 'Dirt'][$id] ?? '';
+                $dtName = self::EVOLUTION_APTITUDE_NAMES[$cat][$id] ?? '';
 
                 return $count === 1
                     ? "Win any {$dtName} race"
@@ -1380,10 +1754,10 @@ class GameToraSyncService
                     : "Win {$count} {$len}m {$grade} races";
 
             case 's_fn_dt_gn_race_w':
-                $strat = [1 => 'Runner', 2 => 'Leader', 3 => 'Betweener', 4 => 'Chaser'][(int) ($c[1] ?? 0)] ?? 'strategy';
+                $strat = self::EVOLUTION_APTITUDE_NAMES['strat'][(int) ($c[1] ?? 0)] ?? 'strategy';
                 $pop = $c[2] ?? 1;
                 $id = (int) ($c[4] ?? 0);
-                $dtName = [0 => 'Short', 1 => 'Mile', 2 => 'Medium', 3 => 'Long', 4 => 'Dirt'][$id] ?? '';
+                $dtName = self::EVOLUTION_APTITUDE_NAMES['dist'][$id] ?? '';
                 $grade = ($c[5] ?? '') == 100 ? 'G1' : 'graded';
                 $count = (int) ($c[6] ?? 1);
 
@@ -1392,7 +1766,7 @@ class GameToraSyncService
                     : "Win {$count} {$grade} {$dtName} races as {$strat} being #{$pop} favorite";
 
             case 's_fn_gn_race_w':
-                $strat = [1 => 'Runner', 2 => 'Leader', 3 => 'Betweener', 4 => 'Chaser'][(int) ($c[1] ?? 0)] ?? 'strategy';
+                $strat = self::EVOLUTION_APTITUDE_NAMES['strat'][(int) ($c[1] ?? 0)] ?? 'strategy';
                 $pop = $c[2] ?? 1;
                 $grade = ($c[3] ?? '') == 100 ? 'G1' : 'graded';
                 $count = (int) ($c[4] ?? 1);
@@ -1402,9 +1776,9 @@ class GameToraSyncService
                     : "Win {$count} {$grade} races as {$strat} being #{$pop} favorite";
 
             case 's_dt_gn_race_w':
-                $strat = [1 => 'Runner', 2 => 'Leader', 3 => 'Betweener', 4 => 'Chaser'][(int) ($c[1] ?? 0)] ?? 'strategy';
+                $strat = self::EVOLUTION_APTITUDE_NAMES['strat'][(int) ($c[1] ?? 0)] ?? 'strategy';
                 $id = (int) ($c[3] ?? 0);
-                $dtName = [0 => 'Short', 1 => 'Mile', 2 => 'Medium', 3 => 'Long', 4 => 'Dirt'][$id] ?? '';
+                $dtName = self::EVOLUTION_APTITUDE_NAMES['dist'][$id] ?? '';
                 $grade = ($c[4] ?? '') == 100 ? 'G1' : 'graded';
                 $count = (int) ($c[5] ?? 1);
 

@@ -112,7 +112,7 @@ class CygamesNewsSyncTest extends TestCase
             'character-cards' => 'cards', 'characters' => 'characters', 'support-cards' => 'support',
             'racetracks' => 'tracks', 'racetracks_extended' => 'extended',
         ];
-        AppSetting::setValue('gametora_manifest_hash', implode('|', ['characters', 'cards', 'support', '', '', '', '', '', '', '', 'tracks', 'extended', '', '4']));
+        AppSetting::setValue('gametora_manifest_hash', implode('|', ['characters', 'cards', 'support', '', '', '', '', '', '', '', 'tracks', 'extended', '', '5']));
         GachaBanner::create(['name' => 'Example', 'start_date' => '2026-11-13']);
         Http::fake([
             GameToraSyncService::MANIFEST_URL => Http::response($manifest),
@@ -657,6 +657,84 @@ class CygamesNewsSyncTest extends TestCase
             ]);
         $this->getJson('/api/collection/skill-sources?q=Behold&rarity=evolved')->assertOk()
             ->assertJsonPath('skills.0.characters.0.catalog_id', $character->id);
+    }
+
+    public function test_sync_rejects_partial_evolution_data_and_retries_the_same_manifest(): void
+    {
+        $oldSkills = ['evolve' => [[
+            'id' => 100903211, 'name_en' => 'Behold the Scarlet Gale',
+            'evolution_conditions' => [['Have at least 800 Power']],
+        ]]];
+        $character = UmaCatalogItem::create([
+            'type' => 'character',
+            'name' => 'Daiwa Scarlet [Old Title]',
+            'gametora_id' => 100903,
+            'skills' => $oldSkills,
+        ]);
+        AppSetting::setValue('gametora_manifest_hash', 'previous-manifest');
+        AppSetting::setValue('gametora_last_synced_at', '2026-11-16T00:00:00+00:00');
+
+        $daiwaEvolution = ['new' => 100903211, 'old' => 203381, 'servers' => ['ja'], 'conditions' => [[['stat', 3, 800]]]];
+        $creekEvolution = ['new' => 102902111, 'old' => 203381, 'servers' => ['ja'], 'conditions' => [[['stat', 2, 600]]]];
+        $daiwaRow = ['card_id' => 100903, 'evolutions' => [$daiwaEvolution]];
+        $creekRow = ['card_id' => 102902, 'evolutions' => [$creekEvolution]];
+        $partialSkills = [
+            ['id' => 203381, 'enname' => 'Base Skill', 'rarity' => 2],
+            ['id' => 100903211, 'enname' => 'Behold the Scarlet Gale', 'rarity' => 6],
+        ];
+        Http::fake([
+            GameToraSyncService::MANIFEST_URL => Http::response([
+                'characters' => 'bases',
+                'character-cards' => 'cards',
+                'support-cards' => 'supports',
+                'skills' => 'skills',
+                'evolutions' => 'evolutions-test',
+            ]),
+            GameToraSyncService::DATA_BASE_URL.'/characters.bases.json' => Http::response([]),
+            GameToraSyncService::DATA_BASE_URL.'/character-cards.cards.json' => Http::response([
+                ['card_id' => 100903, 'name_en' => 'Daiwa Scarlet', 'title_en' => 'Scarlet Gale'],
+                ['card_id' => 102902, 'name_en' => 'Super Creek', 'skills_evo' => [$creekEvolution]],
+            ]),
+            GameToraSyncService::DATA_BASE_URL.'/support-cards.supports.json' => Http::response([]),
+            GameToraSyncService::DATA_BASE_URL.'/skills.skills.json' => Http::sequence()
+                ->push($partialSkills)
+                ->whenEmpty(Http::response([...$partialSkills, ['id' => 102902111, 'enname' => 'Creek Evolution', 'rarity' => 6]])),
+            GameToraSyncService::DATA_BASE_URL.'/evolutions.evolutions-test.json' => Http::sequence()
+                ->push([$daiwaRow, $creekRow])
+                ->push([$daiwaRow])
+                ->push([$creekRow])
+                ->push([$daiwaRow, $creekRow]),
+            'https://umapyoi.net/api/v1/news/search/twinkle' => Http::response([]),
+            'https://umamusume.jp/api/ajax/pr_info_index*' => Http::response([]),
+        ]);
+
+        $originalStorage = storage_path();
+        $isolatedStorage = storage_path('framework/testing/'.uniqid('partial-evolutions-'));
+        $this->app->useStoragePath($isolatedStorage);
+        try {
+            $this->postJson('/api/gacha/sync-gametora')->assertInternalServerError();
+            $this->postJson('/api/gacha/sync-gametora')->assertInternalServerError();
+            $this->postJson('/api/gacha/sync-gametora')->assertInternalServerError();
+
+            $this->assertSame('Daiwa Scarlet [Old Title]', $character->refresh()->name);
+            $this->assertSame($oldSkills, $character->skills);
+            $this->assertSame('previous-manifest', AppSetting::getValue('gametora_manifest_hash'));
+            $this->assertSame('2026-11-16T00:00:00+00:00', AppSetting::getValue('gametora_last_synced_at'));
+            $this->assertDatabaseMissing('uma_catalog_items', ['type' => 'character', 'name' => 'Super Creek']);
+            $this->assertFileDoesNotExist(storage_path('app/gametora_skills_latest.json'));
+
+            $this->postJson('/api/gacha/sync-gametora')->assertOk()->assertJsonPath('is_up_to_date', false);
+            $this->postJson('/api/gacha/sync-gametora')->assertOk()->assertJsonPath('is_up_to_date', true);
+        } finally {
+            $this->app->useStoragePath($originalStorage);
+            File::deleteDirectory($isolatedStorage);
+        }
+
+        $this->getJson('/api/collection/characters/detail?id='.$character->id)->assertOk()
+            ->assertJsonPath('character.skills.evolve.0.id', 100903211)
+            ->assertJsonPath('character.skills.evolve.0.evolution_conditions', [['Have at least 800 Power']]);
+        $this->getJson('/api/collection/characters/detail?name=Super%20Creek')->assertOk()
+            ->assertJsonPath('character.skills.evolve.0.id', 102902111);
     }
 
     public function test_article_detail_failure_on_first_sync_is_retried_and_saved_on_second_sync(): void
