@@ -2,6 +2,15 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.13] - 19 November 2026
+
+### Integritas sinkronisasi GameTora dan pemulihan backup
+
+- Sinkronisasi GameTora menjaga identitas karakter, alias, kepemilikan, dan tingkat bintang saat katalog berubah, serta menolak data evolusi skill yang tidak valid atau membentuk siklus.
+- Restore backup mempertahankan identitas banner lokal dan GameTora meskipun judulnya sama. Riwayat tarikan dan pity tetap terhubung ke banner asal pada mode merge maupun overwrite.
+- Merge backup yang sama berulang kali kini idempoten dan tidak lagi menggandakan tarikan atau membuat pity tanpa banner saat referensi banner tidak dapat dipetakan dengan aman.
+- Checkpoint sinkronisasi GameTora dibatalkan saat restore mengubah data katalog atau banner yang dikelola GameTora, sehingga sinkronisasi biasa dapat memulihkan data upstream tanpa memerlukan force.
+
 ## [Versi 3.3.12] - 17 November 2026
 
 ### Daring Tact dan pemulihan evolusi skill JP
