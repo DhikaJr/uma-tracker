@@ -7,6 +7,8 @@ namespace App\Services;
 use App\Http\Controllers\Api\CollectionController;
 use App\Models\AppSetting;
 use App\Models\GachaBanner;
+use App\Models\GachaPity;
+use App\Models\GachaPull;
 use App\Models\UmaCatalogItem;
 use App\Support\AtomicJsonFile;
 use App\Support\CharacterCatalogPlan;
@@ -43,6 +45,16 @@ class GameToraSyncService
     ];
 
     private const EVOLUTION_APTITUDE_CATEGORIES = ['trn', 'dist', 'strat'];
+
+    private const EVOLUTION_EVENT_OPERANDS = [
+        'ev' => ['id'],
+        'ev_cn_on' => ['id', 'uint', 'uint'],
+        'ev_ac_on' => ['id', 'uint_list', 'uint'],
+        'evn' => ['id', 'uint'],
+        'p_ev_s' => ['id'],
+        'ev_trc_t' => ['id', 'uint'],
+        'mo_ev' => ['uint', 'id'],
+    ];
 
     public const MANIFEST_CHECKPOINT_KEY = 'gametora_manifest_hash';
 
@@ -119,6 +131,7 @@ class GameToraSyncService
                     $this->syncRacetracks($manifest);
                 }
                 UmaCatalog::syncCanonical2026SelectPickupBanners();
+                $this->canonicalizeLegacyOguriBanner();
                 try {
                     $this->cygamesNewsService->syncSelectPickupBanners($force);
                 } catch (\Throwable $e) {
@@ -282,6 +295,7 @@ class GameToraSyncService
 
             // 5. Synchronize 2026 Gacha Banners
             $newBannerCount = $this->sync2026Banners($manifest, $rawCharCards, $rawSupportCards, $force);
+            $this->canonicalizeLegacyOguriBanner();
 
             // 6. Synchronize Racetracks & Courses Catalog
             $this->syncRacetracks($manifest);
@@ -530,6 +544,43 @@ class GameToraSyncService
         } catch (Exception $e) {
             Log::warning('Gagal menyinkronkan racetracks GameTora: '.VerifiedHttp::errorMessage($e));
         }
+    }
+
+    private function canonicalizeLegacyOguriBanner(): void
+    {
+        DB::transaction(function (): void {
+            $lineup = ['Oguri Cap [Cinderella Gray]'];
+            $banners = GachaBanner::where('banner_type', 'character')
+                ->where('category', 'premium')->whereDate('start_date', '2025-12-11');
+            $canonical = (clone $banners)->where('gametora_id', 30394)->first();
+            if ($canonical?->featured_items !== $lineup) {
+                return;
+            }
+
+            $legacyMatches = $banners->whereNull('gametora_id')
+                ->where('name', '新衣装Oguri Cap登場! Premium Pretty Derby Gacha')->get()
+                ->filter(fn (GachaBanner $banner) => $banner->featured_items === $lineup);
+            if ($legacyMatches->count() !== 1) {
+                return;
+            }
+            $legacy = $legacyMatches->first();
+            $legacyPulls = GachaPull::where('gacha_banner_id', $legacy->id);
+            $legacyPities = GachaPity::where('gacha_banner_id', $legacy->id);
+
+            if (($legacyPulls->exists() || $legacyPities->exists())
+                && (GachaPull::where('gacha_banner_id', $canonical->id)->exists() || GachaPity::where('gacha_banner_id', $canonical->id)->exists())) {
+                Log::warning('Banner Oguri legacy dan kanonis sama-sama memiliki riwayat. Kedua banner dipertahankan.', [
+                    'legacy_banner_id' => $legacy->id,
+                    'canonical_banner_id' => $canonical->id,
+                ]);
+
+                return;
+            }
+
+            $legacyPulls->toBase()->update(['gacha_banner_id' => $canonical->id]);
+            $legacyPities->toBase()->update(['gacha_banner_id' => $canonical->id]);
+            $legacy->delete();
+        });
     }
 
     /**
@@ -1264,7 +1315,13 @@ class GameToraSyncService
                     || ! is_string($condition[0] ?? null) || $condition[0] === '') {
                     throw new Exception($error);
                 }
-                $operands = match ($condition[0]) {
+                $operator = $condition[0];
+                $eventOperands = self::EVOLUTION_EVENT_OPERANDS[$operator] ?? null;
+                if ($eventOperands !== null && count($condition) !== count($eventOperands) + 1) {
+                    throw new Exception($error);
+                }
+
+                $operands = $eventOperands ?? match ($operator) {
                     'stat' => ['stat', 'uint'],
                     'a_skill' => ['aptitude', 'aptitude_code', '?uint'],
                     'e_skill' => ['text', '?uint'],
@@ -1272,25 +1329,30 @@ class GameToraSyncService
                     'skill' => ['id'],
                     'race_w2', 'win', 'participate' => ['race'],
                     'race_pn' => ['race', '?uint'],
+                    'race_place' => ['race', 'uint_list'],
                     'win_all' => ['races'],
-                    'dt_gn_race_w' => ['distance_or_surface', 'aptitude_code', '?uint', '?uint'],
+                    'dt_gn_race_w' => ['distance_or_surface', 'aptitude_code', '?race_grade', '?uint'],
                     'dt_race_w' => ['distance_or_surface', 'aptitude_code', '?uint'],
-                    'gn_race_w', 'any_race_pn' => ['?uint', '?uint'],
+                    'gn_race_w' => ['?race_grade', '?uint'],
+                    'any_race_pn' => ['?uint', '?uint'],
                     'out_c', 'out_s', 'sc_out', 'rest' => ['?uint'],
-                    's_gn_race_w' => ['?strategy_code', '?uint', '?uint'],
-                    's_gn2_race_w' => ['?strategy_code', '?uint', '?uint', '?uint'],
+                    's_gn_race_w' => ['?strategy_code', '?race_grade', '?uint'],
+                    's_gn2_race_w' => ['?strategy_code', '?race_grade', '?race_grade', '?uint'],
                     'rt_race_w' => ['id', '?uint'],
-                    'l_gn_race_w' => ['id', '?uint', '?uint'],
-                    's_fn_dt_gn_race_w' => ['?strategy_code', '?uint', '?unused', 'distance_code', '?uint', '?uint'],
-                    's_fn_gn_race_w' => ['?strategy_code', '?uint', '?uint', '?uint'],
-                    's_dt_gn_race_w' => ['?strategy_code', '?unused', 'distance_code', '?uint', '?uint'],
-                    'gn_race_pn' => ['?uint', '?uint', '?uint'],
-                    'y_gn_race_w' => ['?label', '?uint', '?uint'],
-                    'tc_gn_race_w' => ['?unused', '?uint', '?uint'],
-                    'ev', 'ev_cn_on', 'ev_ac_on', 'evn', 'p_ev_s', 'ev_trc_t' => ['text'],
-                    'mo_ev' => ['?unused', 'text'],
+                    'l_gn_race_w' => ['id', '?race_grade', '?uint'],
+                    's_fn_dt_gn_race_w' => ['?strategy_code', '?uint', '?unused', 'distance_code', '?race_grade', '?uint'],
+                    's_fn_gn_race_w' => ['?strategy_code', '?uint', '?race_grade', '?uint'],
+                    's_dt_gn_race_w' => ['?strategy_code', '?unused', 'distance_code', '?race_grade', '?uint'],
+                    'gn_race_pn' => ['?race_grade', '?uint', '?uint'],
+                    'y_gn_race_w' => ['?label', '?race_grade', '?uint'],
+                    'tc_gn_race_w' => ['?unused', '?race_grade', '?uint'],
+                    'ev_mo_up' => ['uint'],
                     'e_ev' => ($condition[1] ?? null) === 'mo' ? ['text', 'uint'] : ['text'],
-                    default => [],
+                    'train_nf', 'scen_dreams_r5', 'scen_dreams_ra', 'scen_gff_sa', 'scen_gff_sf',
+                    'scen_island_ea', 'scen_island_ef', 'scen_mecha_u5', 'scen_mecha_ua',
+                    'scen_ramen_ja', 'scen_ramen_jf', 'scen_shuntaisai_pa', 'scen_shuntaisai_pf',
+                    'scen_uaf_wa', 'scen_uaf_wf', 'scen_yukoma_b3', 'scen_yukoma_ba' => [],
+                    default => throw new Exception($error),
                 };
                 $aptitudeCategory = self::evolutionAptitudeCategory($condition[1] ?? null);
                 foreach ($operands as $offset => $domain) {
@@ -1311,6 +1373,8 @@ class GameToraSyncService
     {
         return match ($domain) {
             'uint' => $this->isEvolutionInteger($value),
+            'uint_list' => is_array($value) && array_is_list($value) && $value !== []
+                && array_all($value, $this->isEvolutionInteger(...)),
             'id' => $this->isEvolutionInteger($value) && (int) $value > 0,
             'stat' => (is_int($value) || is_string($value)) && isset(self::EVOLUTION_STAT_NAMES[$value]),
             'aptitude' => isset(self::EVOLUTION_APTITUDE_NAMES[$aptitudeCategory]),
@@ -1321,6 +1385,7 @@ class GameToraSyncService
             'text' => is_string($value) && trim($value) !== '',
             'label' => is_int($value) || (is_string($value) && trim($value) !== ''),
             'race' => $this->isEvolutionRaceReference($value),
+            'race_grade' => $value === 'g' || $this->isEvolutionInteger($value),
             'races' => is_array($value)
                 ? array_is_list($value) && $value !== [] && array_all($value, $this->isEvolutionRaceReference(...))
                 : $this->isEvolutionRaceReference($value),

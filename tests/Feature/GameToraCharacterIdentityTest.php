@@ -6,6 +6,8 @@ namespace Tests\Feature;
 
 use App\Models\AppSetting;
 use App\Models\GachaBanner;
+use App\Models\GachaPity;
+use App\Models\GachaPull;
 use App\Models\UmaCatalogItem;
 use App\Models\UserCharacter;
 use App\Services\GameToraSyncService;
@@ -938,14 +940,28 @@ class GameToraCharacterIdentityTest extends TestCase
     #[TestWith([['race_pn', 1001, 3], ['race_pn', 'damaged', 3]])]
     #[TestWith([['e_skill', 'speed', 3], ['e_skill', 'speed', 'damaged']])]
     #[TestWith([['rt_race_w', 10001, 2], ['rt_race_w', 10001, ['damaged']]])]
-    public function test_pass_five_operand_domains_reject_malformed_tuples_before_publication(array $valid, array $invalid): void
-    {
+    #[TestWith([['ev_cn_on', 501002524, 0, 2], ['ev_cn_on', 501002524, 0]])]
+    #[TestWith([['ev_ac_on', 501016524, [2, 3, 4], 2], ['ev_ac_on', 501016524, ['damaged'], 2]])]
+    #[TestWith([['ev', 501004515], ['ev', 0]])]
+    #[TestWith([['ev', 501004515], ['unknown_evolution_operator', 501004515]])]
+    #[TestWith([
+        ['ev_ac_on', 501016524, [2, 3, 4], 2],
+        ['ev_ac_on', 'damaged-id', [true], 2],
+        ['ev_ac_on', 501016524, [2, 3, 4], 1],
+        'Trigger the 「501016524」 training event',
+    ], 'corrupt event and corrected same manifest')]
+    public function test_pass_five_operand_domains_reject_malformed_tuples_before_publication(
+        array $valid,
+        array $invalid,
+        array $correctedTuple = ['fan', 0],
+        string $correctedText = 'Have at least 0 fans',
+    ): void {
         $archive = $this->ownedCharacter('Daiwa Scarlet [Archive]')->catalogItem()->firstOrFail();
         $current = UmaCatalogItem::create(['type' => 'character', 'name' => 'Daiwa Scarlet [Scarlet Gale]', 'gametora_id' => 100903]);
         $initial = $damaged = $corrected = $this->evolutionRow();
         $initial['evolutions'][0]['conditions'] = [[$valid]];
         $damaged['evolutions'][0]['conditions'] = [[$invalid]];
-        $corrected['evolutions'][0]['conditions'] = [[['fan', 0]]];
+        $corrected['evolutions'][0]['conditions'] = [[$correctedTuple]];
         $revision = 'first';
         $this->fakeGameTora([['card_id' => 100903, 'name_en' => 'Daiwa Scarlet', 'title_en' => 'Scarlet Gale']], [
             GameToraSyncService::MANIFEST_URL => function () use (&$revision) {
@@ -975,8 +991,200 @@ class GameToraCharacterIdentityTest extends TestCase
 
         $this->postJson('/api/gacha/sync-gametora')->assertOk()->assertJsonPath('is_up_to_date', false);
         $this->assertNotSame($hash, AppSetting::getValue('gametora_manifest_hash'));
-        $this->assertSame([['Have at least 0 fans']], $current->refresh()->skills['evolve'][0]['evolution_conditions']);
+        $this->assertSame([[$correctedText]], $current->refresh()->skills['evolve'][0]['evolution_conditions']);
+        $this->assertSame([[$correctedTuple]], $current->raw_data['skills_evo'][0]['conditions']);
         $this->assertSame($current->skills['evolve'], $archive->refresh()->skills['evolve']);
+    }
+
+    public function test_live_silence_suzuka_evolution_accepts_numeric_event_requirement(): void
+    {
+        $relation = [
+            'old' => 200024,
+            'new' => 100201311,
+            'servers' => ['ja'],
+            'conditions' => [[['ev_cn_on', 501002524, 0, 2], ['fan', 150000]], [['stat', 4, 600]]],
+        ];
+        $evolution = ['card_id' => 100201, 'evolutions' => [$relation]];
+        $this->fakeGameTora([['card_id' => 100201, 'name_en' => 'Silence Suzuka', 'title_en' => 'Original']], [
+            GameToraSyncService::MANIFEST_URL => Http::response(['characters' => 'bases', 'character-cards' => 'cards',
+                'support-cards' => 'supports', 'skills' => 'skills', 'evolutions' => 'first']),
+            GameToraSyncService::DATA_BASE_URL.'/skills.skills.json' => Http::response([
+                ['id' => 200024, 'rarity' => 2],
+                ['id' => 100201311, 'rarity' => 6],
+            ]),
+        ] + $this->evolutionFixtures($evolution));
+
+        $this->postJson('/api/gacha/sync-gametora')->assertOk()->assertJsonPath('is_up_to_date', false);
+        $character = UmaCatalogItem::where('gametora_id', 100201)->sole();
+        $this->assertSame($relation['conditions'], $character->raw_data['skills_evo'][0]['conditions']);
+        $skill = $character->skills['evolve'][0];
+        $this->assertSame(100201311, $skill['id']);
+        $this->assertSame(200024, $skill['base_skill_id']);
+        $this->assertSame([['Trigger the 「501002524」 training event', 'Have at least 150,000 fans'], ['Have at least 600 Guts']], $skill['evolution_conditions']);
+    }
+
+    public function test_live_evolution_event_shapes_are_supported_across_cards(): void
+    {
+        $evolution = $this->evolutionRow();
+        $conditions = [[
+            ['ev', 501004515],
+            ['ev_trc_t', 501037524, 1],
+            ['evn', 501040524, 1],
+            ['p_ev_s', 501046525],
+            ['mo_ev', 4, 501060801],
+            ['ev_ac_on', 501016524, [2, 3, 4], 2],
+            ['ev_mo_up', 3],
+            ['race_place', 101101, [1, 2]],
+            ['scen_shuntaisai_pa'],
+        ]];
+        $evolution['evolutions'][0]['conditions'] = $conditions;
+        $this->fakeGameToraEvolution($evolution);
+
+        $this->postJson('/api/gacha/sync-gametora')->assertOk()->assertJsonPath('is_up_to_date', false);
+        $card = UmaCatalogItem::where('gametora_id', 100903)->sole();
+        $this->assertSame($conditions, $card->raw_data['skills_evo'][0]['conditions']);
+        $this->assertCount(6, $card->skills['evolve'][0]['evolution_conditions'][0]);
+    }
+
+    public function test_live_special_week_evolution_accepts_graded_race_requirement(): void
+    {
+        $evolution = ['card_id' => 100102, 'evolutions' => [[
+            'conditions' => [[['s_gn_race_w', 3, 'g', 2]], [['stat', 2, 600]]],
+            'servers' => ['ja', 'ko', 'zh_tw'],
+            'old' => 200591,
+            'new' => 100102111,
+        ]]];
+        $this->fakeGameTora([['card_id' => 100102, 'name_en' => 'Special Week', 'title_en' => "Hopp'n♪Happy Heart"]], [
+            GameToraSyncService::MANIFEST_URL => Http::response(['characters' => 'bases', 'character-cards' => 'cards',
+                'support-cards' => 'supports', 'skills' => 'skills', 'evolutions' => 'first']),
+            GameToraSyncService::DATA_BASE_URL.'/skills.skills.json' => Http::response([
+                ['id' => 200591, 'enname' => 'Fast & Furious', 'rarity' => 2],
+                ['id' => 100102111, 'enname' => "Sunshine 'n' Spirit!", 'rarity' => 6],
+            ]),
+        ] + $this->evolutionFixtures($evolution));
+
+        $this->postJson('/api/gacha/sync-gametora')->assertOk()->assertJsonPath('is_up_to_date', false);
+
+        $character = UmaCatalogItem::where('gametora_id', 100102)->sole();
+        $skill = $character->skills['evolve'][0];
+        $this->assertSame(100102111, $skill['id']);
+        $this->assertSame(200591, $skill['base_skill_id']);
+        $this->assertSame([['Win 2 graded races as Betweener'], ['Have at least 600 Stamina']], $skill['evolution_conditions']);
+        $this->assertNotEmpty(AppSetting::getValue(GameToraSyncService::MANIFEST_CHECKPOINT_KEY));
+    }
+
+    #[TestWith([false])]
+    #[TestWith([true])]
+    public function test_sync_canonicalizes_legacy_oguri_banner_without_losing_history(bool $historyOnBoth): void
+    {
+        $legacy = GachaBanner::whereNull('gametora_id')
+            ->where('name', '新衣装Oguri Cap登場! Premium Pretty Derby Gacha')->sole();
+        $lineup = ['Oguri Cap [Cinderella Gray]'];
+        $canonical = GachaBanner::create([
+            'gametora_id' => 30394, 'banner_type' => 'character', 'category' => 'premium', 'base_rate' => 4.5,
+            'name' => '新衣装Oguri Cap登場! Premium Pretty Derby Gacha: Oguri Cap [Cinderella Gray]',
+            'featured_items' => $lineup, 'start_date' => '2025-12-11', 'end_date' => '2026-01-08',
+        ]);
+        $pull = GachaPull::create([
+            'gacha_banner_id' => $legacy->id, 'banner_type' => 'character', 'pull_type' => 'single',
+            'item_name' => $lineup[0], 'rarity' => 'SSR', 'is_rate_up' => true, 'pity_count_at_pull' => 32,
+            'pulled_at' => '2025-12-15 12:00:00',
+        ]);
+        $pity = GachaPity::create([
+            'gacha_banner_id' => $legacy->id, 'banner_type' => 'character', 'current_pity' => 32,
+            'last_reset_at' => '2025-12-14 12:00:00', 'total_sparks' => 1,
+        ]);
+        if ($historyOnBoth) {
+            GachaPity::create(['gacha_banner_id' => $canonical->id, 'banner_type' => 'character', 'current_pity' => 12]);
+        }
+
+        $this->fakeGameTora([['card_id' => 100603, 'name_en' => 'Oguri Cap', 'title_en' => 'Cinderella Gray']], [
+            GameToraSyncService::MANIFEST_URL => Http::response(['characters' => 'bases', 'character-cards' => 'cards',
+                'support-cards' => 'supports', 'gacha/char-standard' => 'banners']),
+            GameToraSyncService::DATA_BASE_URL.'/gacha/char-standard.banners.json' => Http::response([
+                ['id' => 30394, 'start' => 1765422000, 'end' => 1767841199, 'pickups' => [[100603, 7500, true]]],
+            ]),
+        ]);
+
+        foreach ([false, true] as $cached) {
+            $this->postJson('/api/gacha/sync-gametora')->assertOk()->assertJsonPath('is_up_to_date', $cached);
+            $sameBannerRows = GachaBanner::where('banner_type', 'character')->where('category', 'premium')
+                ->whereDate('start_date', '2025-12-11')->orderBy('id')->pluck('id')->all();
+            $this->assertSame($historyOnBoth ? [$legacy->id, $canonical->id] : [$canonical->id], $sameBannerRows);
+            $this->assertSame(30394, $canonical->refresh()->gametora_id);
+            $this->assertSame($historyOnBoth ? $legacy->id : $canonical->id, $pull->refresh()->gacha_banner_id);
+            $this->assertSame(32, $pull->pity_count_at_pull);
+            $this->assertSame($pull->gacha_banner_id, $pity->refresh()->gacha_banner_id);
+            $this->assertSame(32, $pity->current_pity);
+            $this->assertSame(1, $pity->total_sparks);
+            $this->assertSame('2025-12-14 12:00:00', $pity->last_reset_at->toDateTimeString());
+            if ($historyOnBoth) {
+                $this->assertDatabaseHas('gacha_pities', ['gacha_banner_id' => $canonical->id, 'current_pity' => 12]);
+            }
+            $this->assertSame([], DB::select('PRAGMA foreign_key_check'));
+        }
+    }
+
+    public function test_unresolved_pickup_placeholder_remains_in_history_and_backup_after_sync(): void
+    {
+        $placeholder = GachaBanner::create([
+            'gametora_id' => 30434, 'banner_type' => 'character', 'category' => 'standard', 'base_rate' => 3.0,
+            'name' => 'Pretty Derby Gacha: Pickup Character', 'featured_items' => [],
+            'start_date' => '2026-04-30', 'end_date' => '2026-05-11',
+        ]);
+        $pull = GachaPull::create([
+            'gacha_banner_id' => $placeholder->id, 'banner_type' => 'character', 'pull_type' => 'single',
+            'item_name' => 'Daiwa Scarlet', 'rarity' => 'SR', 'is_rate_up' => false, 'pity_count_at_pull' => 1,
+            'pulled_at' => '2026-05-01 12:00:00',
+        ]);
+        GachaPity::create(['gacha_banner_id' => $placeholder->id, 'banner_type' => 'character', 'current_pity' => 1]);
+        $this->fakeGameTora([['card_id' => 100903, 'name_en' => 'Daiwa Scarlet']], [
+            GameToraSyncService::MANIFEST_URL => Http::response(['characters' => 'bases', 'character-cards' => 'cards',
+                'support-cards' => 'supports', 'gacha/char-standard' => 'banners']),
+            GameToraSyncService::DATA_BASE_URL.'/gacha/char-standard.banners.json' => Http::response([
+                ['id' => 30434, 'start' => 1777518000, 'end' => 1778468399,
+                    'pickups' => [], 'lineup' => [3333 => [100903]]],
+            ]),
+        ]);
+
+        $this->postJson('/api/gacha/sync-gametora')->assertOk();
+        $this->assertSame([], $placeholder->refresh()->featured_items);
+        $this->getJson('/api/gacha/pulls?gacha_banner_id='.$placeholder->id)->assertOk()
+            ->assertJsonPath('data.0.id', $pull->id)
+            ->assertJsonPath('data.0.banner.id', $placeholder->id)
+            ->assertJsonPath('data.0.is_rate_up', false);
+        $backup = $this->getJson('/api/backup/export')->assertOk()->json('data');
+        $this->assertSame(30434, array_column($backup['gacha_banners'], 'gametora_id', 'id')[$placeholder->id]);
+        $this->assertSame($placeholder->id, array_column($backup['gacha_pulls'], 'gacha_banner_id', 'id')[$pull->id]);
+        $this->assertContains($placeholder->id, array_column($backup['gacha_pities'], 'gacha_banner_id'));
+        $this->assertSame([], DB::select('PRAGMA foreign_key_check'));
+    }
+
+    public function test_live_race_grade_domain_accepts_graded_token_on_same_manifest_retry(): void
+    {
+        $valid = $invalid = $this->evolutionRow();
+        $valid['evolutions'][0]['conditions'] = [[
+            ['dt_gn_race_w', 'dist', 1, 'g', 3],
+            ['gn_race_w', 'g', 2],
+            ['s_gn_race_w', 1, '100', 1],
+        ]];
+        $invalid['evolutions'][0]['conditions'] = [[['gn_race_w', 'unknown', 2]]];
+        $this->fakeGameToraEvolution($valid, [
+            GameToraSyncService::DATA_BASE_URL.'/evolutions.first.json' => Http::sequence()->push([$invalid])->push([$valid]),
+        ]);
+
+        $this->postJson('/api/gacha/sync-gametora')->assertInternalServerError()->assertJsonPath('success', false);
+        $this->assertNull(AppSetting::getValue(GameToraSyncService::MANIFEST_CHECKPOINT_KEY));
+        $this->assertDatabaseMissing('uma_catalog_items', ['gametora_id' => 100903]);
+
+        $this->postJson('/api/gacha/sync-gametora')->assertOk()->assertJsonPath('is_up_to_date', false);
+        $skill = UmaCatalogItem::where('gametora_id', 100903)->sole()->skills['evolve'][0];
+        $this->assertSame([[
+            'Win 3 graded Mile races',
+            'Win 2 graded races',
+            'Win any G1 race as Runner',
+        ]], $skill['evolution_conditions']);
+        $this->assertNotEmpty(AppSetting::getValue(GameToraSyncService::MANIFEST_CHECKPOINT_KEY));
     }
 
     public function test_pass_five_valid_numeric_string_uses_integer_operand_semantics(): void

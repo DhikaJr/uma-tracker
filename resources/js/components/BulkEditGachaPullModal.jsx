@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Layers, X, Check, AlertCircle, Sparkles, Calendar, Ticket } from 'lucide-react';
+import { isGachaBannerSelectable } from '../utils/gachaBannerOptions';
 
 export default function BulkEditGachaPullModal({
     isOpen,
@@ -17,6 +18,7 @@ export default function BulkEditGachaPullModal({
     const [errorMsg, setErrorMsg] = useState('');
 
     if (!isOpen || selectedIds.length === 0) return null;
+    const selectableBanners = banners.filter(isGachaBannerSelectable);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -32,6 +34,11 @@ export default function BulkEditGachaPullModal({
         }
 
         if (bannerId !== 'keep' && bannerId !== '') {
+            if (!selectableBanners.some(banner => String(banner.id) === bannerId)) {
+                setErrorMsg('Pilih banner tujuan dengan daftar pickup yang tersedia.');
+                setSubmitting(false);
+                return;
+            }
             payload.gacha_banner_id = parseInt(bannerId, 10);
         }
 
@@ -145,7 +152,7 @@ export default function BulkEditGachaPullModal({
                             className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-2xl px-3.5 py-2.5 text-xs font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none"
                         >
                             <option value="keep">— Jangan Ubah Banner (Pertahankan Banner Asal) —</option>
-                            {banners.map((b) => (
+                            {selectableBanners.map((b) => (
                                 <option key={b.id} value={b.id}>
                                     {b.name} ({b.banner_type === 'character' ? 'Uma' : 'Support'})
                                 </option>

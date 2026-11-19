@@ -21,6 +21,7 @@ import {
     Pencil
 } from 'lucide-react';
 import RarityBadge from './RarityBadge';
+import { groupGachaBannerOptions, isGachaBannerSelectable, isScenarioReleaseBanner } from '../utils/gachaBannerOptions';
 const Quick10PullModal = lazy(() => import('./Quick10PullModal'));
 const DeleteConfirmModal = lazy(() => import('./DeleteConfirmModal'));
 const GachaProbabilitySimulator = lazy(() => import('./GachaProbabilitySimulator'));
@@ -602,14 +603,6 @@ export default function GachaView({ onNotify, setBaseRate }) {
         }
     };
 
-    // Helper: Determine if a banner is a scenario release banner (including 2026-10-26 release)
-    const isScenarioReleaseBanner = (banner) => {
-        if (!banner) return false;
-        if (banner.category === 'scenario_release') return true;
-        const sDate = String(banner.start_date || '');
-        return sDate.includes('10-26') || sDate.includes('2026-10-26');
-    };
-
     // Helper: Category badge styling for 2026 JP banners
     const getCategoryBadge = (category, banner = null) => {
         let cat = category;
@@ -692,9 +685,9 @@ export default function GachaView({ onNotify, setBaseRate }) {
     const handleSingleSubmit = async (e) => {
         e.preventDefault();
         const activeBanner = banners.find(b => String(b.id) === String(singleBannerId) && b.banner_type === singleForm.banner_type);
-        if (!activeBanner) {
+        if (!isGachaBannerSelectable(activeBanner)) {
             setSingleBannerError(true);
-            onNotify?.(`Kolom Banner JP 2026+ wajib dipilih! Harap pilih banner yang sesuai dengan tipe tarikan (${singleForm.banner_type === 'character' ? 'Karakter' : 'Support Card'}).`, 'error');
+            onNotify?.(`Pilih banner JP dengan daftar pickup yang tersedia untuk ${singleForm.banner_type === 'character' ? 'Karakter' : 'Support Card'}.`, 'error');
             return;
         }
 
@@ -765,9 +758,9 @@ export default function GachaView({ onNotify, setBaseRate }) {
         e.preventDefault();
 
         const activeBanner = banners.find(b => String(b.id) === String(selectedBannerId) && b.banner_type === multiBanner);
-        if (!activeBanner) {
+        if (!isGachaBannerSelectable(activeBanner)) {
             setBannerError(true);
-            onNotify?.(`Kolom Banner JP 2026+ wajib dipilih! Harap pilih banner yang sesuai dengan tipe tarikan (${multiBanner === 'character' ? 'Karakter' : 'Support Card'}).`, 'error');
+            onNotify?.(`Pilih banner JP dengan daftar pickup yang tersedia untuk ${multiBanner === 'character' ? 'Karakter' : 'Support Card'}.`, 'error');
             return;
         }
 
@@ -988,17 +981,13 @@ export default function GachaView({ onNotify, setBaseRate }) {
     const currentMultiBanner = banners.find(b => String(b.id) === String(selectedBannerId) && b.banner_type === multiBanner);
 
     const renderBannerOptions = (typeFilter = null) => {
-        const filtered = typeFilter ? banners.filter(b => b.banner_type === typeFilter) : banners;
-        const anni = filtered.filter(b => b.category === 'anniversary' || isScenarioReleaseBanner(b));
-        const twinkle = filtered.filter(b => b.category === 'twinkle');
-        const selectUp = typeFilter === 'character' ? [] : filtered.filter(b => b.category === 'select_rate_up' && b.banner_type !== 'character');
-        const standard = filtered.filter(b => b.category === 'standard' && !isScenarioReleaseBanner(b));
+        const { anni, premium, twinkle, selectUp, standard } = groupGachaBannerOptions(banners, typeFilter);
 
         return (
             <>
-                <option value="">-- Pilih Banner JP 2026+ (Wajib) --</option>
+                <option value="">-- Pilih Banner JP (Wajib) --</option>
                 {anni.length > 0 && (
-                    <optgroup label="🌟 Anniversary & Skenario Baru 2026+">
+                    <optgroup label="🌟 Anniversary & Skenario Baru">
                         {anni.map(b => (
                             <option key={b.id} value={b.id}>
                                 {b.name} ({b.start_date ? b.start_date.slice(5) : ''})
@@ -1006,8 +995,17 @@ export default function GachaView({ onNotify, setBaseRate }) {
                         ))}
                     </optgroup>
                 )}
+                {premium.length > 0 && (
+                    <optgroup label="💎 Premium Gacha">
+                        {premium.map(b => (
+                            <option key={b.id} value={b.id}>
+                                {b.name} ({b.start_date ? b.start_date.slice(5) : ''})
+                            </option>
+                        ))}
+                    </optgroup>
+                )}
                 {twinkle.length > 0 && (
-                    <optgroup label="💫 Twinkle Collection 2026+">
+                    <optgroup label="💫 Twinkle Collection">
                         {twinkle.map(b => (
                             <option key={b.id} value={b.id}>
                                 {b.name} ({b.start_date ? b.start_date.slice(5) : ''})
@@ -1016,7 +1014,7 @@ export default function GachaView({ onNotify, setBaseRate }) {
                     </optgroup>
                 )}
                 {selectUp.length > 0 && (
-                    <optgroup label="🎯 Select Pick Up 2026+">
+                    <optgroup label="🎯 Select Pick Up">
                         {selectUp.map(b => (
                             <option key={b.id} value={b.id}>
                                 {b.name} ({b.start_date ? b.start_date.slice(5) : ''})
@@ -1025,7 +1023,7 @@ export default function GachaView({ onNotify, setBaseRate }) {
                     </optgroup>
                 )}
                 {standard.length > 0 && (
-                    <optgroup label="🎴 Standard Gacha 2026+">
+                    <optgroup label="🎴 Standard Gacha">
                         {standard.map(b => (
                             <option key={b.id} value={b.id}>
                                 {b.name} ({b.start_date ? b.start_date.slice(5) : ''})
@@ -1519,7 +1517,7 @@ export default function GachaView({ onNotify, setBaseRate }) {
                                 {/* 2026+ JP Banner Selection */}
                                 <div className="flex items-center gap-2">
                                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-0.5">
-                                        <span>Banner JP 2026+:</span>
+                                        <span>Banner JP:</span>
                                         <span className="text-rose-500 font-black">*</span>
                                     </label>
                                     {(() => {
@@ -1958,7 +1956,7 @@ export default function GachaView({ onNotify, setBaseRate }) {
                                         <>
                                             <div className="flex items-center justify-between mb-1.5 h-4 leading-4">
                                                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
-                                                    Banner JP 2026+ <span className="text-rose-500 font-black">*</span>
+                                                    Banner JP <span className="text-rose-500 font-black">*</span>
                                                 </label>
                                                 {hasSingleBannerError && (
                                                     <span className="text-[10px] font-extrabold text-rose-600 dark:text-rose-400 shrink-0">

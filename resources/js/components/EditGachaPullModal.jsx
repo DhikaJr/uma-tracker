@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, Save, Calendar, Check, AlertCircle, RefreshCw } from 'lucide-react';
 import RarityBadge from './RarityBadge';
+import { isGachaBannerSelectable } from '../utils/gachaBannerOptions';
 
 export default function EditGachaPullModal({
     pull,
@@ -56,6 +57,9 @@ export default function EditGachaPullModal({
     }, [isOpen, onClose]);
 
     if (!isOpen || !pull) return null;
+    const selectableBanners = banners.filter(banner => banner.banner_type === form.banner_type && isGachaBannerSelectable(banner));
+    const targetIsSelectable = selectableBanners.some(banner => String(banner.id) === form.gacha_banner_id);
+    const keepingOriginalBanner = form.gacha_banner_id !== '' && form.gacha_banner_id === String(pull.gacha_banner_id);
 
     // Helper: Determine if banner is Twinkle Collection
     const isTwinkleBanner = (banner) => {
@@ -203,6 +207,10 @@ export default function EditGachaPullModal({
         e.preventDefault();
         if (!form.item_name.trim()) {
             setErrorMsg('Nama item / karakter wajib diisi.');
+            return;
+        }
+        if (form.gacha_banner_id && !targetIsSelectable && !keepingOriginalBanner) {
+            setErrorMsg('Pilih banner tujuan dengan daftar pickup yang tersedia.');
             return;
         }
 
@@ -361,13 +369,14 @@ export default function EditGachaPullModal({
                             className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none"
                         >
                             <option value="">-- General / Tidak Tertaut Banner Spesifik --</option>
-                            {banners
-                                .filter(b => !form.banner_type || b.category === form.banner_type || b.category === 'both')
-                                .map(b => (
-                                    <option key={b.id} value={b.id}>
-                                        [{b.base_rate > 3.0 ? '4.5%' : '3.0%'}] {b.name} ({b.start_date || ''})
-                                    </option>
-                                ))}
+                            {keepingOriginalBanner && !targetIsSelectable && (
+                                <option value={form.gacha_banner_id} disabled>— Pertahankan banner asal —</option>
+                            )}
+                            {selectableBanners.map(b => (
+                                <option key={b.id} value={b.id}>
+                                    [{b.base_rate > 3.0 ? '4.5%' : '3.0%'}] {b.name} ({b.start_date || ''})
+                                </option>
+                            ))}
                         </select>
                     </div>
 

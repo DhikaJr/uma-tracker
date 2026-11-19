@@ -14,6 +14,7 @@ import {
     Zap
 } from 'lucide-react';
 import RarityBadge from './RarityBadge';
+import { isGachaBannerSelectable } from '../utils/gachaBannerOptions';
 
 export default function Quick10PullModal({
     isOpen,
@@ -24,10 +25,11 @@ export default function Quick10PullModal({
     onNotify,
 }) {
     const todayDate = new Date().toISOString().slice(0, 10);
+    const selectableBanners = useMemo(() => banners.filter(isGachaBannerSelectable), [banners]);
 
     // Form state
     const [selectedBannerId, setSelectedBannerId] = useState(() => {
-        return banners.length > 0 ? String(banners[0].id) : '';
+        return selectableBanners.length > 0 ? String(selectableBanners[0].id) : '';
     });
     const [pulledAt, setPulledAt] = useState(todayDate);
     const [submitting, setSubmitting] = useState(false);
@@ -46,8 +48,8 @@ export default function Quick10PullModal({
 
     // Active banner details
     const currentBanner = useMemo(() => {
-        return banners.find(b => String(b.id) === String(selectedBannerId)) || banners[0] || null;
-    }, [banners, selectedBannerId]);
+        return selectableBanners.find(b => String(b.id) === selectedBannerId) || null;
+    }, [selectableBanners, selectedBannerId]);
 
     const bannerType = currentBanner?.banner_type || 'character';
     const isTwinkle = useMemo(() => {
@@ -144,8 +146,8 @@ export default function Quick10PullModal({
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!selectedBannerId) {
-            onNotify?.('Silakan pilih Banner JP 2026+ terlebih dahulu!', 'error');
+        if (!currentBanner) {
+            onNotify?.('Pilih banner JP dengan daftar pickup yang tersedia.', 'error');
             return;
         }
 
@@ -210,7 +212,7 @@ export default function Quick10PullModal({
 
             const payload = {
                 banner_type: bannerType,
-                gacha_banner_id: parseInt(selectedBannerId, 10),
+                gacha_banner_id: Number(currentBanner.id),
                 pull_type: 'multi_10',
                 pulled_at: pulledAt || todayDate,
                 pulls: pulls,
@@ -282,11 +284,12 @@ export default function Quick10PullModal({
                                 <span>Banner JP 2026+</span>
                             </label>
                             <select
-                                value={selectedBannerId}
+                                value={currentBanner ? selectedBannerId : ''}
                                 onChange={(e) => setSelectedBannerId(e.target.value)}
                                 className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:outline-none"
                             >
-                                {banners.map(b => (
+                                {!currentBanner && <option value="" disabled>-- Pilih Banner JP --</option>}
+                                {selectableBanners.map(b => (
                                     <option key={b.id} value={b.id}>
                                         {b.banner_type === 'character' ? '🌸' : '🃏'} {b.name} ({b.base_rate || 3.0}%)
                                     </option>
