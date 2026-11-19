@@ -2,6 +2,15 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.15] - 19 November 2026
+
+### Perbaikan Select Pick Up dan banner Premium
+
+- Kandidat Select Pick Up kini diambil dari lineup resmi Cygames untuk masing-masing banner, sehingga daftar manual rate-up tidak lagi menggunakan pool fallback yang salah.
+- Sinkronisasi berita Cygames menggunakan konfigurasi CA lokal yang sama dengan koneksi GameTora agar enrichment banner dapat berjalan dengan verifikasi TLS aktif.
+- Banner Premium legacy seperti Stay Gold kini dikanonisasi ke identitas GameTora yang benar tanpa kehilangan riwayat pull atau pity.
+- Pemilihan kandidat manual-UP mengikuti identitas banner yang dipilih meskipun beberapa banner memiliki label yang sama.
+
 ## [Versi 3.3.14] - 19 November 2026
 
 ### Kompatibilitas GameTora dan perbaikan pilihan banner Gacha
