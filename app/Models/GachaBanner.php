@@ -289,4 +289,13 @@ class GachaBanner extends Model
 
         return is_string($url) && $url !== '' ? $url : null;
     }
+
+    public function hasOfficialSelectPickupCandidates(): bool
+    {
+        return $this->category === 'select_rate_up'
+            && $this->banner_type === 'support_card'
+            && is_array($this->featured_items)
+            && count($this->featured_items) === 10
+            && $this->getProvenanceUrl() !== null;
+    }
 }

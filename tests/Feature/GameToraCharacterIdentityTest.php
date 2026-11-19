@@ -1125,6 +1125,82 @@ class GameToraCharacterIdentityTest extends TestCase
         }
     }
 
+    #[TestWith(['legacy'])]
+    #[TestWith(['canonical'])]
+    #[TestWith(['both'])]
+    #[TestWith(['different_date'])]
+    #[TestWith(['different_lineup'])]
+    public function test_stay_gold_premium_canonicalization_preserves_history_and_requires_exact_identity(string $scenario): void
+    {
+        $name = 'Stay Gold登場! Premium Pretty Derby Gacha';
+        $lineup = ['Stay Gold [Sunlit Outsider]'];
+        $legacy = GachaBanner::whereNull('gametora_id')->where('name', $name)->sole();
+        $canonical = GachaBanner::create([
+            'gametora_id' => 30396, 'banner_type' => 'character', 'category' => 'premium', 'base_rate' => 4.5,
+            'name' => "{$name}: {$lineup[0]}", 'featured_items' => $lineup, 'start_date' => '2025-12-21',
+        ]);
+        if ($scenario === 'different_date') {
+            $legacy->update(['start_date' => '2025-12-22']);
+        }
+        if ($scenario === 'different_lineup') {
+            $legacy->update(['featured_items' => ['Stay Gold [Different Card]']]);
+        }
+
+        $keepsLegacy = in_array($scenario, ['both', 'different_date', 'different_lineup'], true);
+        $histories = [];
+        foreach ([$legacy, $canonical] as $banner) {
+            if (($banner->is($legacy) && $scenario === 'canonical')
+                || ($banner->is($canonical) && ! in_array($scenario, ['canonical', 'both'], true))) {
+                continue;
+            }
+
+            $count = $banner->is($legacy) ? 32 : 12;
+            $pull = GachaPull::create([
+                'gacha_banner_id' => $banner->id, 'banner_type' => 'character', 'pull_type' => 'single',
+                'item_name' => $lineup[0], 'rarity' => 'SSR', 'is_rate_up' => true, 'pity_count_at_pull' => $count,
+                'pulled_at' => "2025-12-25 12:{$count}:00",
+            ]);
+            $pity = GachaPity::create([
+                'gacha_banner_id' => $banner->id, 'banner_type' => 'character', 'current_pity' => $count,
+                'last_reset_at' => '2025-12-24 12:00:00', 'total_sparks' => 1,
+            ]);
+            $histories[] = [$keepsLegacy ? $banner->id : $canonical->id, $pull, $pity];
+        }
+
+        $this->fakeGameTora([['card_id' => 113101, 'name_en' => 'Stay Gold', 'title_en' => 'Sunlit Outsider']]);
+        $assertHistory = function () use ($legacy, $canonical, $keepsLegacy, $histories): void {
+            $this->assertSame($keepsLegacy ? [$legacy->id, $canonical->id] : [$canonical->id],
+                GachaBanner::whereKey([$legacy->id, $canonical->id])->orderBy('id')->pluck('id')->all());
+            $this->assertSame(30396, $canonical->refresh()->gametora_id);
+            $this->assertDatabaseCount('gacha_pulls', count($histories));
+            $this->assertDatabaseCount('gacha_pities', count($histories));
+            foreach ($histories as [$expectedBanner, $pull, $pity]) {
+                $this->assertDatabaseHas('gacha_pulls', [...$pull->getAttributes(), 'gacha_banner_id' => $expectedBanner]);
+                $this->assertDatabaseHas('gacha_pities', [...$pity->getAttributes(), 'gacha_banner_id' => $expectedBanner]);
+            }
+            $this->assertSame([], DB::select('PRAGMA foreign_key_check'));
+        };
+
+        $legacyBackup = $this->getJson('/api/backup/export')->assertOk()->json();
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            $this->postJson('/api/backup/import', ['mode' => 'merge', 'data' => $legacyBackup])->assertOk()
+                ->assertJsonPath('unresolved_references', []);
+            $this->assertDatabaseCount('gacha_pulls', count($histories));
+            $this->assertDatabaseCount('gacha_pities', count($histories));
+        }
+        foreach ([false, true] as $cached) {
+            $this->postJson('/api/gacha/sync-gametora')->assertOk()->assertJsonPath('is_up_to_date', $cached);
+            $assertHistory();
+        }
+        $backup = $this->getJson('/api/backup/export')->assertOk()->json();
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            $this->postJson('/api/backup/import', ['mode' => 'merge', 'data' => $backup])->assertOk()
+                ->assertJsonPath('unresolved_references', []);
+            $this->postJson('/api/gacha/sync-gametora')->assertOk()->assertJsonPath('success', true);
+            $assertHistory();
+        }
+    }
+
     public function test_unresolved_pickup_placeholder_remains_in_history_and_backup_after_sync(): void
     {
         $placeholder = GachaBanner::create([

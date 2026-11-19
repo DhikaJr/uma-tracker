@@ -131,7 +131,7 @@ class GameToraSyncService
                     $this->syncRacetracks($manifest);
                 }
                 UmaCatalog::syncCanonical2026SelectPickupBanners();
-                $this->canonicalizeLegacyOguriBanner();
+                $this->canonicalizeLegacyPremiumBanners();
                 try {
                     $this->cygamesNewsService->syncSelectPickupBanners($force);
                 } catch (\Throwable $e) {
@@ -295,7 +295,7 @@ class GameToraSyncService
 
             // 5. Synchronize 2026 Gacha Banners
             $newBannerCount = $this->sync2026Banners($manifest, $rawCharCards, $rawSupportCards, $force);
-            $this->canonicalizeLegacyOguriBanner();
+            $this->canonicalizeLegacyPremiumBanners();
 
             // 6. Synchronize Racetracks & Courses Catalog
             $this->syncRacetracks($manifest);
@@ -546,19 +546,25 @@ class GameToraSyncService
         }
     }
 
-    private function canonicalizeLegacyOguriBanner(): void
+    private function canonicalizeLegacyPremiumBanners(): void
     {
-        DB::transaction(function (): void {
-            $lineup = ['Oguri Cap [Cinderella Gray]'];
+        $this->canonicalizeLegacyPremiumBanner(30394, '2025-12-11', '新衣装Oguri Cap登場! Premium Pretty Derby Gacha', 'Oguri Cap [Cinderella Gray]');
+        $this->canonicalizeLegacyPremiumBanner(30396, '2025-12-21', 'Stay Gold登場! Premium Pretty Derby Gacha', 'Stay Gold [Sunlit Outsider]');
+    }
+
+    private function canonicalizeLegacyPremiumBanner(int $gameToraId, string $startDate, string $legacyName, string $featuredItem): void
+    {
+        DB::transaction(function () use ($gameToraId, $startDate, $legacyName, $featuredItem): void {
+            $lineup = [$featuredItem];
             $banners = GachaBanner::where('banner_type', 'character')
-                ->where('category', 'premium')->whereDate('start_date', '2025-12-11');
-            $canonical = (clone $banners)->where('gametora_id', 30394)->first();
+                ->where('category', 'premium')->whereDate('start_date', $startDate);
+            $canonical = (clone $banners)->where('gametora_id', $gameToraId)->first();
             if ($canonical?->featured_items !== $lineup) {
                 return;
             }
 
             $legacyMatches = $banners->whereNull('gametora_id')
-                ->where('name', '新衣装Oguri Cap登場! Premium Pretty Derby Gacha')->get()
+                ->where('name', $legacyName)->get()
                 ->filter(fn (GachaBanner $banner) => $banner->featured_items === $lineup);
             if ($legacyMatches->count() !== 1) {
                 return;
@@ -569,7 +575,8 @@ class GameToraSyncService
 
             if (($legacyPulls->exists() || $legacyPities->exists())
                 && (GachaPull::where('gacha_banner_id', $canonical->id)->exists() || GachaPity::where('gacha_banner_id', $canonical->id)->exists())) {
-                Log::warning('Banner Oguri legacy dan kanonis sama-sama memiliki riwayat. Kedua banner dipertahankan.', [
+                Log::warning('Banner Premium legacy dan kanonis sama-sama memiliki riwayat. Kedua banner dipertahankan.', [
+                    'gametora_id' => $gameToraId,
                     'legacy_banner_id' => $legacy->id,
                     'canonical_banner_id' => $canonical->id,
                 ]);
@@ -835,6 +842,7 @@ class GameToraSyncService
 
         // 6. Process Special Banners (Twinkle Collection & Select Rate Up) (2026 non-paid)
         $specialHash = $manifest['gacha/special'] ?? null;
+        $canonicalSelect = UmaCatalog::getSelectPickupCandidates2026();
         if ($specialHash) {
             $url = self::DATA_BASE_URL."/gacha/special.{$specialHash}.json";
             $res = VerifiedHttp::request()->timeout(25)->get($url);
@@ -859,7 +867,6 @@ class GameToraSyncService
                     $monthKey = date('Y-m', $start);
 
                     $charItems = array_values(array_unique($charBannerItems[$id] ?? []));
-                    $suppItems = array_values(array_unique($suppBannerItems[$id] ?? []));
 
                     if (isset($b['lineup']) && is_array($b['lineup'])) {
                         foreach ($b['lineup'] as $ids) {
@@ -867,9 +874,6 @@ class GameToraSyncService
                                 foreach ($ids as $cardId) {
                                     if (isset($charCards[$cardId]) && ! in_array($charCards[$cardId], $charItems, true)) {
                                         $charItems[] = $charCards[$cardId];
-                                    }
-                                    if (isset($suppCards[$cardId]) && ! in_array($suppCards[$cardId], $suppItems, true)) {
-                                        $suppItems[] = $suppCards[$cardId];
                                     }
                                 }
                             }
@@ -916,75 +920,29 @@ class GameToraSyncService
                     } else {
                         $cat = 'select_rate_up';
                         $bannerType = 'support_card'; // Select Pick Up is strictly for support cards in 2026
-                        $prefix = "Select Pick Up ({$monthName})";
-
-                        $canonicalSelect = UmaCatalog::getSelectPickupCandidates2026();
-                        $featuredItems = $canonicalSelect[$startDate]['candidates'] ?? [];
-
-                        if (empty($featuredItems)) {
-                            foreach ($canonicalSelect as $sDate => $info) {
-                                if (substr($sDate, 0, 7) === $monthKey) {
-                                    $featuredItems = $info['candidates'];
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (empty($featuredItems) && isset($b['lineup']['7500']) && is_array($b['lineup']['7500'])) {
-                            foreach ($b['lineup']['7500'] as $cardId) {
-                                if (isset($suppCards[$cardId])) {
-                                    $featuredItems[] = $suppCards[$cardId];
-                                }
-                            }
-                        }
-
-                        if (empty($featuredItems)) {
-                            $featuredItems = array_slice($suppItems, 0, 10);
-                        }
-
-                        $title = $prefix;
+                        $title = "Select Pick Up ({$monthName})";
+                        $fallback = $canonicalSelect[$startDate] ?? null;
+                        $featuredItems = ($fallback['gametora_id'] ?? null) === (int) $id ? $fallback['candidates'] : [];
                     }
 
-                    GachaBanner::updateOrCreate(
-                        ['gametora_id' => $id, 'banner_type' => $bannerType],
-                        [
-                            'category' => $cat,
-                            'base_rate' => 3.00,
-                            'name' => $title,
-                            'featured_items' => $featuredItems,
-                            'start_date' => $startDate,
-                            'end_date' => $endDate,
-                            'is_active' => true,
-                        ]
-                    );
+                    $banner = GachaBanner::firstOrNew(['gametora_id' => $id, 'banner_type' => $bannerType]);
+                    if ($isTwinkle || ! $banner->hasOfficialSelectPickupCandidates()) {
+                        $banner->featured_items = $featuredItems;
+                    }
+                    $banner->fill([
+                        'category' => $cat,
+                        'base_rate' => 3.00,
+                        'name' => $title,
+                        'start_date' => $startDate,
+                        'end_date' => $endDate,
+                        'is_active' => true,
+                    ])->save();
                     $syncedCount++;
                 }
             }
         }
 
-        // Clean up: delete any select_rate_up banners assigned to character
-        GachaBanner::where('category', 'select_rate_up')
-            ->where('banner_type', 'character')
-            ->delete();
-
-        // Delete stale duplicate Feb 2026 support banner (20031)
-        GachaBanner::where('gametora_id', 20031)->delete();
-
-        // Ensure all 10 official 2026 Select Pick Up Support Card banners are seeded
-        foreach (UmaCatalog::getSelectPickupCandidates2026() as $sp) {
-            GachaBanner::updateOrCreate(
-                ['gametora_id' => $sp['gametora_id'], 'banner_type' => 'support_card'],
-                [
-                    'category' => 'select_rate_up',
-                    'base_rate' => 3.00,
-                    'name' => $sp['name'],
-                    'featured_items' => $sp['candidates'],
-                    'start_date' => $sp['start_date'],
-                    'end_date' => $sp['end_date'],
-                    'is_active' => true,
-                ]
-            );
-        }
+        UmaCatalog::syncCanonical2026SelectPickupBanners();
 
         // Dynamically enrich/override with official Cygames announcements if available
         try {

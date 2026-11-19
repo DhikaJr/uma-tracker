@@ -2708,18 +2708,18 @@ class UmaCatalog
         // 3. Upsert all 10 official 2026 Select Pick Up Support Card banners with 10 SSR candidates
         $count = 0;
         foreach (self::getSelectPickupCandidates2026() as $sp) {
-            GachaBanner::updateOrCreate(
-                ['gametora_id' => $sp['gametora_id'], 'banner_type' => 'support_card'],
-                [
-                    'category' => 'select_rate_up',
-                    'base_rate' => 3.00,
-                    'name' => $sp['name'],
-                    'featured_items' => $sp['candidates'],
-                    'start_date' => $sp['start_date'],
-                    'end_date' => $sp['end_date'],
-                    'is_active' => true,
-                ]
-            );
+            $banner = GachaBanner::firstOrNew(['gametora_id' => $sp['gametora_id'], 'banner_type' => 'support_card']);
+            if (! $banner->hasOfficialSelectPickupCandidates()) {
+                $banner->featured_items = $sp['candidates'];
+            }
+            $banner->fill([
+                'category' => 'select_rate_up',
+                'base_rate' => 3.00,
+                'name' => $sp['name'],
+                'start_date' => $sp['start_date'],
+                'end_date' => $sp['end_date'],
+                'is_active' => true,
+            ])->save();
             $count++;
         }
 

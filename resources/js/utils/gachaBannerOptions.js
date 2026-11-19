@@ -10,6 +10,10 @@ export function isGachaBannerSelectable(banner) {
         && banner.featured_items.some(item => typeof item === 'string' && item.trim() !== '');
 }
 
+export function getSelectedGachaBanner(banners, bannerId, bannerType) {
+    return banners.find(banner => String(banner.id) === String(bannerId) && banner.banner_type === bannerType);
+}
+
 export function groupGachaBannerOptions(banners, typeFilter) {
     const filtered = banners.filter(b => isGachaBannerSelectable(b) && (!typeFilter || b.banner_type === typeFilter));
 

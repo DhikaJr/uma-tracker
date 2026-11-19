@@ -21,12 +21,20 @@ import {
     Pencil
 } from 'lucide-react';
 import RarityBadge from './RarityBadge';
-import { groupGachaBannerOptions, isGachaBannerSelectable, isScenarioReleaseBanner } from '../utils/gachaBannerOptions';
+import { getSelectedGachaBanner, groupGachaBannerOptions, isGachaBannerSelectable, isScenarioReleaseBanner } from '../utils/gachaBannerOptions';
 const Quick10PullModal = lazy(() => import('./Quick10PullModal'));
 const DeleteConfirmModal = lazy(() => import('./DeleteConfirmModal'));
 const GachaProbabilitySimulator = lazy(() => import('./GachaProbabilitySimulator'));
 const EditGachaPullModal = lazy(() => import('./EditGachaPullModal'));
 const BulkEditGachaPullModal = lazy(() => import('./BulkEditGachaPullModal'));
+
+export function FeaturedRateUpButtons({ banner, onSelect, className, title }) {
+    return banner.featured_items.map((item, index) => (
+        <button key={index} type="button" onClick={() => onSelect(item)} className={className} title={title}>
+            <span>+</span> {item}
+        </button>
+    ));
+}
 
 export default function GachaView({ onNotify, setBaseRate }) {
     // State
@@ -656,7 +664,7 @@ export default function GachaView({ onNotify, setBaseRate }) {
     };
 
     // Current Pool based on banner type & Twinkle Collection filter
-    const currentSingleBanner = banners.find(b => String(b.id) === String(singleBannerId) && b.banner_type === singleForm.banner_type);
+    const currentSingleBanner = getSelectedGachaBanner(banners, singleBannerId, singleForm.banner_type);
     const currentPool = useMemo(() => {
         if (isTwinkleBanner(currentSingleBanner) && Array.isArray(currentSingleBanner?.featured_items) && currentSingleBanner.featured_items.length > 0) {
             const twinkleFeatured = currentSingleBanner.featured_items.filter(c => typeof c === 'string' ? c.includes('[') : true);
@@ -978,7 +986,7 @@ export default function GachaView({ onNotify, setBaseRate }) {
         setValidationErrors(prev => prev.filter(num => num <= clamped));
     };
 
-    const currentMultiBanner = banners.find(b => String(b.id) === String(selectedBannerId) && b.banner_type === multiBanner);
+    const currentMultiBanner = getSelectedGachaBanner(banners, selectedBannerId, multiBanner);
 
     const renderBannerOptions = (typeFilter = null) => {
         const { anni, premium, twinkle, selectUp, standard } = groupGachaBannerOptions(banners, typeFilter);
@@ -1602,7 +1610,7 @@ export default function GachaView({ onNotify, setBaseRate }) {
 
                         {/* Select Pick Up Mode Notice & Featured Chips for Batch Pull */}
                         {(() => {
-                            const currentBanner = banners.find(b => String(b.id) === String(selectedBannerId) && b.banner_type === multiBanner);
+                            const currentBanner = currentMultiBanner;
                             if (!currentBanner) return null;
                             const isSelect = isSelectPickupBanner(currentBanner);
                             const isTwinkle = isTwinkleBanner(currentBanner);
@@ -1668,17 +1676,12 @@ export default function GachaView({ onNotify, setBaseRate }) {
                                             <span className="text-xs font-extrabold text-amber-900 dark:text-amber-300 flex items-center gap-1">
                                                 ⭐ {isSelect ? 'Kandidat Pick Up:' : 'Featured Rate-Up:'}
                                             </span>
-                                            {currentBanner.featured_items.map((item, fIdx) => (
-                                                <button
-                                                    key={fIdx}
-                                                    type="button"
-                                                    onClick={() => handleApplyFeaturedToSlot(item)}
-                                                    className="px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-amber-500 dark:hover:bg-amber-600 hover:text-white dark:hover:text-white text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700/80 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs flex items-center gap-1"
-                                                    title="Klik untuk isi cepat ke slot pull (otomatis centang UP)"
-                                                >
-                                                    <span>+</span> {item}
-                                                </button>
-                                            ))}
+                                            <FeaturedRateUpButtons
+                                                banner={currentBanner}
+                                                onSelect={handleApplyFeaturedToSlot}
+                                                className="px-2.5 py-1 bg-white dark:bg-slate-800 hover:bg-amber-500 dark:hover:bg-amber-600 hover:text-white dark:hover:text-white text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700/80 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs flex items-center gap-1"
+                                                title="Klik untuk isi cepat ke slot pull (otomatis centang UP)"
+                                            />
                                             <span className="text-[11px] text-amber-700/80 dark:text-amber-400/80 italic ml-auto">
                                                 (Klik untuk isi cepat ke slot pull)
                                             </span>
@@ -2138,7 +2141,7 @@ export default function GachaView({ onNotify, setBaseRate }) {
 
                         {/* Select Pick Up Mode Notice & Featured Chips for Single Pull */}
                         {(() => {
-                            const currentBanner = banners.find(b => String(b.id) === String(singleBannerId) && b.banner_type === singleForm.banner_type);
+                            const currentBanner = currentSingleBanner;
                             if (!currentBanner) return null;
                             const isTwinkle = isTwinkleBanner(currentBanner);
                             const isSelect = isSelectPickupBanner(currentBanner);
@@ -2209,19 +2212,14 @@ export default function GachaView({ onNotify, setBaseRate }) {
                                             <span className="text-xs font-extrabold text-amber-900">
                                                 ⭐ {isSelect ? 'Kandidat Pick Up:' : 'Featured Rate-Up:'}
                                             </span>
-                                            {currentBanner.featured_items.map((item, fIdx) => (
-                                                <button
-                                                    key={fIdx}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        handleSelectItem(item);
-                                                        setSingleForm(prev => ({ ...prev, is_rate_up: !isSelect }));
-                                                    }}
-                                                    className="px-2 py-0.5 bg-white hover:bg-amber-500 hover:text-white text-amber-900 border border-amber-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
-                                                >
-                                                    + {item}
-                                                </button>
-                                            ))}
+                                            <FeaturedRateUpButtons
+                                                banner={currentBanner}
+                                                onSelect={item => {
+                                                    handleSelectItem(item);
+                                                    setSingleForm(prev => ({ ...prev, is_rate_up: !isSelect }));
+                                                }}
+                                                className="px-2 py-0.5 bg-white hover:bg-amber-500 hover:text-white text-amber-900 border border-amber-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+                                            />
                                         </div>
                                     )}
                                 </div>

@@ -41,3 +41,22 @@ for (const [name, props] of [
         assert.equal(banners[0].gametora_id, 30434);
     });
 }
+
+test('manual-UP buttons display only the selected Select Pick Up banner candidates', async () => {
+    const { FeaturedRateUpButtons } = await vite.ssrLoadModule('/resources/js/components/GachaView.jsx');
+    const { getSelectedGachaBanner } = await vite.ssrLoadModule('/resources/js/utils/gachaBannerOptions.js');
+    const selectorBanners = [
+        { id: 83, gametora_id: 30477, banner_type: 'support_card', name: 'Select Pick Up', category: 'select_rate_up', featured_items: ['SSR [気まぐれ渡り星] Stay Gold (Guts)'] },
+        { id: 99, gametora_id: 30485, banner_type: 'support_card', name: 'Select Pick Up', category: 'select_rate_up', featured_items: ['SSR [巻頭カラーの夏] Kiseki (Stamina)', 'SSR [両手いっぱい、小倉愛] Nice Nature (Intelligence)'] },
+    ];
+
+    for (const [selected, other] of [selectorBanners, [...selectorBanners].reverse()]) {
+        const banner = getSelectedGachaBanner(selectorBanners, String(selected.id), 'support_card');
+        const html = renderToStaticMarkup(createElement(FeaturedRateUpButtons, { banner }));
+        const candidateLabels = [...html.matchAll(/<button\b[^>]*><span>\+<\/span> (.*?)<\/button>/g)].map(([, label]) => label);
+        assert.deepEqual(candidateLabels, selected.featured_items);
+        for (const candidate of other.featured_items) {
+            assert.ok(!html.includes(candidate));
+        }
+    }
+});

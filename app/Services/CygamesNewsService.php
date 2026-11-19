@@ -7,8 +7,8 @@ namespace App\Services;
 use App\Models\AppSetting;
 use App\Models\GachaBanner;
 use App\Models\UmaCatalogItem;
+use App\Support\VerifiedHttp;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -30,7 +30,7 @@ class CygamesNewsService
     public function fetchNewsIndex(): array
     {
         try {
-            $response = Http::withHeaders([
+            $response = VerifiedHttp::request()->withHeaders([
                 'User-Agent' => self::USER_AGENT,
                 'Referer' => 'https://umamusume.jp/news/',
             ])->timeout(10)->get(self::NEWS_INDEX_URL, [
@@ -50,7 +50,7 @@ class CygamesNewsService
             return is_array($data['information_list'] ?? null) ? $data['information_list'] : [];
         } catch (Throwable $e) {
             Log::warning('Failed to fetch Cygames news index', [
-                'error' => $e->getMessage(),
+                'error' => VerifiedHttp::errorMessage($e),
             ]);
 
             return [];
@@ -87,7 +87,7 @@ class CygamesNewsService
     public function fetchArticleDetail(int $announceId): ?array
     {
         try {
-            $response = Http::withHeaders([
+            $response = VerifiedHttp::request()->withHeaders([
                 'User-Agent' => self::USER_AGENT,
                 'Referer' => 'https://umamusume.jp/news/',
             ])->timeout(10)->get(self::NEWS_DETAIL_URL, [
@@ -110,7 +110,7 @@ class CygamesNewsService
         } catch (Throwable $e) {
             Log::warning('Failed to fetch Cygames news detail', [
                 'announce_id' => $announceId,
-                'error' => $e->getMessage(),
+                'error' => VerifiedHttp::errorMessage($e),
             ]);
 
             return null;
@@ -137,12 +137,10 @@ class CygamesNewsService
 
         // 1. Extract GameTora banner ID from support card banner image (e.g. gacha_banner_30477.png)
         $gametoraId = null;
-        if (preg_match('/<h2[^>]*?>\s*サポートカード\s*<\/h2>.*?gacha_banner_(\d+)\.png/isu', $message, $bannerMatch)) {
+        if (preg_match('/<h2[^>]*?>\s*サポートカード\s*<\/h2>(?:(?!<h2\b).)*?gacha_banner_(\d+)\.png/isu', $message, $bannerMatch)) {
             $gametoraId = (int) $bannerMatch[1];
         } elseif (preg_match('/gacha_banner_(\d+)\.png(?:[^<]|<(?!\/figure))*?<\/figure>\s*■\s*ピックアップサポートカード候補/isu', $message, $bannerMatch)) {
             $gametoraId = (int) $bannerMatch[1];
-        } elseif (preg_match_all('/gacha_banner_(\d+)\.png/i', $message, $allBanners)) {
-            $gametoraId = (int) end($allBanners[1]);
         }
 
         // 2. Extract date period if available in message HTML (e.g. 10/13 12:00 ～ 10/26 11:59)
@@ -376,24 +374,18 @@ class CygamesNewsService
                 continue;
             }
 
-            // Banner matching:
-            // 1. Try matching by GameTora banner ID extracted from image
             $banner = null;
             if ($parsed['gametora_id'] !== null) {
                 $banner = GachaBanner::where('gametora_id', $parsed['gametora_id'])
                     ->where('banner_type', 'support_card')
                     ->first();
-            }
-
-            // 2. Fallback: match by start_date and category
-            if (! $banner && ! empty($parsed['start_date'])) {
-                $banner = GachaBanner::where('banner_type', 'support_card')
-                    ->where('start_date', $parsed['start_date'])
-                    ->where(function ($q) {
-                        $q->where('category', 'select_rate_up')
-                            ->orWhere('name', 'like', '%Select Pick Up%');
-                    })
-                    ->first();
+            } elseif (! empty($parsed['start_date'])) {
+                $matches = GachaBanner::where('banner_type', 'support_card')
+                    ->where('category', 'select_rate_up')
+                    ->where('gametora_id', '>', 0)
+                    ->whereDate('start_date', $parsed['start_date'])
+                    ->limit(2)->get();
+                $banner = $matches->count() === 1 ? $matches->first() : null;
             }
 
             $applied = false;
