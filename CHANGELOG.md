@@ -2,6 +2,15 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.14] - 19 November 2026
+
+### Kompatibilitas GameTora dan perbaikan pilihan banner Gacha
+
+- Sinkronisasi GameTora kini mendukung format syarat evolusi terbaru pada dataset Jepang dengan validasi operand dan jumlah parameter yang tetap ketat.
+- Banner Premium seperti Daring Tact kembali tersedia pada pilihan banner Gacha, dengan pengelompokan kategori yang lebih akurat.
+- Banner placeholder tanpa lineup pickup tidak lagi dapat dipilih untuk pencatatan baru, tetapi riwayat dan data backup tetap dipertahankan.
+- Banner Premium Oguri Cap lama kini dapat dikanonisasi ke identitas GameTora yang benar tanpa kehilangan riwayat pull atau pity.
+
 ## [Versi 3.3.13] - 19 November 2026
 
 ### Integritas sinkronisasi GameTora dan pemulihan backup
