@@ -2,6 +2,15 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.3.16] - 23 November 2026
+
+### Pemulihan lineup Select Pick Up
+
+- Sinkronisasi GameTora tidak lagi menghapus kandidat Select Pick Up yang valid ketika sumber upstream tidak menyediakan lineup resmi.
+- Banner Select Pick Up dengan kandidat atau provenance yang hilang kini dapat dipulihkan otomatis melalui pengumuman resmi Cygames tanpa memerlukan force sync.
+- Select Pick Up November 2026 tetap dapat dipulihkan dari pengumuman resminya meskipun artikel tersebut sudah tidak muncul pada indeks berita Cygames.
+- Banner yang belum memiliki lineup resmi tetap dipertahankan beserta riwayat pull dan pity tanpa menampilkan kandidat yang tidak terverifikasi.
+
 ## [Versi 3.3.15] - 19 November 2026
 
 ### Perbaikan Select Pick Up dan banner Premium
