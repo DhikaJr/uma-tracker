@@ -110,6 +110,41 @@ class SyncInstrumentationTest extends TestCase
         $this->assertSame(0, $umapyoi->metadata['lineups_found']);
     }
 
+    public function test_full_sync_preserves_february_alias_identity_and_counts_only_actionable_banners(): void
+    {
+        $february = [
+            'banner_type' => 'support_card', 'category' => 'select_rate_up',
+            'name' => 'Select Pick Up (Feb 2026)', 'start_date' => '2026-02-14', 'featured_items' => [],
+        ];
+        $canonical = GachaBanner::create(['gametora_id' => 30415] + $february);
+        $alias = GachaBanner::create(['gametora_id' => 20030] + $february);
+        $mismatch = GachaBanner::create([
+            'gametora_id' => 20031, 'name' => 'Select Pick Up (Feb 2026): different identity',
+        ] + $february);
+        foreach ([$canonical, $alias] as $banner) {
+            $banner->pity()->create(['banner_type' => 'support_card', 'current_pity' => 5]);
+        }
+        $this->fakeGameTora([
+            GameToraSyncService::DATA_BASE_URL.'/gacha/special.special.json' => Http::response([
+                ['id' => 20030, 'start' => strtotime('2026-02-14')],
+                ['id' => 20031, 'start' => strtotime('2026-02-14')],
+            ]),
+        ]);
+
+        $this->postJson('/api/gacha/sync-gametora')->assertOk()->assertJsonPath('is_up_to_date', false);
+
+        $parent = SyncRun::forSource(SyncRun::SOURCE_GAMETORA)->sole();
+        $child = $parent->children()->forSource(SyncRun::SOURCE_CYGAMES)->sole();
+        $this->assertSame(1, $parent->unresolved_count);
+        $this->assertSame(1, $child->unresolved_count);
+        $this->assertSame(5, $alias->fresh()->pity->current_pity);
+        $this->assertSame([], $alias->fresh()->featured_items);
+        $this->assertSame('Select Pick Up (Feb 2026): different identity', $mismatch->fresh()->name);
+        $this->assertCount(10, $canonical->fresh()->featured_items);
+        $this->getJson('/api/data-health')->assertOk()
+            ->assertJsonPath('health.issues.unresolved_select_pickup_ids', [20031]);
+    }
+
     #[TestWith(['creating', SyncRun::SOURCE_GAMETORA])]
     #[TestWith(['updating', SyncRun::SOURCE_GAMETORA])]
     #[TestWith(['updating', SyncRun::SOURCE_CYGAMES])]

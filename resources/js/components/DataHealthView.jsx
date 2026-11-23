@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Activity, AlertCircle, AlertTriangle, Check, CheckCircle2, CircleHelp, Clock, History, LoaderCircle, RefreshCw } from 'lucide-react';
 import {
-    HEALTH_SOURCES, formatDateTime, formatDuration, getOverallHealthMeta, getRunMetadataItems,
-    getRunStatusMeta, getSourceLabel, getSourceStatusMeta, getTriggerLabel,
+    HEALTH_SOURCES, RECOVERY_ACTIONS, formatDateTime, formatDuration, getOverallHealthMeta,
+    getRecoveryActions, getRecoveryResult, getRunMetadataItems, getRunStatusMeta, getSourceLabel,
+    getSourceStatusMeta, getTriggerLabel, getUnresolvedCount,
 } from '../utils/dataHealth';
 
 const surfaces = 'rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900';
 const muted = 'text-slate-600 dark:text-slate-400';
 const title = 'font-bold text-slate-900 dark:text-slate-100';
+const actionButton = 'inline-flex min-h-10 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-wait dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200 dark:hover:bg-emerald-900/60';
 
 const tones = {
     healthy: { icon: CheckCircle2, classes: 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' },
@@ -79,7 +81,7 @@ export function HealthOverview({ health }) {
     const { icon: Icon, classes } = tones[overall.tone];
     const issues = health.issues;
     const ids = Array.isArray(issues?.unresolved_select_pickup_ids) ? issues.unresolved_select_pickup_ids : [];
-    const count = issues?.unresolved_select_pickup_count ?? (issues ? ids.length : null);
+    const count = getUnresolvedCount(health);
 
     return (
         <div className="space-y-6">
@@ -126,6 +128,44 @@ export function HealthOverview({ health }) {
                 ) : <p className={`text-sm ${muted}`}>Hasil pemeriksaan belum tersedia.</p>}
             </section>
         </div>
+    );
+}
+
+export function RecoveryActions({ health, activeAction, disabled, result, onAction }) {
+    const actions = getRecoveryActions(health);
+    if (activeAction && !actions.includes(activeAction)) actions.push(activeAction);
+    const FeedbackIcon = result && tones[result.tone].icon;
+    const feedback = result && (
+        <div className={'mt-3 flex items-start gap-2 rounded-xl border px-3.5 py-3 text-sm ' + tones[result.tone].classes}>
+            <FeedbackIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+            {result.message}
+        </div>
+    );
+
+    return (
+        <section aria-labelledby="health-recovery" className={'p-4 sm:p-5 ' + surfaces}>
+            <h2 id="health-recovery" className={'text-lg ' + title}>Tindakan Pemulihan</h2>
+            <div role="status">{result?.tone !== 'failed' && feedback}</div>
+            <div role="alert">{result?.tone === 'failed' && feedback}</div>
+            {actions.length > 0 ? (
+                <ul className="mt-3 space-y-2">
+                    {actions.map(source => {
+                        const action = RECOVERY_ACTIONS[source];
+                        const running = activeAction === source;
+                        return (
+                            <li key={source} className="flex flex-col items-start gap-2.5 rounded-xl border border-slate-200 px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 dark:border-slate-800">
+                                <p className={'min-w-0 text-sm ' + muted}>{action.description}</p>
+                                <button type="button" onClick={() => onAction(source)} disabled={disabled || Boolean(activeAction)}
+                                    aria-busy={running} className={'max-w-full shrink-0 disabled:opacity-80 aria-busy:disabled:opacity-100 ' + actionButton}>
+                                    {running && <LoaderCircle aria-hidden="true" className="size-4 shrink-0 motion-safe:animate-spin" />}
+                                    {running ? action.pendingLabel : action.label}
+                                </button>
+                            </li>
+                        );
+                    })}
+                </ul>
+            ) : <p className={'mt-3 text-sm ' + muted}>Tidak ada tindakan pemulihan yang disarankan saat ini.</p>}
+        </section>
     );
 }
 
@@ -217,52 +257,99 @@ function LoadingRows({ label }) {
 const initialSection = { data: null, loading: true, error: false };
 
 async function loadSection(url, accepts, signal, setSection) {
+    setSection(previous => previous.loading ? previous : { ...previous, loading: true });
     try {
         const response = await fetch(url, { cache: 'no-store', signal });
         if (!response.ok) throw new Error();
         const data = await response.json();
         if (data?.success !== true || !accepts(data)) throw new Error();
-        if (signal.aborted) return false;
+        if (signal.aborted) return null;
         setSection({ data, loading: false, error: false, receivedAt: new Date().toISOString() });
-        return true;
+        return data;
     } catch {
         if (!signal.aborted) setSection(previous => ({ ...previous, loading: false, error: true }));
-        return false;
+        return null;
+    }
+}
+
+function loadHealthAndHistory(signal, setHealth, setHistory) {
+    return Promise.all([
+        loadSection('/api/data-health', data => data.health && typeof data.health === 'object' && !Array.isArray(data.health), signal, setHealth),
+        loadSection('/api/data-health/sync-runs?limit=20', data => Array.isArray(data.runs), signal, setHistory),
+    ]);
+}
+
+async function requestRecovery(source, signal) {
+    const { url, payload } = RECOVERY_ACTIONS[source];
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload ?? {}),
+            signal,
+        });
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data?.success === true ? data : null;
+    } catch {
+        return null;
     }
 }
 
 export default function DataHealthView() {
     const [health, setHealth] = useState(initialSection);
     const [history, setHistory] = useState(initialSection);
-    const [revision, setRevision] = useState(0);
     const [refreshConfirmed, setRefreshConfirmed] = useState(false);
+    const [activeAction, setActiveAction] = useState(null);
+    const [actionResult, setActionResult] = useState(null);
+    const pageController = useRef(null);
+    const pendingRequest = useRef(false);
+    const confirmationTimeout = useRef(null);
     const loading = health.loading || history.loading;
 
     useEffect(() => {
         const controller = new AbortController();
-        const healthRequest = loadSection('/api/data-health', data => data.health && typeof data.health === 'object' && !Array.isArray(data.health), controller.signal, setHealth);
-        const historyRequest = loadSection('/api/data-health/sync-runs?limit=20', data => Array.isArray(data.runs), controller.signal, setHistory);
-        let confirmationTimeout;
-
-        if (revision > 0) {
-            Promise.all([healthRequest, historyRequest]).then(([healthLoaded, historyLoaded]) => {
-                if (controller.signal.aborted || !healthLoaded || !historyLoaded) return;
-                setRefreshConfirmed(true);
-                confirmationTimeout = setTimeout(() => setRefreshConfirmed(false), 2500);
-            });
-        }
+        pageController.current = controller;
+        loadHealthAndHistory(controller.signal, setHealth, setHistory);
 
         return () => {
             controller.abort();
-            clearTimeout(confirmationTimeout);
+            clearTimeout(confirmationTimeout.current);
         };
-    }, [revision]);
+    }, []);
 
-    function refresh() {
+    function clearFeedback() {
+        clearTimeout(confirmationTimeout.current);
         setRefreshConfirmed(false);
-        setHealth(previous => ({ ...previous, loading: true }));
-        setHistory(previous => ({ ...previous, loading: true }));
-        setRevision(previous => previous + 1);
+        setActionResult(null);
+    }
+
+    async function refresh() {
+        if (loading || pendingRequest.current) return;
+        const signal = pageController.current.signal;
+        pendingRequest.current = true;
+        clearFeedback();
+        const [healthLoaded, historyLoaded] = await loadHealthAndHistory(signal, setHealth, setHistory);
+        pendingRequest.current = false;
+        if (signal.aborted || !healthLoaded || !historyLoaded) return;
+        setRefreshConfirmed(true);
+        confirmationTimeout.current = setTimeout(() => setRefreshConfirmed(false), 2500);
+    }
+
+    async function runRecovery(source) {
+        if (loading || pendingRequest.current) return;
+        const signal = pageController.current.signal;
+        const previousHealth = health.data.health;
+        pendingRequest.current = true;
+        clearFeedback();
+        setActiveAction(source);
+        const result = await requestRecovery(source, signal);
+        if (signal.aborted) return;
+        const [latest] = await loadHealthAndHistory(signal, setHealth, setHistory);
+        if (signal.aborted) return;
+        setActionResult(getRecoveryResult(source, result, previousHealth, latest?.health));
+        setActiveAction(null);
+        pendingRequest.current = false;
     }
 
     return (
@@ -283,9 +370,9 @@ export default function DataHealthView() {
                         </span>
                     </p>
                 </div>
-                <button type="button" onClick={refresh} disabled={loading}
+                <button type="button" onClick={refresh} disabled={loading || Boolean(activeAction)}
                     title="Membaca ulang status dan riwayat yang sudah tercatat. Tidak menjalankan sinkronisasi baru."
-                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-wait disabled:opacity-60 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200 dark:hover:bg-emerald-900/60">
+                    className={actionButton + ' disabled:opacity-60'}>
                     <RefreshCw aria-hidden="true" className={`size-4 ${loading ? 'motion-safe:animate-spin' : ''}`} />
                     {loading ? 'Memuat...' : 'Muat Ulang'}
                 </button>
@@ -302,6 +389,11 @@ export default function DataHealthView() {
                 )}
                 {health.data && <HealthOverview health={health.data.health} />}
             </div>
+
+            {health.data && (
+                <RecoveryActions health={health.data.health} activeAction={activeAction} disabled={loading}
+                    result={actionResult} onAction={runRecovery} />
+            )}
 
             <section aria-labelledby="health-history" aria-busy={history.loading} className={`p-4 sm:p-5 ${surfaces}`}>
                 <div className="mb-4 flex flex-wrap items-start justify-between gap-2">

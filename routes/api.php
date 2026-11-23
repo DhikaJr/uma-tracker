@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CircleTrackerController;
 use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\CompetitionEventController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DataHealthActionController;
 use App\Http\Controllers\Api\DataHealthController;
 use App\Http\Controllers\Api\GachaController;
 use App\Http\Controllers\Api\PlannerController;
@@ -47,6 +48,8 @@ Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
 Route::prefix('data-health')->group(function () {
     Route::get('/', [DataHealthController::class, 'index']);
     Route::get('/sync-runs', [DataHealthController::class, 'syncRuns']);
+    Route::post('/actions/recheck-cygames', [DataHealthActionController::class, 'recheckCygames']);
+    Route::post('/actions/recheck-umapyoi', [DataHealthActionController::class, 'recheckUmapyoi']);
 });
 
 // Gacha Tracker Endpoints

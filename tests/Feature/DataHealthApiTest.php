@@ -31,6 +31,9 @@ class DataHealthApiTest extends TestCase
         } else {
             AppSetting::setValue(GameToraSyncService::MANIFEST_CHECKPOINT_KEY, 'verified-manifest');
             SyncRun::factory()->create(['status' => $status]);
+            if ($status === SyncRun::STATUS_DEGRADED) {
+                SyncRun::factory()->create(['source' => SyncRun::SOURCE_CYGAMES, 'status' => SyncRun::STATUS_FAILED]);
+            }
         }
 
         $response = $this->getJson('/api/data-health')->assertOk()

@@ -6,6 +6,9 @@ namespace App\Support;
 
 use App\Models\GachaBanner;
 use App\Models\UmaCatalogItem;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class UmaCatalog
@@ -2527,10 +2530,10 @@ class UmaCatalog
                     'SSR [Blooming Buds] Daring Heart (Intelligence)',
                 ],
             ],
-            '2026-02-14' => [
+            GachaBanner::FEBRUARY_SELECT_PICKUP_START_DATE => [
                 'name' => 'Select Pick Up (Feb 2026)',
                 'gametora_id' => 30415,
-                'start_date' => '2026-02-14',
+                'start_date' => GachaBanner::FEBRUARY_SELECT_PICKUP_START_DATE,
                 'end_date' => '2026-02-24',
                 'candidates' => [
                     'SSR [世界を変える眼差し] Almond Eye (Speed)',
@@ -2697,17 +2700,14 @@ class UmaCatalog
      */
     public static function syncCanonical2026SelectPickupBanners(): int
     {
-        // 1. Delete erroneous character select_rate_up banners
         GachaBanner::where('category', 'select_rate_up')
             ->where('banner_type', 'character')
+            ->where(fn (Builder $banners) => $banners->whereNull('gametora_id')
+                ->orWhereNotIn('gametora_id', GachaBanner::LEGACY_FEBRUARY_SELECT_PICKUP_IDS))
             ->delete();
 
-        // 2. Delete stale duplicate Feb 2026 support banner (20031)
-        GachaBanner::where('gametora_id', 20031)->delete();
-
-        // 3. Upsert all 10 official 2026 Select Pick Up Support Card banners with 10 SSR candidates
-        $count = 0;
-        foreach (self::getSelectPickupCandidates2026() as $sp) {
+        $selectPickups = self::getSelectPickupCandidates2026();
+        foreach ($selectPickups as $sp) {
             $banner = GachaBanner::firstOrNew(['gametora_id' => $sp['gametora_id'], 'banner_type' => 'support_card']);
             if (! $banner->hasOfficialSelectPickupCandidates()) {
                 $banner->featured_items = $sp['candidates'];
@@ -2720,10 +2720,49 @@ class UmaCatalog
                 'end_date' => $sp['end_date'],
                 'is_active' => true,
             ])->save();
-            $count++;
         }
 
-        return $count;
+        self::reconcileLegacyFebruarySelectPickup($selectPickups[GachaBanner::FEBRUARY_SELECT_PICKUP_START_DATE]['gametora_id']);
+
+        return count($selectPickups);
+    }
+
+    private static function reconcileLegacyFebruarySelectPickup(int $canonicalGameToraId): void
+    {
+        DB::transaction(function () use ($canonicalGameToraId): void {
+            $mismatches = GachaBanner::whereIn('gametora_id', GachaBanner::LEGACY_FEBRUARY_SELECT_PICKUP_IDS)
+                ->withoutLegacyFebruarySelectPickup()->get(['id', 'gametora_id']);
+            foreach ($mismatches as $mismatch) {
+                Log::warning('Identitas banner Select Pick Up Februari legacy tidak cocok. Banner dipertahankan.', [
+                    'gametora_id' => $mismatch->gametora_id,
+                    'legacy_banner_id' => $mismatch->id,
+                ]);
+            }
+
+            $aliases = GachaBanner::legacyFebruarySelectPickup()->orderBy('id')->lockForUpdate()->get();
+            if ($aliases->isEmpty()) {
+                return;
+            }
+
+            $canonical = GachaBanner::gameToraSelectPickup()->where('gametora_id', $canonicalGameToraId)
+                ->lockForUpdate()->firstOrFail();
+            foreach ($aliases as $alias) {
+                if (($alias->pulls()->exists() || $alias->pity()->exists())
+                    && ($canonical->pulls()->exists() || $canonical->pity()->exists())) {
+                    Log::warning('Banner Select Pick Up Februari legacy dan kanonis sama-sama memiliki riwayat. Kedua banner dipertahankan.', [
+                        'gametora_id' => $alias->gametora_id,
+                        'legacy_banner_id' => $alias->id,
+                        'canonical_banner_id' => $canonical->id,
+                    ]);
+
+                    continue;
+                }
+
+                $alias->pulls()->toBase()->update(['gacha_banner_id' => $canonical->id]);
+                $alias->pity()->toBase()->update(['gacha_banner_id' => $canonical->id]);
+                $alias->delete();
+            }
+        });
     }
 
     /**

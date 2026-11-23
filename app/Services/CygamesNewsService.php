@@ -479,9 +479,8 @@ class CygamesNewsService
                     ->where('banner_type', 'support_card')
                     ->first();
             } elseif (! empty($parsed['start_date'])) {
-                $matches = GachaBanner::where('banner_type', 'support_card')
-                    ->where('category', 'select_rate_up')
-                    ->where('gametora_id', '>', 0)
+                $matches = GachaBanner::gameToraSelectPickup()
+                    ->withoutLegacyFebruarySelectPickup()
                     ->whereDate('start_date', $parsed['start_date'])
                     ->limit(2)->get();
                 $banner = $matches->count() === 1 ? $matches->first() : null;

@@ -22,6 +22,83 @@ export const HEALTH_SOURCES = {
     umapyoi: 'Umapyoi',
 };
 
+export const RECOVERY_ACTIONS = {
+    gametora: {
+        url: '/api/gacha/sync-gametora',
+        payload: { force: false, allow_evolution_removals: false },
+        label: 'Sinkronkan GameTora',
+        pendingLabel: 'Menyinkronkan GameTora...',
+        description: 'Menjalankan sinkronisasi normal GameTora dengan mode force dan penghapusan evolusi dinonaktifkan.',
+    },
+    cygames: {
+        url: '/api/data-health/actions/recheck-cygames',
+        label: 'Periksa ulang Cygames',
+        pendingLabel: 'Memeriksa Cygames...',
+        description: 'Memeriksa ulang pengumuman resmi Select Pick Up dan memulihkan lineup hanya jika kandidat resmi dapat diverifikasi.',
+    },
+    umapyoi: {
+        url: '/api/data-health/actions/recheck-umapyoi',
+        label: 'Periksa ulang Umapyoi',
+        pendingLabel: 'Memeriksa Umapyoi...',
+        description: 'Menguji ulang sumber Twinkle Collection dan memperbarui telemetri sumber tanpa menulis ulang banner.',
+    },
+};
+
+export function getUnresolvedCount(health) {
+    const issues = health?.issues;
+    return issues?.unresolved_select_pickup_count
+        ?? (Array.isArray(issues?.unresolved_select_pickup_ids) ? issues.unresolved_select_pickup_ids.length : null);
+}
+
+export function getRecoveryActions(health) {
+    if (!health) return [];
+
+    const sources = health.sources;
+    const hasProblem = source => ['degraded', 'failed'].includes(sources?.[source]?.status);
+    const actions = [];
+    if (health.overall_status !== 'healthy' || ['failed', 'unknown'].includes(sources?.gametora?.status ?? 'unknown')) actions.push('gametora');
+    if (hasProblem('cygames') || getUnresolvedCount(health) > 0) actions.push('cygames');
+    if (hasProblem('umapyoi')) actions.push('umapyoi');
+    return actions;
+}
+
+export function getRecoveryResult(source, result, previousHealth, latestHealth) {
+    if (source === 'gametora') {
+        if (result) return { tone: 'healthy', message: 'Sinkronisasi GameTora selesai.' };
+
+        const latest = latestHealth?.sources?.gametora;
+        const failureRecorded = latest?.status === 'failed' && latest.last_run_id != null
+            && latest.last_run_id !== previousHealth?.sources?.gametora?.last_run_id;
+        return {
+            tone: 'failed',
+            message: failureRecorded
+                ? 'Sinkronisasi GameTora gagal. Status terbaru telah dicatat.'
+                : 'Sinkronisasi GameTora gagal.',
+        };
+    }
+
+    if (!result) return { tone: 'failed', message: 'Tindakan pemulihan tidak dapat dijalankan.' };
+
+    const sourceLabel = getSourceLabel(source);
+    const status = result.source_status;
+    if (source === 'cygames' && getUnresolvedCount(latestHealth) > 0) {
+        return { tone: 'degraded', message: 'Cygames sudah diperiksa ulang, tetapi masih ada Select Pick Up yang belum dapat diverifikasi.' };
+    }
+    if (status === 'failed') {
+        return { tone: 'degraded', message: 'Pemeriksaan ' + sourceLabel + ' selesai, tetapi sumber masih mengalami kegagalan.' };
+    }
+    if (status === 'degraded') {
+        return { tone: 'degraded', message: 'Pemeriksaan ' + sourceLabel + ' selesai, tetapi sumber masih mengalami gangguan.' };
+    }
+    if (status !== 'success') {
+        return { tone: 'degraded', message: 'Pemeriksaan ' + sourceLabel + ' selesai. Status terbaru belum dapat dikonfirmasi.' };
+    }
+    if (source === 'cygames' && getUnresolvedCount(previousHealth) > 0 && getUnresolvedCount(latestHealth) === 0) {
+        return { tone: 'healthy', message: 'Lineup Select Pick Up berhasil dipulihkan.' };
+    }
+    return { tone: 'healthy', message: sourceLabel + ' berhasil diperiksa ulang dan status terbaru sudah tercatat.' };
+}
+
 const triggerLabels = {
     manual: 'Manual',
     embedded: 'Bagian dari sinkronisasi induk',

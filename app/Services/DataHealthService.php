@@ -22,13 +22,16 @@ final class DataHealthService
             SyncRun::SOURCE_UMAPYOI => $this->source(SyncRun::SOURCE_UMAPYOI),
         ];
         $gameTora = $sources[SyncRun::SOURCE_GAMETORA]['status'];
+        $sourceProblems = [SyncRun::STATUS_DEGRADED, SyncRun::STATUS_FAILED];
 
         return [
             'overall_status' => match (true) {
                 $gameTora === 'unknown' => 'unknown',
                 $gameTora === SyncRun::STATUS_FAILED => 'failed',
-                $gameTora === SyncRun::STATUS_DEGRADED || $unresolvedIds !== [] => 'degraded',
+                $unresolvedIds !== [] => 'degraded',
                 (string) AppSetting::getValue(GameToraSyncService::MANIFEST_CHECKPOINT_KEY) === '' => 'degraded',
+                in_array($sources[SyncRun::SOURCE_CYGAMES]['status'], $sourceProblems, true),
+                in_array($sources[SyncRun::SOURCE_UMAPYOI]['status'], $sourceProblems, true) => 'degraded',
                 default => 'healthy',
             },
             'sources' => $sources,

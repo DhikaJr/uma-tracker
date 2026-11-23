@@ -20,6 +20,10 @@ class GachaBanner extends Model
 
     public const DEFAULT_RATE_UP_PER_ITEM = 0.75;
 
+    public const FEBRUARY_SELECT_PICKUP_START_DATE = '2026-02-14';
+
+    public const LEGACY_FEBRUARY_SELECT_PICKUP_IDS = [20030, 20031];
+
     protected $attributes = [
         'base_rate' => self::DEFAULT_BASE_RATE,
     ];
@@ -105,7 +109,21 @@ class GachaBanner extends Model
     public function scopeUnresolvedSelectPickup(Builder $query): Builder
     {
         return $query->gameToraSelectPickup()
+            ->withoutLegacyFebruarySelectPickup()
             ->where(fn (Builder $banners) => $banners->whereNull('featured_items')->orWhereJsonLength('featured_items', 0));
+    }
+
+    public function scopeLegacyFebruarySelectPickup(Builder $query): Builder
+    {
+        return $query->gameToraSelectPickup()
+            ->whereIn('gametora_id', self::LEGACY_FEBRUARY_SELECT_PICKUP_IDS)
+            ->where('name', 'Select Pick Up (Feb 2026)')
+            ->whereDate('start_date', self::FEBRUARY_SELECT_PICKUP_START_DATE);
+    }
+
+    public function scopeWithoutLegacyFebruarySelectPickup(Builder $query): Builder
+    {
+        return $query->whereNotIn('gacha_banners.id', self::legacyFebruarySelectPickup()->select('id'));
     }
 
     /**

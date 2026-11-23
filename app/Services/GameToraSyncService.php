@@ -902,6 +902,10 @@ class GameToraSyncService
                     if ($endDate === null || str_starts_with($endDate, '2050')) {
                         $endDate = date('Y-m-t', $start);
                     }
+                    if ($startDate === GachaBanner::FEBRUARY_SELECT_PICKUP_START_DATE
+                        && in_array((int) $id, GachaBanner::LEGACY_FEBRUARY_SELECT_PICKUP_IDS, true)) {
+                        continue;
+                    }
                     $monthName = date('M Y', $start);
                     $monthKey = date('Y-m', $start);
 
@@ -998,6 +1002,10 @@ class GameToraSyncService
             ->orWhere('name', 'LIKE', 'Select Pick Up%')
             ->get()
             ->each(function (GachaBanner $banner) {
+                if (in_array($banner->gametora_id, GachaBanner::LEGACY_FEBRUARY_SELECT_PICKUP_IDS, true)) {
+                    return;
+                }
+
                 if (preg_match('/^(Select Pick Up \([A-Za-z]+ \d{4}\))/i', $banner->name, $matches)) {
                     if ($banner->name !== $matches[1]) {
                         $banner->update(['name' => $matches[1]]);
@@ -1006,6 +1014,11 @@ class GameToraSyncService
             });
 
         return $syncedCount;
+    }
+
+    public function recheckUmapyoiSource(): void
+    {
+        $this->fetchUmapyoiTwinkleLineups();
     }
 
     /**

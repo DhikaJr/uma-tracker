@@ -58,7 +58,7 @@ class DataHealthServiceTest extends TestCase
     }
 
     #[TestWith([SyncRun::STATUS_SUCCESS, 'healthy'])]
-    #[TestWith([SyncRun::STATUS_DEGRADED, 'degraded'])]
+    #[TestWith([SyncRun::STATUS_DEGRADED, 'healthy'])]
     #[TestWith([SyncRun::STATUS_FAILED, 'failed'])]
     public function test_latest_completed_gametora_run_determines_overall_health(string $status, string $overall): void
     {
@@ -112,7 +112,7 @@ class DataHealthServiceTest extends TestCase
         ], $snapshot['issues']);
     }
 
-    public function test_old_failed_child_does_not_degrade_newer_successful_parent(): void
+    public function test_optional_source_failure_remains_current_when_newer_gametora_run_skips_that_source(): void
     {
         AppSetting::setValue(GameToraSyncService::MANIFEST_CHECKPOINT_KEY, 'verified-manifest');
         $olderParent = SyncRun::factory()->create([
@@ -127,10 +127,55 @@ class DataHealthServiceTest extends TestCase
 
         $snapshot = app(DataHealthService::class)->snapshot();
 
-        $this->assertSame('healthy', $snapshot['overall_status']);
+        $this->assertSame('degraded', $snapshot['overall_status']);
         $this->assertSame($newerParent->id, $snapshot['sources']['gametora']['last_run_id']);
         $this->assertSame($child->id, $snapshot['sources']['umapyoi']['last_run_id']);
         $this->assertSame(SyncRun::STATUS_FAILED, $snapshot['sources']['umapyoi']['status']);
+    }
+
+    #[TestWith([SyncRun::STATUS_DEGRADED, true, false, 'healthy'])]
+    #[TestWith([SyncRun::STATUS_FAILED, true, false, 'failed'])]
+    #[TestWith([SyncRun::STATUS_DEGRADED, true, true, 'degraded'])]
+    #[TestWith([SyncRun::STATUS_SUCCESS, false, false, 'degraded'])]
+    public function test_direct_source_recoveries_only_supersede_optional_source_failures(
+        string $parentStatus,
+        bool $hasCheckpoint,
+        bool $unresolved,
+        string $expectedOverall,
+    ): void {
+        if ($hasCheckpoint) {
+            AppSetting::setValue(GameToraSyncService::MANIFEST_CHECKPOINT_KEY, 'verified-manifest');
+        }
+        if ($unresolved) {
+            GachaBanner::create([
+                'gametora_id' => 30485, 'name' => 'Select Pick Up fixture', 'category' => 'select_rate_up',
+                'banner_type' => 'support_card', 'start_date' => '2026-11-16', 'featured_items' => [],
+            ]);
+        }
+        $parent = SyncRun::factory()->create(['status' => $parentStatus, 'started_at' => now()->subDay()]);
+        $sources = [SyncRun::SOURCE_CYGAMES, SyncRun::SOURCE_UMAPYOI];
+        foreach ($sources as $source) {
+            SyncRun::factory()->for($parent, 'parent')->create([
+                'source' => $source, 'trigger' => SyncRun::TRIGGER_EMBEDDED,
+                'status' => SyncRun::STATUS_FAILED, 'started_at' => now()->subDay(),
+            ]);
+        }
+        $health = app(DataHealthService::class);
+        $this->assertSame($parentStatus === SyncRun::STATUS_FAILED ? 'failed' : 'degraded', $health->snapshot()['overall_status']);
+
+        foreach ($sources as $source) {
+            $directRuns[$source] = SyncRun::factory()->create(['source' => $source]);
+        }
+        $snapshot = $health->snapshot();
+
+        $this->assertSame($expectedOverall, $snapshot['overall_status']);
+        $this->assertSame((int) $unresolved, $snapshot['issues']['unresolved_select_pickup_count']);
+        foreach ($directRuns as $source => $run) {
+            $this->assertSame($run->id, $snapshot['sources'][$source]['last_run_id']);
+            $this->assertSame(SyncRun::STATUS_SUCCESS, $snapshot['sources'][$source]['status']);
+        }
+        $this->assertSame($parentStatus, $parent->refresh()->status);
+        $this->assertSame(2, $parent->children()->where('status', SyncRun::STATUS_FAILED)->count());
     }
 
     #[TestWith(['2026-11-23 10:01:00'])]

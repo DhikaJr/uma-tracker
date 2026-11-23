@@ -5,7 +5,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 import {
-    formatDateTime, formatDuration, getOverallHealthMeta, getRunMetadataItems, getRunStatusMeta,
+    RECOVERY_ACTIONS, formatDateTime, formatDuration, getOverallHealthMeta, getRecoveryActions, getRecoveryResult, getRunMetadataItems, getRunStatusMeta,
     getSourceLabel, getSourceStatusMeta, getTriggerLabel,
 } from '../../resources/js/utils/dataHealth.js';
 
@@ -144,7 +144,7 @@ test('empty history explains that new telemetry requires a sync after Data Healt
     assert.doesNotMatch(html, /Muat Ulang/);
 });
 
-test('the page starts with separate loading states and only offers a GET refresh', async () => {
+test('the page starts with separate loading states before any recovery actions are suggested', async () => {
     const { default: DataHealthView } = await vite.ssrLoadModule(viewModule);
     const html = render(DataHealthView);
     assert.match(html, />Data Health</);
@@ -155,13 +155,85 @@ test('the page starts with separate loading states and only offers a GET refresh
     assert.match(refreshButton, /disabled=""/);
     assert.match(refreshButton, /title="Membaca ulang status dan riwayat yang sudah tercatat\. Tidak menjalankan sinkronisasi baru\."/);
     assert.match(refreshButton, /animate-spin[\s\S]*Memuat\.\.\.<\/button>/);
-    assert.doesNotMatch(html, /Data diperbarui/);
+    assert.doesNotMatch(html, /Data diperbarui|Tindakan Pemulihan/);
     const source = await readFile(new URL('../../resources/js/components/DataHealthView.jsx', import.meta.url), 'utf8');
     assert.deepEqual([...source.matchAll(/loadSection\('(\/api\/[^']+)'/g)].map(([, url]) => url),
         ['/api/data-health', '/api/data-health/sync-runs?limit=20']);
     assert.match(source, /fetch\(url, \{ cache: 'no-store', signal \}\)/);
     assert.match(source, /controller\.abort\(\)/);
-    assert.doesNotMatch(source, /setInterval|localStorage|sessionStorage|\bPOST\b|\/api\/gacha\/sync/);
+    assert.doesNotMatch(source, /setInterval|localStorage|sessionStorage/);
+});
+
+const healthySnapshot = {
+    overall_status: 'healthy',
+    sources: { gametora: { status: 'degraded' }, cygames: { status: 'unknown' }, umapyoi: { status: 'success' } },
+    issues: { unresolved_select_pickup_count: 0, unresolved_select_pickup_ids: [] },
+};
+
+const degradedSnapshot = {
+    overall_status: 'degraded',
+    sources: { gametora: { status: 'degraded' }, cygames: { status: 'failed' }, umapyoi: { status: 'failed' } },
+    issues: { unresolved_select_pickup_count: 1, unresolved_select_pickup_ids: [30485] },
+};
+
+test('recovery suggestions follow current source failures and unresolved Select Pick Up without duplicates', () => {
+    assert.deepEqual(getRecoveryActions(healthySnapshot), []);
+    assert.deepEqual(getRecoveryActions({ overall_status: 'unknown' }), ['gametora']);
+    assert.deepEqual(getRecoveryActions({ ...degradedSnapshot, sources: { ...degradedSnapshot.sources, umapyoi: { status: 'unknown' } } }), ['gametora', 'cygames']);
+    assert.deepEqual(getRecoveryActions({ ...degradedSnapshot, sources: healthySnapshot.sources }), ['gametora', 'cygames']);
+    assert.deepEqual(getRecoveryActions({ ...degradedSnapshot, issues: healthySnapshot.issues, sources: { ...healthySnapshot.sources, umapyoi: { status: 'degraded' } } }), ['gametora', 'umapyoi']);
+});
+
+test('recovery actions use fixed endpoints and safe GameTora options', () => {
+    assert.deepEqual(Object.values(RECOVERY_ACTIONS).map(({ url, payload }) => [url, payload ?? {}]), [
+        ['/api/gacha/sync-gametora', { force: false, allow_evolution_removals: false }],
+        ['/api/data-health/actions/recheck-cygames', {}],
+        ['/api/data-health/actions/recheck-umapyoi', {}],
+    ]);
+});
+
+test('recovery result distinguishes successful execution, remaining problems, and action failure', () => {
+    assert.deepEqual(getRecoveryResult('cygames', { source_status: 'success' }, degradedSnapshot, healthySnapshot), {
+        tone: 'healthy', message: 'Lineup Select Pick Up berhasil dipulihkan.',
+    });
+    assert.deepEqual(getRecoveryResult('cygames', { source_status: 'failed' }, degradedSnapshot, degradedSnapshot), {
+        tone: 'degraded', message: 'Cygames sudah diperiksa ulang, tetapi masih ada Select Pick Up yang belum dapat diverifikasi.',
+    });
+    assert.match(getRecoveryResult('umapyoi', { source_status: 'failed' }).message, /sumber masih mengalami kegagalan/);
+    assert.match(getRecoveryResult('umapyoi', { source_status: 'unknown' }).message, /belum dapat dikonfirmasi/);
+    assert.equal(getRecoveryResult('umapyoi', { source_status: 'success', lineups_found: 0 }).tone, 'healthy');
+    assert.deepEqual(getRecoveryResult('umapyoi', null), {
+        tone: 'failed', message: 'Tindakan pemulihan tidak dapat dijalankan.',
+    });
+    assert.equal(getRecoveryResult('gametora', null, degradedSnapshot, {
+        sources: { gametora: { status: 'failed', last_run_id: 8 } },
+    }).message, 'Sinkronisasi GameTora gagal. Status terbaru telah dicatat.');
+    assert.equal(getRecoveryResult('gametora', null, degradedSnapshot, null).message, 'Sinkronisasi GameTora gagal.');
+});
+
+test('degraded recovery section shows only source-specific actions and healthy section has no buttons', async () => {
+    const { RecoveryActions } = await vite.ssrLoadModule(viewModule);
+    const degraded = render(RecoveryActions, { health: degradedSnapshot });
+    const healthy = render(RecoveryActions, { health: healthySnapshot });
+
+    assert.match(degraded, />Tindakan Pemulihan</);
+    assert.deepEqual([...degraded.matchAll(/<button\b[^>]*>([^<]+)<\/button>/g)].map(([, label]) => label), [
+        'Sinkronkan GameTora', 'Periksa ulang Cygames', 'Periksa ulang Umapyoi',
+    ]);
+    assert.doesNotMatch(degraded, /Fix All|Perbaiki Semua|Retry All|Force GameTora/);
+    assert.match(healthy, /Tidak ada tindakan pemulihan yang disarankan saat ini\./);
+    assert.doesNotMatch(healthy, /<button/);
+});
+
+test('active recovery is announced and disables every source button', async () => {
+    const { RecoveryActions } = await vite.ssrLoadModule(viewModule);
+    const html = render(RecoveryActions, { health: degradedSnapshot, activeAction: 'cygames' });
+    const buttons = [...html.matchAll(/<button\b[^>]*>/g)].map(([tag]) => tag);
+
+    assert.equal(buttons.length, 3);
+    assert.ok(buttons.every(tag => tag.includes('disabled=""')));
+    assert.equal(buttons.filter(tag => tag.includes('aria-busy="true"')).length, 1);
+    assert.match(html, /animate-spin[^>]*aria-hidden="true"[\s\S]*Memeriksa Cygames\.\.\./);
 });
 
 test('Health is the active Navbar item after Event and bottom navigation keeps its seven items', async () => {
