@@ -771,7 +771,7 @@ class GameToraCharacterIdentityTest extends TestCase
 
         $this->postJson('/api/gacha/sync-gametora', ['allow_evolution_removals' => true])->assertInternalServerError();
 
-        $writes = array_filter(DB::getQueryLog(), fn (array $query) => preg_match('/^\s*(insert|update|delete|replace)\b/i', $query['query']));
+        $writes = $this->nonTelemetryWrites();
         DB::disableQueryLog();
         $this->assertSame([], $writes);
         $this->assertSame($hash, AppSetting::getValue('gametora_manifest_hash'));
@@ -846,7 +846,7 @@ class GameToraCharacterIdentityTest extends TestCase
         DB::enableQueryLog();
         try {
             $failure = $this->postJson('/api/gacha/sync-gametora');
-            $writes = array_filter(DB::getQueryLog(), fn (array $query) => preg_match('/^\s*(insert|update|delete|replace)\b/i', $query['query']));
+            $writes = $this->nonTelemetryWrites();
         } finally {
             DB::disableQueryLog();
         }
@@ -980,7 +980,7 @@ class GameToraCharacterIdentityTest extends TestCase
         DB::enableQueryLog();
         try {
             $failure = $this->postJson('/api/gacha/sync-gametora');
-            $writes = array_filter(DB::getQueryLog(), fn (array $query) => preg_match('/^\s*(insert|update|delete|replace)\b/i', $query['query']));
+            $writes = $this->nonTelemetryWrites();
         } finally {
             DB::disableQueryLog();
         }
@@ -1311,7 +1311,7 @@ class GameToraCharacterIdentityTest extends TestCase
         DB::enableQueryLog();
         try {
             $failure = $this->postJson('/api/gacha/sync-gametora');
-            $writes = array_filter(DB::getQueryLog(), fn (array $query) => preg_match('/^\s*(insert|update|delete|replace)\b/i', $query['query']));
+            $writes = $this->nonTelemetryWrites();
         } finally {
             DB::disableQueryLog();
         }
@@ -1574,7 +1574,7 @@ class GameToraCharacterIdentityTest extends TestCase
         DB::enableQueryLog();
         try {
             $failure = $this->postJson('/api/gacha/sync-gametora');
-            $writes = array_filter(DB::getQueryLog(), fn (array $query) => preg_match('/^\s*(insert|update|delete|replace)\b/i', $query['query']));
+            $writes = $this->nonTelemetryWrites();
         } finally {
             DB::disableQueryLog();
         }
@@ -2099,6 +2099,17 @@ class GameToraCharacterIdentityTest extends TestCase
             'https://umapyoi.net/api/v1/news/search/twinkle' => Http::response([]),
             'https://umamusume.jp/api/ajax/pr_info_index*' => Http::response([]),
         ]);
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function nonTelemetryWrites(): array
+    {
+        return array_filter(DB::getQueryLog(), function (array $query): bool {
+            $statement = ltrim($query['query']);
+
+            return preg_match('/^(insert|update|delete|replace)\b/i', $statement) === 1
+                && preg_match('/^(insert into|update) "sync_runs"\s/i', $statement) !== 1;
+        });
     }
 
     private function evolutionRow(int $cardId = 100903, int $skillId = 100903211): array

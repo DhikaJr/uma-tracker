@@ -95,6 +95,19 @@ class GachaBanner extends Model
         return $query->where('banner_type', $bannerType);
     }
 
+    public function scopeGameToraSelectPickup(Builder $query): Builder
+    {
+        return $query->where('category', 'select_rate_up')
+            ->where('banner_type', 'support_card')
+            ->where('gametora_id', '>', 0);
+    }
+
+    public function scopeUnresolvedSelectPickup(Builder $query): Builder
+    {
+        return $query->gameToraSelectPickup()
+            ->where(fn (Builder $banners) => $banners->whereNull('featured_items')->orWhereJsonLength('featured_items', 0));
+    }
+
     /**
      * Scope query by category.
      */

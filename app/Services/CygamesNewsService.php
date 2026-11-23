@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\AppSetting;
 use App\Models\GachaBanner;
+use App\Models\SyncRun;
 use App\Models\UmaCatalogItem;
 use App\Support\VerifiedHttp;
 use Carbon\Carbon;
@@ -34,6 +35,12 @@ class CygamesNewsService
      */
     public function fetchNewsIndex(): array
     {
+        return $this->requestNewsIndex() ?? [];
+    }
+
+    /** @return array<int, array<string, mixed>>|null */
+    private function requestNewsIndex(): ?array
+    {
         try {
             $response = VerifiedHttp::request()->withHeaders([
                 'User-Agent' => self::USER_AGENT,
@@ -47,18 +54,18 @@ class CygamesNewsService
                     'status' => $response->status(),
                 ]);
 
-                return [];
+                return null;
             }
 
             $data = $response->json();
 
-            return is_array($data['information_list'] ?? null) ? $data['information_list'] : [];
+            return is_array($data['information_list'] ?? null) ? $data['information_list'] : null;
         } catch (Throwable $e) {
             Log::warning('Failed to fetch Cygames news index', [
                 'error' => VerifiedHttp::errorMessage($e),
             ]);
 
-            return [];
+            return null;
         }
     }
 
@@ -366,13 +373,72 @@ class CygamesNewsService
      *
      * @return array{success: bool, updated_count: int, articles_processed: int}
      */
-    public function syncSelectPickupBanners(bool $force = false): array
+    public function syncSelectPickupBanners(bool $force = false, ?SyncRunRecorder $parent = null): array
     {
-        $articles = $this->fetchNewsIndex();
+        $run = SyncRunRecorder::start(SyncRun::SOURCE_CYGAMES, $parent ? SyncRun::TRIGGER_EMBEDDED : SyncRun::TRIGGER_DIRECT, $parent, ['force' => $force]);
+        $observations = [
+            'index_fetch_ok' => false,
+            'detail_fetch_failures' => 0,
+            'parse_failures' => 0,
+            'resolution_failures' => 0,
+            'unmatched_articles' => 0,
+            'articles_processed' => 0,
+            'official_banners_updated' => 0,
+            'created_banners' => 0,
+        ];
+        $error = null;
+        try {
+            return $this->syncArticles($force, $observations);
+        } catch (Throwable $e) {
+            $error = $e;
+
+            throw $e;
+        } finally {
+            $this->finishRun($run, $observations, $error);
+        }
+    }
+
+    /**
+     * @param  array{index_fetch_ok: bool, detail_fetch_failures: int, parse_failures: int, resolution_failures: int, unmatched_articles: int, articles_processed: int, official_banners_updated: int, created_banners: int}  $observations
+     */
+    private function finishRun(SyncRunRecorder $run, array $observations, ?Throwable $error): void
+    {
+        $unresolvedCount = SyncRunRecorder::bestEffort(fn () => GachaBanner::unresolvedSelectPickup()->distinct()->count('gametora_id')) ?? 0;
+        $warningCount = (int) ! $observations['index_fetch_ok'] + $observations['detail_fetch_failures']
+            + $observations['parse_failures'] + $observations['resolution_failures'] + $observations['unmatched_articles'];
+        $appliedCount = $observations['official_banners_updated'];
+        $status = SyncRun::STATUS_SUCCESS;
+        if ($error !== null) {
+            $status = SyncRun::STATUS_FAILED;
+        } elseif ($warningCount > 0 || $unresolvedCount > 0) {
+            $retainedOfficial = $appliedCount === 0 && $unresolvedCount === 0 && SyncRunRecorder::bestEffort(
+                fn () => GachaBanner::gameToraSelectPickup()->get()->contains(fn (GachaBanner $banner) => $banner->hasOfficialSelectPickupCandidates()),
+            );
+            $status = $appliedCount > 0 || $retainedOfficial ? SyncRun::STATUS_DEGRADED : SyncRun::STATUS_FAILED;
+        }
+
+        $run->finish(
+            $status,
+            $observations,
+            createdCount: $observations['created_banners'],
+            updatedCount: $appliedCount - $observations['created_banners'],
+            unresolvedCount: $unresolvedCount,
+            warningCount: $warningCount,
+            error: $error,
+        );
+    }
+
+    /**
+     * @param  array{index_fetch_ok: bool, detail_fetch_failures: int, parse_failures: int, resolution_failures: int, unmatched_articles: int, articles_processed: int, official_banners_updated: int, created_banners: int}  $observations
+     * @return array{success: bool, updated_count: int, articles_processed: int}
+     */
+    private function syncArticles(bool $force, array &$observations): array
+    {
+        $index = $this->requestNewsIndex();
+        $observations['index_fetch_ok'] = $index !== null;
+        $articles = $index ?? [];
         $highestProcessedAnnounceId = (int) AppSetting::getValue('last_processed_cygames_announce_id', 0);
         $maxAnnounceIdInBatch = $highestProcessedAnnounceId;
-        $updatedCount = 0;
-        $processedCount = 0;
 
         foreach ($this->selectPickupArticleIds($articles) as $announceId) {
             if ($announceId <= 0) {
@@ -387,18 +453,23 @@ class CygamesNewsService
 
             $detail = $this->fetchArticleDetail($announceId);
             if (! $detail) {
+                $observations['detail_fetch_failures']++;
+
                 continue;
             }
 
-            $processedCount++;
+            $observations['articles_processed']++;
             $parsed = $this->parseArticle($detail);
             if (! $parsed || $parsed['announce_id'] !== $announceId) {
+                $observations['parse_failures']++;
+
                 continue;
             }
 
             $resolvedCandidates = $this->resolveCandidates($parsed['raw_candidates']);
             if (! $resolvedCandidates || count($resolvedCandidates) !== 10) {
-                // Safety Guard: NEVER overwrite valid banner data if candidate resolution fails
+                $observations['resolution_failures']++;
+
                 continue;
             }
 
@@ -418,6 +489,8 @@ class CygamesNewsService
 
             if (! $banner) {
                 if ($parsed['gametora_id'] === null || $parsed['start_date'] === null) {
+                    $observations['unmatched_articles']++;
+
                     continue;
                 }
 
@@ -456,7 +529,8 @@ class CygamesNewsService
             });
 
             if ($updated) {
-                $updatedCount++;
+                $observations['official_banners_updated']++;
+                $observations['created_banners'] += (int) $banner->wasRecentlyCreated;
             }
             $maxAnnounceIdInBatch = max($maxAnnounceIdInBatch, $announceId);
         }
@@ -466,9 +540,9 @@ class CygamesNewsService
         }
 
         return [
-            'success' => $articles !== [] || $updatedCount > 0,
-            'updated_count' => $updatedCount,
-            'articles_processed' => $processedCount,
+            'success' => $articles !== [] || $observations['official_banners_updated'] > 0,
+            'updated_count' => $observations['official_banners_updated'],
+            'articles_processed' => $observations['articles_processed'],
         ];
     }
 }

@@ -9,6 +9,7 @@ use App\Models\AppSetting;
 use App\Models\GachaBanner;
 use App\Models\GachaPity;
 use App\Models\GachaPull;
+use App\Models\SyncRun;
 use App\Models\UmaCatalogItem;
 use App\Support\AtomicJsonFile;
 use App\Support\CharacterCatalogPlan;
@@ -86,24 +87,19 @@ class GameToraSyncService
         ];
     }
 
-    private function unresolvedSelectPickupNotice(): string
-    {
-        $bannerIds = GachaBanner::where('category', 'select_rate_up')
-            ->where('banner_type', 'support_card')
-            ->where('gametora_id', '>', 0)
-            ->where(fn ($banners) => $banners->whereNull('featured_items')->orWhereJsonLength('featured_items', 0))
-            ->orderBy('gametora_id')->pluck('gametora_id');
-
-        return $bannerIds->isEmpty() ? '' : ' Kandidat Select Pick Up belum tersedia untuk banner '.$bannerIds->implode(', ').'.';
-    }
-
     /**
      * Synchronize catalog from GameTora JP production datasets.
      *
      * @return array{success: bool, is_up_to_date: bool, message: string, stats?: array<string, mixed>}
      */
-    public function sync(bool $force = false, bool $allowEvolutionRemovals = false): array
+    public function sync(bool $force = false, bool $allowEvolutionRemovals = false, string $trigger = SyncRun::TRIGGER_DIRECT): array
     {
+        $run = SyncRunRecorder::start(SyncRun::SOURCE_GAMETORA, $trigger, metadata: [
+            'force' => $force,
+            'allow_evolution_removals' => $allowEvolutionRemovals,
+        ]);
+        $metadata = ['is_up_to_date' => false];
+
         try {
             // 1. Fetch manifest
             $manifestRes = VerifiedHttp::request()
@@ -136,29 +132,27 @@ class GameToraSyncService
             $evolutionsHash = $manifest['evolutions'] ?? null;
             $combinedHash = "{$charBaseHash}|{$charCardHash}|{$supportHash}|{$skillsHash}|{$objHash}|{$charStdHash}|{$suppStdHash}|{$specialHash}|{$charBannersHash}|{$suppBannersHash}|{$racetracksHash}|{$racetracksExtHash}|{$evolutionsHash}|".self::CATALOG_FORMAT_VERSION;
             $savedHash = (string) AppSetting::getValue(self::MANIFEST_CHECKPOINT_KEY, '');
+            $metadata['manifest_changed'] = $savedHash !== $combinedHash;
 
             if (! $force && ! $allowEvolutionRemovals && $savedHash === $combinedHash && UmaCatalogItem::count() > 0 && GachaBanner::count() > 0) {
+                $metadata['mode'] = 'cached';
                 if (CompetitionRacetrackHelper::readRuntimeCatalog("{$racetracksHash}|{$racetracksExtHash}") === []) {
                     $this->syncRacetracks($manifest);
                 }
                 UmaCatalog::syncCanonical2026SelectPickupBanners();
                 $this->canonicalizeLegacyPremiumBanners();
                 try {
-                    $this->cygamesNewsService->syncSelectPickupBanners($force);
+                    $this->cygamesNewsService->syncSelectPickupBanners($force, $run);
                 } catch (\Throwable $e) {
                     Log::warning('Cygames news sync failed during cached GameTora sync', [
                         'error' => VerifiedHttp::errorMessage($e),
                     ]);
                 }
 
-                return [
-                    'success' => true,
-                    'is_up_to_date' => true,
-                    'message' => 'Katalog sudah yang paling baru sesuai database GameTora Jepang!'.$this->unresolvedSelectPickupNotice(),
-                    'stats' => $this->getStatus(),
-                ];
+                return $this->finishSuccessfulSync($run, true, 'Katalog sudah yang paling baru sesuai database GameTora Jepang!', $metadata);
             }
 
+            $metadata['mode'] = 'full';
             // 2. Fetch Playable Character Cards (Variants & Costumes)
             $charCardsUrl = self::DATA_BASE_URL."/character-cards.{$charCardHash}.json";
             $charCardsRes = VerifiedHttp::request()->timeout(30)->get($charCardsUrl);
@@ -305,7 +299,7 @@ class GameToraSyncService
             }
 
             // 5. Synchronize 2026 Gacha Banners
-            $newBannerCount = $this->sync2026Banners($manifest, $rawCharCards, $rawSupportCards, $force);
+            $newBannerCount = $this->sync2026Banners($manifest, $rawCharCards, $rawSupportCards, $force, $run);
             $this->canonicalizeLegacyPremiumBanners();
 
             // 6. Synchronize Racetracks & Courses Catalog
@@ -324,13 +318,18 @@ class GameToraSyncService
 
             CollectionController::clearSkillCatalogCache();
 
-            return [
-                'success' => true,
-                'is_up_to_date' => false,
-                'message' => "Katalog GameTora berhasil disinkronkan! ({$newCharCount} varian karakter, {$newSupportCount} support card, {$newBannerCount} banner gacha 2026).".$this->unresolvedSelectPickupNotice(),
-                'stats' => $this->getStatus(),
-            ];
+            return $this->finishSuccessfulSync(
+                $run,
+                false,
+                "Katalog GameTora berhasil disinkronkan! ({$newCharCount} varian karakter, {$newSupportCount} support card, {$newBannerCount} banner gacha 2026).",
+                array_replace($metadata, [
+                    'characters_processed' => $newCharCount,
+                    'support_cards_processed' => $newSupportCount,
+                    'banners_processed' => $newBannerCount,
+                ]),
+            );
         } catch (Exception $e) {
+            $run->finish(SyncRun::STATUS_FAILED, $metadata, warningCount: $run->childWarningCount(), error: $e);
             Log::error('GameTora catalog sync error: '.VerifiedHttp::errorMessage($e));
 
             return [
@@ -339,7 +338,36 @@ class GameToraSyncService
                 'message' => 'Gagal menyinkronkan data dari GameTora: '.VerifiedHttp::errorMessage($e),
                 'stats' => $this->getStatus(),
             ];
+        } catch (\Throwable $e) {
+            $run->finish(SyncRun::STATUS_FAILED, $metadata, warningCount: $run->childWarningCount(), error: $e);
+
+            throw $e;
         }
+    }
+
+    /**
+     * @param  array<string, bool|int|string>  $metadata
+     * @return array{success: true, is_up_to_date: bool, message: string, stats: array<string, mixed>}
+     */
+    private function finishSuccessfulSync(SyncRunRecorder $run, bool $isUpToDate, string $message, array $metadata): array
+    {
+        $bannerIds = GachaBanner::unresolvedSelectPickup()->orderBy('gametora_id')->pluck('gametora_id');
+        $unresolvedCount = $bannerIds->unique()->count();
+        $response = [
+            'success' => true,
+            'is_up_to_date' => $isUpToDate,
+            'message' => $bannerIds->isEmpty() ? $message : $message.' Kandidat Select Pick Up belum tersedia untuk banner '.$bannerIds->implode(', ').'.',
+            'stats' => $this->getStatus(),
+        ];
+        $warningCount = $run->childWarningCount();
+        $run->finish(
+            $warningCount > 0 || $unresolvedCount > 0 ? SyncRun::STATUS_DEGRADED : SyncRun::STATUS_SUCCESS,
+            array_replace($metadata, ['is_up_to_date' => $isUpToDate]),
+            unresolvedCount: $unresolvedCount,
+            warningCount: $warningCount,
+        );
+
+        return $response;
     }
 
     /**
@@ -608,7 +636,7 @@ class GameToraSyncService
      * @param  array<int, array<string, mixed>>  $rawCharCards
      * @param  array<int, array<string, mixed>>  $rawSupportCards
      */
-    protected function sync2026Banners(array $manifest, array $rawCharCards, array $rawSupportCards, bool $force = false): int
+    protected function sync2026Banners(array $manifest, array $rawCharCards, array $rawSupportCards, bool $force = false, ?SyncRunRecorder $parent = null): int
     {
         // 1. Build lookup tables for character & support names
         $charCards = [];
@@ -849,7 +877,7 @@ class GameToraSyncService
         }
 
         // 5. Fetch Twinkle Collection Lineups from Umapyoi News (with GameTora rateKey 3750 fallback)
-        $umapyoiTwinkle = $this->fetchUmapyoiTwinkleLineups();
+        $umapyoiTwinkle = $this->fetchUmapyoiTwinkleLineups($parent);
 
         // 6. Process Special Banners (Twinkle Collection & Select Rate Up) (2026 non-paid)
         $specialHash = $manifest['gacha/special'] ?? null;
@@ -958,7 +986,7 @@ class GameToraSyncService
 
         // Dynamically enrich/override with official Cygames announcements if available
         try {
-            $this->cygamesNewsService->syncSelectPickupBanners($force);
+            $this->cygamesNewsService->syncSelectPickupBanners($force, $parent);
         } catch (\Throwable $e) {
             Log::warning('Cygames news sync failed during banner sync, retained canonical fallbacks', [
                 'error' => VerifiedHttp::errorMessage($e),
@@ -985,17 +1013,32 @@ class GameToraSyncService
      *
      * @return array<string|int, array<int, string>> Maps banner ID (or 'YYYY-MM') to array of eligible character strings
      */
-    protected function fetchUmapyoiTwinkleLineups(): array
+    protected function fetchUmapyoiTwinkleLineups(?SyncRunRecorder $parent = null): array
     {
+        $run = SyncRunRecorder::start(SyncRun::SOURCE_UMAPYOI, $parent ? SyncRun::TRIGGER_EMBEDDED : SyncRun::TRIGGER_DIRECT, $parent);
         $lineups = [];
+        $observations = [
+            'search_request_ok' => false,
+            'articles_seen' => 0,
+            'detail_requests' => 0,
+            'detail_failures' => 0,
+            'lineup_failures' => 0,
+            'lineups_found' => 0,
+        ];
+        $requestingDetail = false;
+        $error = null;
         try {
             $searchRes = VerifiedHttp::request()->timeout(8)->get('https://umapyoi.net/api/v1/news/search/twinkle');
             if (! $searchRes->successful()) {
+                $error = new \RuntimeException("HTTP {$searchRes->status()}");
+
                 return [];
             }
 
-            $newsList = $searchRes->json() ?? [];
-            foreach ($newsList as $n) {
+            $newsList = $searchRes->json();
+            $observations['search_request_ok'] = is_array($newsList);
+            $observations['articles_seen'] = is_array($newsList) ? count($newsList) : 0;
+            foreach ($newsList ?? [] as $n) {
                 $title = $n['title_english'] ?? $n['title'] ?? '';
                 if (stripos($title, 'Twinkle Collection') === false) {
                     continue;
@@ -1010,17 +1053,26 @@ class GameToraSyncService
                     continue;
                 }
 
+                $observations['detail_requests']++;
+                $requestingDetail = true;
                 $detailRes = VerifiedHttp::request()->timeout(6)->get("https://umapyoi.net/api/v1/news/{$announceId}");
+                $requestingDetail = false;
                 if (! $detailRes->successful()) {
+                    $observations['detail_failures']++;
+                    $error ??= new \RuntimeException("HTTP {$detailRes->status()}");
+
                     continue;
                 }
 
                 $detail = $detailRes->json() ?? [];
                 $msgEn = $detail['message_english'] ?? '';
                 if (empty($msgEn)) {
+                    $observations['lineup_failures']++;
+
                     continue;
                 }
 
+                $lineupFound = false;
                 if (preg_match('/■\s*Eligible\s+Umamusume(.*?)(?:■|\*|<h2|<\/div|\z)/is', $msgEn, $matches)) {
                     preg_match_all('/★+\s*\[(.*?)\]\s*([^<]+)/u', $matches[1], $charMatches, PREG_SET_ORDER);
                     $chars = [];
@@ -1031,15 +1083,32 @@ class GameToraSyncService
                     if (! empty($chars)) {
                         if (preg_match('/gacha_banner_(\d+)/', $msgEn, $bm)) {
                             $lineups[(int) $bm[1]] = $chars;
+                            $lineupFound = true;
                         }
                         if ($postAt > 0) {
                             $lineups[date('Y-m', $postAt)] = $chars;
+                            $lineupFound = true;
                         }
                     }
                 }
+                $observations[$lineupFound ? 'lineups_found' : 'lineup_failures']++;
             }
         } catch (\Throwable $e) {
+            $error = $e;
+            if ($requestingDetail) {
+                $observations['detail_failures']++;
+            } elseif ($observations['search_request_ok']) {
+                $observations['lineup_failures']++;
+            }
             Log::warning('Gagal mengambil data Twinkle Collection dari Umapyoi: '.VerifiedHttp::errorMessage($e));
+        } finally {
+            $warningCount = (int) ! $observations['search_request_ok'] + $observations['detail_failures'] + $observations['lineup_failures'];
+            $status = match (true) {
+                $warningCount === 0 => SyncRun::STATUS_SUCCESS,
+                $lineups !== [] => SyncRun::STATUS_DEGRADED,
+                default => SyncRun::STATUS_FAILED,
+            };
+            $run->finish($status, $observations, warningCount: $warningCount, error: $error);
         }
 
         return $lineups;

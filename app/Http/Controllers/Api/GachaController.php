@@ -11,6 +11,7 @@ use App\Http\Requests\UpdateGachaPullRequest;
 use App\Models\GachaBanner;
 use App\Models\GachaPity;
 use App\Models\GachaPull;
+use App\Models\SyncRun;
 use App\Services\GameToraSyncService;
 use App\Support\UmaCatalog;
 use Carbon\Carbon;
@@ -861,7 +862,7 @@ class GachaController extends Controller
     public function syncCatalog(Request $request, GameToraSyncService $service): JsonResponse
     {
         $force = $request->boolean('force');
-        $result = $service->sync($force, allowEvolutionRemovals: $request->boolean('allow_evolution_removals'));
+        $result = $service->sync($force, allowEvolutionRemovals: $request->boolean('allow_evolution_removals'), trigger: SyncRun::TRIGGER_MANUAL);
 
         return response()->json($result, $result['success'] ? 200 : 500);
     }
