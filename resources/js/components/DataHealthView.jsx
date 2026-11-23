@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Activity, AlertCircle, AlertTriangle, CheckCircle2, CircleHelp, Clock, History, LoaderCircle, RefreshCw } from 'lucide-react';
+import { Activity, AlertCircle, AlertTriangle, Check, CheckCircle2, CircleHelp, Clock, History, LoaderCircle, RefreshCw } from 'lucide-react';
 import {
     HEALTH_SOURCES, formatDateTime, formatDuration, getOverallHealthMeta, getRunMetadataItems,
     getRunStatusMeta, getSourceLabel, getSourceStatusMeta, getTriggerLabel,
@@ -179,7 +179,7 @@ export function SyncRunTimeline({ runs }) {
         return (
             <div className={`rounded-xl border border-dashed border-slate-200 px-4 py-6 dark:border-slate-700`}>
                 <p className={title}>Belum ada riwayat sinkronisasi.</p>
-                <p className={`mt-1 text-sm ${muted}`}>Riwayat akan muncul setelah sinkronisasi GameTora, Cygames, atau Umapyoi tercatat.</p>
+                <p className={`mt-1 text-sm ${muted}`}>Riwayat akan muncul setelah sinkronisasi GameTora, Cygames, atau Umapyoi dijalankan setelah telemetry Data Health aktif.</p>
             </div>
         );
     }
@@ -222,11 +222,12 @@ async function loadSection(url, accepts, signal, setSection) {
         if (!response.ok) throw new Error();
         const data = await response.json();
         if (data?.success !== true || !accepts(data)) throw new Error();
-        if (!signal.aborted) {
-            setSection({ data, loading: false, error: false, receivedAt: new Date().toISOString() });
-        }
+        if (signal.aborted) return false;
+        setSection({ data, loading: false, error: false, receivedAt: new Date().toISOString() });
+        return true;
     } catch {
         if (!signal.aborted) setSection(previous => ({ ...previous, loading: false, error: true }));
+        return false;
     }
 }
 
@@ -234,16 +235,31 @@ export default function DataHealthView() {
     const [health, setHealth] = useState(initialSection);
     const [history, setHistory] = useState(initialSection);
     const [revision, setRevision] = useState(0);
+    const [refreshConfirmed, setRefreshConfirmed] = useState(false);
     const loading = health.loading || history.loading;
 
     useEffect(() => {
         const controller = new AbortController();
-        loadSection('/api/data-health', data => data.health && typeof data.health === 'object' && !Array.isArray(data.health), controller.signal, setHealth);
-        loadSection('/api/data-health/sync-runs?limit=20', data => Array.isArray(data.runs), controller.signal, setHistory);
-        return () => controller.abort();
+        const healthRequest = loadSection('/api/data-health', data => data.health && typeof data.health === 'object' && !Array.isArray(data.health), controller.signal, setHealth);
+        const historyRequest = loadSection('/api/data-health/sync-runs?limit=20', data => Array.isArray(data.runs), controller.signal, setHistory);
+        let confirmationTimeout;
+
+        if (revision > 0) {
+            Promise.all([healthRequest, historyRequest]).then(([healthLoaded, historyLoaded]) => {
+                if (controller.signal.aborted || !healthLoaded || !historyLoaded) return;
+                setRefreshConfirmed(true);
+                confirmationTimeout = setTimeout(() => setRefreshConfirmed(false), 2500);
+            });
+        }
+
+        return () => {
+            controller.abort();
+            clearTimeout(confirmationTimeout);
+        };
     }, [revision]);
 
     function refresh() {
+        setRefreshConfirmed(false);
         setHealth(previous => ({ ...previous, loading: true }));
         setHistory(previous => ({ ...previous, loading: true }));
         setRevision(previous => previous + 1);
@@ -255,12 +271,23 @@ export default function DataHealthView() {
                 <div className="min-w-0">
                     <h1 className={`text-3xl tracking-tight ${title}`}>Data Health</h1>
                     <p className={`mt-1 text-sm ${muted}`}>Status sinkronisasi dan kesehatan data GameTora, Cygames, serta Umapyoi.</p>
-                    {health.receivedAt && <p className={`mt-2 text-xs ${muted}`}>Diperbarui di halaman: {formatDateTime(health.receivedAt)}</p>}
+                    <p className={`flex flex-wrap items-center gap-x-3 text-xs ${muted}`}>
+                        {health.receivedAt && <span className="mt-2">Diperbarui di halaman: {formatDateTime(health.receivedAt, { includeSeconds: true })}</span>}
+                        <span role="status">
+                            {refreshConfirmed && (
+                                <span className="mt-2 inline-flex items-center gap-1 font-semibold text-emerald-800 dark:text-emerald-300">
+                                    <Check aria-hidden="true" className="size-4 shrink-0" />
+                                    Data diperbarui
+                                </span>
+                            )}
+                        </span>
+                    </p>
                 </div>
-                <button type="button" onClick={refresh} disabled={loading} aria-label="Muat ulang Data Health dan riwayat sinkronisasi"
+                <button type="button" onClick={refresh} disabled={loading}
+                    title="Membaca ulang status dan riwayat yang sudah tercatat. Tidak menjalankan sinkronisasi baru."
                     className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-wait disabled:opacity-60 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200 dark:hover:bg-emerald-900/60">
                     <RefreshCw aria-hidden="true" className={`size-4 ${loading ? 'motion-safe:animate-spin' : ''}`} />
-                    Muat Ulang
+                    {loading ? 'Memuat...' : 'Muat Ulang'}
                 </button>
             </header>
 

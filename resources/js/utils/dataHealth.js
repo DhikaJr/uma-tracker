@@ -29,6 +29,7 @@ const triggerLabels = {
 };
 
 const dateFormatter = new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+const refreshTimeFormatter = new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'medium' });
 const durationFormatter = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 });
 
 export function getOverallHealthMeta(status) {
@@ -54,10 +55,11 @@ export function getTriggerLabel(trigger) {
     return Object.hasOwn(triggerLabels, trigger) ? triggerLabels[trigger] : 'Tidak diketahui';
 }
 
-export function formatDateTime(value) {
+export function formatDateTime(value, { includeSeconds = false } = {}) {
     if (typeof value !== 'string') return '—';
     const milliseconds = Date.parse(value);
-    return Number.isFinite(milliseconds) ? dateFormatter.format(milliseconds) : '—';
+    const formatter = includeSeconds ? refreshTimeFormatter : dateFormatter;
+    return Number.isFinite(milliseconds) ? formatter.format(milliseconds) : '—';
 }
 
 export function formatDuration(startedAt, finishedAt) {

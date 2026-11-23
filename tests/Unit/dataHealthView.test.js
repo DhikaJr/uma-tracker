@@ -49,6 +49,13 @@ test('date and duration helpers format valid timestamps and handle invalid input
     assert.equal(formatDuration(finishedAt, startedAt), '—');
 });
 
+test('the client refresh timestamp includes seconds while telemetry timestamps omit them', () => {
+    const refreshedAt = '2026-11-24T05:26:43Z';
+
+    assert.match(formatDateTime(refreshedAt, { includeSeconds: true }), /\b\d{1,2}\.\d{2}\.43$/);
+    assert.match(formatDateTime(refreshedAt), /, \d{1,2}\.\d{2}$/);
+});
+
 test('metadata helper emits only labeled diagnostics', () => {
     assert.deepEqual(getRunMetadataItems({ mode: 'cached', is_up_to_date: true, lineups_found: 0, secret: 'hidden' }), [
         { label: 'Mode', value: 'Cached' },
@@ -126,7 +133,15 @@ test('unfinished runs have a running label and no fabricated duration', async ()
     assert.match(html, /Sedang Berjalan/);
     assert.match(html, /Durasi —/);
     assert.doesNotMatch(html, />Gagal</);
-    assert.match(render(SyncRunTimeline, { runs: [] }), /Belum ada riwayat sinkronisasi/);
+});
+
+test('empty history explains that new telemetry requires a sync after Data Health is active', async () => {
+    const { SyncRunTimeline } = await vite.ssrLoadModule(viewModule);
+    const html = render(SyncRunTimeline, { runs: [] });
+
+    assert.match(html, /Belum ada riwayat sinkronisasi\./);
+    assert.match(html, /Riwayat akan muncul setelah sinkronisasi GameTora, Cygames, atau Umapyoi dijalankan setelah telemetry Data Health aktif\./);
+    assert.doesNotMatch(html, /Muat Ulang/);
 });
 
 test('the page starts with separate loading states and only offers a GET refresh', async () => {
@@ -136,12 +151,16 @@ test('the page starts with separate loading states and only offers a GET refresh
     assert.match(html, /Memuat Data Health/);
     assert.match(html, /Memuat riwayat sinkronisasi/);
     assert.doesNotMatch(html, /Belum Diketahui|Force Sync|Perbaiki|Retry Cygames|Sinkronkan Sekarang/);
-    assert.match(html, /<button type="button" disabled="" aria-label="Muat ulang Data Health/);
+    const refreshButton = html.match(/<button\b[^>]*>[\s\S]*?<\/button>/)?.[0] ?? '';
+    assert.match(refreshButton, /disabled=""/);
+    assert.match(refreshButton, /title="Membaca ulang status dan riwayat yang sudah tercatat\. Tidak menjalankan sinkronisasi baru\."/);
+    assert.match(refreshButton, /animate-spin[\s\S]*Memuat\.\.\.<\/button>/);
+    assert.doesNotMatch(html, /Data diperbarui/);
     const source = await readFile(new URL('../../resources/js/components/DataHealthView.jsx', import.meta.url), 'utf8');
     assert.deepEqual([...source.matchAll(/loadSection\('(\/api\/[^']+)'/g)].map(([, url]) => url),
         ['/api/data-health', '/api/data-health/sync-runs?limit=20']);
     assert.match(source, /fetch\(url, \{ cache: 'no-store', signal \}\)/);
-    assert.match(source, /return \(\) => controller\.abort\(\)/);
+    assert.match(source, /controller\.abort\(\)/);
     assert.doesNotMatch(source, /setInterval|localStorage|sessionStorage|\bPOST\b|\/api\/gacha\/sync/);
 });
 
