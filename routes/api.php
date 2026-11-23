@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CircleTrackerController;
 use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\CompetitionEventController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DataHealthController;
 use App\Http\Controllers\Api\GachaController;
 use App\Http\Controllers\Api\PlannerController;
 use App\Http\Controllers\Api\SettingController;
@@ -42,6 +43,11 @@ Route::prefix('circle-tracker')->group(function () {
 
 // Dashboard Overview
 Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
+
+Route::prefix('data-health')->group(function () {
+    Route::get('/', [DataHealthController::class, 'index']);
+    Route::get('/sync-runs', [DataHealthController::class, 'syncRuns']);
+});
 
 // Gacha Tracker Endpoints
 Route::prefix('gacha')->group(function () {
