@@ -44,11 +44,27 @@ for (const [name, props] of [
 
 test('manual-UP buttons display only the selected Select Pick Up banner candidates', async () => {
     const { FeaturedRateUpButtons } = await vite.ssrLoadModule('/resources/js/components/GachaView.jsx');
-    const { getSelectedGachaBanner } = await vite.ssrLoadModule('/resources/js/utils/gachaBannerOptions.js');
-    const selectorBanners = [
-        { id: 83, gametora_id: 30477, banner_type: 'support_card', name: 'Select Pick Up', category: 'select_rate_up', featured_items: ['SSR [気まぐれ渡り星] Stay Gold (Guts)'] },
-        { id: 99, gametora_id: 30485, banner_type: 'support_card', name: 'Select Pick Up', category: 'select_rate_up', featured_items: ['SSR [巻頭カラーの夏] Kiseki (Stamina)', 'SSR [両手いっぱい、小倉愛] Nice Nature (Intelligence)'] },
+    const { getSelectedGachaBanner, groupGachaBannerOptions } = await vite.ssrLoadModule('/resources/js/utils/gachaBannerOptions.js');
+    const novemberCandidates = [
+        'SSR [永久の誓い、永久の輝き] Satono Diamond (Speed)',
+        'SSR [刀光散らしてClash！] Tap Dance City (Speed)',
+        'SSR [心覚えし、京の華] Air Groove (Speed)',
+        'SSR [天才的ユートピア] Tokai Teio (Speed)',
+        'SSR [吉兆招福チョコ来たる] Matikanefukukitaru (Speed)',
+        'SSR [その執念は怒濤が如く] Meisho Doto (Stamina)',
+        'SSR [巻頭カラーの夏] Kiseki (Stamina)',
+        'SSR [賑やかな未来を乗せて走れ！] Sakura Chiyono O (Stamina)',
+        'SSR [両手いっぱい、小倉愛] Nice Nature (Intelligence)',
+        'SSR [Innovator] Forever Young (Intelligence)',
     ];
+    const selectorBanners = [
+        { id: 83, gametora_id: 30477, banner_type: 'support_card', name: 'Select Pick Up (Oct 2026)', category: 'select_rate_up', end_date: '2026-10-26', featured_items: ['SSR [気まぐれ渡り星] Stay Gold (Guts)'] },
+        { id: 99, gametora_id: 30485, banner_type: 'support_card', name: 'Select Pick Up (Nov 2026)', category: 'select_rate_up', end_date: '2026-11-30', featured_items: novemberCandidates },
+    ];
+
+    const [october, november] = selectorBanners;
+    assert.deepEqual(groupGachaBannerOptions([october, { ...november, featured_items: [] }], 'support_card').selectUp, [october]);
+    assert.deepEqual(groupGachaBannerOptions(selectorBanners, 'support_card').selectUp, selectorBanners);
 
     for (const [selected, other] of [selectorBanners, [...selectorBanners].reverse()]) {
         const banner = getSelectedGachaBanner(selectorBanners, String(selected.id), 'support_card');

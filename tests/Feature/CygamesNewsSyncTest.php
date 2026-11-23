@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\AppSetting;
 use App\Models\GachaBanner;
+use App\Models\GachaPity;
 use App\Models\GachaPull;
 use App\Models\UmaCatalogItem;
 use App\Services\CircleTrackerService;
@@ -18,6 +19,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tests\TestCase;
 
 class CygamesNewsSyncTest extends TestCase
@@ -448,24 +450,8 @@ class CygamesNewsSyncTest extends TestCase
     {
         $october = json_decode(file_get_contents(base_path('tests/Fixtures/cygames_select_pickup_3490.json')), true)['detail'];
         $november = json_decode(file_get_contents(base_path('tests/Fixtures/cygames_select_pickup_3547.json')), true)['detail'];
-        $newCards = [
-            'その執念は怒濤が如く' => 'SSR [その執念は怒濤が如く] Meisho Doto (Stamina)',
-            '巻頭カラーの夏' => 'SSR [巻頭カラーの夏] Kiseki (Stamina)',
-            '両手いっぱい、小倉愛' => 'SSR [両手いっぱい、小倉愛] Nice Nature (Intelligence)',
-        ];
-        foreach ($newCards as $title => $name) {
-            UmaCatalogItem::create(['type' => 'support_card', 'name' => $name, 'rarity' => 'SSR', 'raw_data' => ['title_ja' => $title]]);
-        }
-
+        $novemberCandidates = $this->seedNovemberCandidates();
         $octoberCandidates = UmaCatalog::getSelectPickupCandidates2026()['2026-10-13']['candidates'];
-        $novemberCandidates = [
-            ...array_slice($octoberCandidates, 0, 5),
-            $newCards['その執念は怒濤が如く'],
-            $newCards['巻頭カラーの夏'],
-            $octoberCandidates[5],
-            $newCards['両手いっぱい、小倉愛'],
-            $octoberCandidates[8],
-        ];
         $pool = array_map(fn (int $id) => [
             'support_id' => $id, 'char_name' => "Pool Card {$id}", 'rarity' => 3, 'type' => 'speed',
             'title_ja' => "[Pool Title {$id}]",
@@ -475,20 +461,24 @@ class CygamesNewsSyncTest extends TestCase
             'character-cards' => 'cards', 'characters' => 'characters', 'support-cards' => 'supports', 'gacha/special' => 'special',
         ];
         Http::fake([
-            GameToraSyncService::MANIFEST_URL => Http::response($manifest),
+            GameToraSyncService::MANIFEST_URL => function () use (&$manifest) {
+                return Http::response($manifest);
+            },
             GameToraSyncService::DATA_BASE_URL.'/character-cards.cards.json' => Http::response([]),
             GameToraSyncService::DATA_BASE_URL.'/characters.characters.json' => Http::response([]),
             GameToraSyncService::DATA_BASE_URL.'/support-cards.supports.json' => Http::response($pool),
-            GameToraSyncService::DATA_BASE_URL.'/gacha/special.special.json' => Http::response([
-                ['id' => 30485, 'start' => strtotime('2026-11-16'), 'end' => strtotime('2026-11-30'), 'lineup' => [7500 => [301, 302], 120 => range(40001, 40010)]],
+            GameToraSyncService::DATA_BASE_URL.'/gacha/special.*.json' => Http::response([
+                ['id' => 30485, 'start' => strtotime('2026-11-16'), 'end' => strtotime('2026-11-19'), 'lineup' => [7500 => [301, 302], 120 => range(40001, 40010)]],
                 ['id' => 90477, 'start' => strtotime('2026-10-20'), 'lineup' => [7500 => [40001, 40002]]],
             ]),
             'https://umapyoi.net/api/v1/news/search/twinkle' => Http::response([]),
-            CygamesNewsService::NEWS_INDEX_URL.'*' => function () use (&$newsAvailable, $october, $november) {
-                return $newsAvailable ? Http::response(['information_list' => [$november, $october]]) : Http::response(null, 503);
+            CygamesNewsService::NEWS_INDEX_URL.'*' => function () use (&$newsAvailable, $october) {
+                return $newsAvailable ? Http::response(['information_list' => [$october]]) : Http::response(null, 503);
             },
             CygamesNewsService::NEWS_DETAIL_URL.'*announce_id=3490' => Http::response(['detail' => $october]),
-            CygamesNewsService::NEWS_DETAIL_URL.'*announce_id=3547' => Http::response(['detail' => $november]),
+            CygamesNewsService::NEWS_DETAIL_URL.'*announce_id=3547' => function () use (&$newsAvailable, $november) {
+                return $newsAvailable ? Http::response(['detail' => $november]) : Http::response(null, 503);
+            },
         ]);
 
         $sync = app(GameToraSyncService::class);
@@ -500,9 +490,26 @@ class CygamesNewsSyncTest extends TestCase
         $this->assertSame([], GachaBanner::where('gametora_id', 90477)->sole()->featured_items);
         $this->assertNull($new->getProvenanceUrl());
 
-        $new->update(['featured_items' => $octoberCandidates]);
+        $pull = GachaPull::create([
+            'gacha_banner_id' => $new->id, 'banner_type' => 'support_card', 'pull_type' => 'single',
+            'item_name' => 'Prior pull', 'rarity' => 'R', 'pulled_at' => '2026-11-17 12:00:00',
+        ]);
+        $pity = GachaPity::create(['gacha_banner_id' => $new->id, 'banner_type' => 'support_card', 'current_pity' => 1]);
+        $manifest['gacha/special'] = 'special-offline';
+        $offline = $this->postJson('/api/gacha/sync-catalog')->assertOk()->assertJsonPath('is_up_to_date', false);
+        $this->assertSame([], $new->refresh()->featured_items);
+        $this->assertSame($new->id, $pull->refresh()->gacha_banner_id);
+        $this->assertSame($new->id, $pity->refresh()->gacha_banner_id);
+
+        $new->update(['featured_items' => $novemberCandidates]);
+        $manifest['gacha/special'] = 'special-last-known';
+        $this->postJson('/api/gacha/sync-catalog')->assertOk()->assertJsonPath('is_up_to_date', false);
+        $this->assertSame($novemberCandidates, $new->refresh()->featured_items);
+        $this->assertNull($new->getProvenanceUrl());
+        $this->assertStringContainsString('30485', $offline->json('message'));
+
         $newsAvailable = true;
-        $this->assertTrue($sync->sync()['is_up_to_date']);
+        $this->postJson('/api/gacha/sync-catalog')->assertOk()->assertJsonPath('is_up_to_date', true);
         $this->assertSame($octoberCandidates, $old->refresh()->featured_items);
         $this->assertSame($novemberCandidates, $new->refresh()->featured_items);
         foreach ([[$old, 3490], [$new, 3547]] as [$banner, $announceId]) {
@@ -512,10 +519,95 @@ class CygamesNewsSyncTest extends TestCase
 
         $newsAvailable = false;
         $this->assertTrue($sync->sync()['is_up_to_date']);
-        $this->assertTrue($sync->sync(force: true)['success']);
+        $manifest['gacha/special'] = 'special-new';
+        $this->postJson('/api/gacha/sync-catalog')->assertOk()->assertJsonPath('is_up_to_date', false);
         $banners = collect($this->getJson('/api/gacha/banners?category=select_rate_up')->assertOk()->json())->keyBy('id');
         $this->assertSame($octoberCandidates, $banners[$old->id]['featured_items']);
         $this->assertSame($novemberCandidates, $banners[$new->id]['featured_items']);
+        $this->assertSame('2026-11-30', $new->refresh()->end_date->toDateString());
+        $this->assertSame(CygamesNewsService::NEWS_WEB_BASE_URL.'3547', $new->getProvenanceUrl());
+    }
+
+    #[TestWith(['empty_candidates'])]
+    #[TestWith(['missing_provenance'])]
+    #[TestWith(['legacy_marker'])]
+    #[TestWith(['missing_row'])]
+    #[TestWith(['missing_row', 90485, 9047])]
+    public function test_ordinary_sync_repairs_processed_article_when_banner_state_is_damaged(string $damage, int $gameToraId = 30485, int $announceId = 3547): void
+    {
+        $november = json_decode(file_get_contents(base_path('tests/Fixtures/cygames_select_pickup_3547.json')), true)['detail'];
+        $november['announce_id'] = $announceId;
+        $november['message'] = str_replace('gacha_banner_30485.png', "gacha_banner_{$gameToraId}.png", $november['message']);
+        $provenanceUrl = CygamesNewsService::NEWS_WEB_BASE_URL.$announceId;
+        $expectedCandidates = $this->seedNovemberCandidates();
+        $banner = null;
+        if ($damage !== 'missing_row') {
+            $banner = GachaBanner::create([
+                'gametora_id' => $gameToraId, 'banner_type' => 'support_card', 'category' => 'select_rate_up',
+                'name' => 'Select Pick Up (Nov 2026)', 'start_date' => '2026-11-16', 'end_date' => '2026-11-19',
+                'featured_items' => in_array($damage, ['empty_candidates', 'legacy_marker'], true) ? [] : $expectedCandidates,
+            ]);
+        }
+        AppSetting::setValue("cygames_article_processed_{$announceId}", '1');
+        AppSetting::setValue('last_processed_cygames_announce_id', (string) $announceId);
+        if ($damage !== 'missing_provenance') {
+            AppSetting::setValue("select_pickup_provenance_{$gameToraId}", $provenanceUrl);
+            AppSetting::setValue("select_pickup_provenance_id_{$gameToraId}", (string) $announceId);
+        }
+        if ($damage !== 'legacy_marker') {
+            AppSetting::setValue("cygames_article_banner_id_{$announceId}", (string) $gameToraId);
+        }
+        Http::fake([
+            GameToraSyncService::MANIFEST_URL => Http::response([
+                'character-cards' => 'cards', 'characters' => 'characters', 'support-cards' => 'supports',
+            ]),
+            GameToraSyncService::DATA_BASE_URL.'/character-cards.cards.json' => Http::response([]),
+            GameToraSyncService::DATA_BASE_URL.'/characters.characters.json' => Http::response([]),
+            GameToraSyncService::DATA_BASE_URL.'/support-cards.supports.json' => Http::response([]),
+            'https://umapyoi.net/api/v1/news/search/twinkle' => Http::response([]),
+            CygamesNewsService::NEWS_INDEX_URL.'*' => Http::response(['information_list' => []]),
+            CygamesNewsService::NEWS_DETAIL_URL."*announce_id={$announceId}" => Http::response(['detail' => $november]),
+        ]);
+
+        $this->postJson('/api/gacha/sync-catalog')->assertOk()->assertJsonPath('is_up_to_date', false);
+        $this->postJson('/api/gacha/sync-catalog')->assertOk()->assertJsonPath('is_up_to_date', true);
+
+        $restored = GachaBanner::where('gametora_id', $gameToraId)->sole();
+        if ($banner) {
+            $this->assertSame($banner->id, $restored->id);
+        }
+        $this->assertSame('support_card', $restored->banner_type);
+        $this->assertSame('select_rate_up', $restored->category);
+        $this->assertSame('2026-11-16', $restored->start_date->toDateString());
+        $this->assertSame('2026-11-30', $restored->end_date->toDateString());
+        $this->assertSame($provenanceUrl, $restored->getProvenanceUrl());
+        $this->assertSame((string) $announceId, AppSetting::getValue("select_pickup_provenance_id_{$gameToraId}"));
+        $banners = collect($this->getJson('/api/gacha/banners?banner_type=support_card&category=select_rate_up')->assertOk()->json())->keyBy('id');
+        $this->assertSame($expectedCandidates, $banners[$restored->id]['featured_items']);
+        $this->assertCount(1, Http::recorded(fn ($request) => str_starts_with($request->url(), CygamesNewsService::NEWS_DETAIL_URL)));
+    }
+
+    /** @return list<string> */
+    private function seedNovemberCandidates(): array
+    {
+        $newCards = [
+            'その執念は怒濤が如く' => 'SSR [その執念は怒濤が如く] Meisho Doto (Stamina)',
+            '巻頭カラーの夏' => 'SSR [巻頭カラーの夏] Kiseki (Stamina)',
+            '両手いっぱい、小倉愛' => 'SSR [両手いっぱい、小倉愛] Nice Nature (Intelligence)',
+        ];
+        foreach ($newCards as $title => $name) {
+            UmaCatalogItem::create(['type' => 'support_card', 'name' => $name, 'rarity' => 'SSR', 'raw_data' => ['title_ja' => $title]]);
+        }
+        $octoberCandidates = UmaCatalog::getSelectPickupCandidates2026()['2026-10-13']['candidates'];
+
+        return [
+            ...array_slice($octoberCandidates, 0, 5),
+            $newCards['その執念は怒濤が如く'],
+            $newCards['巻頭カラーの夏'],
+            $octoberCandidates[5],
+            $newCards['両手いっぱい、小倉愛'],
+            $octoberCandidates[8],
+        ];
     }
 
     public function test_official_select_pickup_id_does_not_fall_back_to_a_different_same_date_banner(): void

@@ -86,6 +86,17 @@ class GameToraSyncService
         ];
     }
 
+    private function unresolvedSelectPickupNotice(): string
+    {
+        $bannerIds = GachaBanner::where('category', 'select_rate_up')
+            ->where('banner_type', 'support_card')
+            ->where('gametora_id', '>', 0)
+            ->where(fn ($banners) => $banners->whereNull('featured_items')->orWhereJsonLength('featured_items', 0))
+            ->orderBy('gametora_id')->pluck('gametora_id');
+
+        return $bannerIds->isEmpty() ? '' : ' Kandidat Select Pick Up belum tersedia untuk banner '.$bannerIds->implode(', ').'.';
+    }
+
     /**
      * Synchronize catalog from GameTora JP production datasets.
      *
@@ -143,7 +154,7 @@ class GameToraSyncService
                 return [
                     'success' => true,
                     'is_up_to_date' => true,
-                    'message' => 'Katalog sudah yang paling baru sesuai database GameTora Jepang!',
+                    'message' => 'Katalog sudah yang paling baru sesuai database GameTora Jepang!'.$this->unresolvedSelectPickupNotice(),
                     'stats' => $this->getStatus(),
                 ];
             }
@@ -316,7 +327,7 @@ class GameToraSyncService
             return [
                 'success' => true,
                 'is_up_to_date' => false,
-                'message' => "Katalog GameTora berhasil disinkronkan! ({$newCharCount} varian karakter, {$newSupportCount} support card, {$newBannerCount} banner gacha 2026).",
+                'message' => "Katalog GameTora berhasil disinkronkan! ({$newCharCount} varian karakter, {$newSupportCount} support card, {$newBannerCount} banner gacha 2026).".$this->unresolvedSelectPickupNotice(),
                 'stats' => $this->getStatus(),
             ];
         } catch (Exception $e) {
@@ -926,15 +937,16 @@ class GameToraSyncService
                     }
 
                     $banner = GachaBanner::firstOrNew(['gametora_id' => $id, 'banner_type' => $bannerType]);
-                    if ($isTwinkle || ! $banner->hasOfficialSelectPickupCandidates()) {
+                    $hasOfficialCandidates = ! $isTwinkle && $banner->hasOfficialSelectPickupCandidates();
+                    if ($isTwinkle || (! $hasOfficialCandidates && ($featuredItems !== [] || empty($banner->featured_items)))) {
                         $banner->featured_items = $featuredItems;
                     }
                     $banner->fill([
                         'category' => $cat,
                         'base_rate' => 3.00,
                         'name' => $title,
-                        'start_date' => $startDate,
-                        'end_date' => $endDate,
+                        'start_date' => $hasOfficialCandidates ? ($banner->start_date ?? $startDate) : $startDate,
+                        'end_date' => $hasOfficialCandidates ? ($banner->end_date ?? $endDate) : $endDate,
                         'is_active' => true,
                     ])->save();
                     $syncedCount++;

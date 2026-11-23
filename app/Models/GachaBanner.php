@@ -296,6 +296,8 @@ class GachaBanner extends Model
             && $this->banner_type === 'support_card'
             && is_array($this->featured_items)
             && count($this->featured_items) === 10
+            && array_all($this->featured_items, fn (mixed $item): bool => is_string($item) && trim($item) !== '')
+            && count(array_unique($this->featured_items)) === 10
             && $this->getProvenanceUrl() !== null;
     }
 }

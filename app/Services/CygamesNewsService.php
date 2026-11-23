@@ -9,6 +9,7 @@ use App\Models\GachaBanner;
 use App\Models\UmaCatalogItem;
 use App\Support\VerifiedHttp;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -21,6 +22,10 @@ class CygamesNewsService
     public const NEWS_WEB_BASE_URL = 'https://umamusume.jp/news/detail?id=';
 
     public const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+    private const ARCHIVED_SELECT_PICKUP_ARTICLES = [30485 => 3547];
+
+    private const ARTICLE_BANNER_KEY_PREFIX = 'cygames_article_banner_id_';
 
     /**
      * Fetch news index from official Cygames JP news API.
@@ -149,7 +154,11 @@ class CygamesNewsService
         $postAt = (string) ($detail['post_at'] ?? '');
         $postYear = $postAt !== '' ? (int) Carbon::parse($postAt)->year : (int) date('Y');
 
-        if (preg_match('/(?:開催期間|期間)[^<]*?<\/h2>\s*(\d{1,2})\/(\d{1,2})(?:\s+\d{1,2}:\d{1,2})?\s*(?:～|~|-)\s*(\d{1,2})\/(\d{1,2})/u', $message, $dateMatch)) {
+        $periodHeading = '(?:開催期間|期間)[^<]*?<\/h2>\s*';
+        $dateRange = '(\d{1,2})\/(\d{1,2})(?:\s+\d{1,2}:\d{1,2})?\s*(?:～|~|-)\s*(\d{1,2})\/(\d{1,2})';
+        $supportPeriod = '(?:(?!<h[1-6]\b).)*?セレクトピックアップ\s*サポートカードガチャ\s*<br\s*\/?>\s*';
+        if (preg_match('/'.$periodHeading.$supportPeriod.$dateRange.'/isu', $message, $dateMatch)
+            || preg_match('/'.$periodHeading.$dateRange.'/u', $message, $dateMatch)) {
             $startMonth = (int) $dateMatch[1];
             $startDay = (int) $dateMatch[2];
             $endMonth = (int) $dateMatch[3];
@@ -300,27 +309,56 @@ class CygamesNewsService
     }
 
     /**
-     * Determine whether an announcement article has already been successfully processed.
+     * Check whether the article's banner still has a valid lineup from this announcement or a later one.
      */
     public function isArticleProcessed(int $announceId): bool
     {
-        if (AppSetting::getValue("cygames_article_processed_{$announceId}") === '1') {
-            return true;
+        $gameToraId = (int) AppSetting::getValue(self::ARTICLE_BANNER_KEY_PREFIX.$announceId, 0);
+        if ($gameToraId <= 0) {
+            return false;
         }
 
-        if (AppSetting::where('key', 'like', 'select_pickup_provenance_id_%')->where('value', (string) $announceId)->exists()) {
-            return true;
-        }
+        $banner = GachaBanner::where('gametora_id', $gameToraId)->where('banner_type', 'support_card')->first();
+        $sourceId = (int) AppSetting::getValue("select_pickup_provenance_id_{$gameToraId}", 0);
 
-        return false;
+        return $sourceId >= $announceId
+            && $banner?->hasOfficialSelectPickupCandidates()
+            && $banner->getProvenanceUrl() === self::NEWS_WEB_BASE_URL.$sourceId;
     }
 
     /**
      * Mark an announcement article as successfully processed.
      */
-    public function markArticleProcessed(int $announceId): void
+    private function markArticleProcessed(int $announceId, int $gameToraId): void
     {
+        AppSetting::setValue(self::ARTICLE_BANNER_KEY_PREFIX.$announceId, (string) $gameToraId);
         AppSetting::setValue("cygames_article_processed_{$announceId}", '1');
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $articles
+     * @return list<int>
+     */
+    private function selectPickupArticleIds(array $articles): array
+    {
+        $articleIds = array_column($this->filterSelectPickupArticles($articles), 'announce_id');
+        $knownArticleKeys = AppSetting::where('key', 'like', self::ARTICLE_BANNER_KEY_PREFIX.'%')->pluck('key');
+        foreach ($knownArticleKeys as $key) {
+            if (str_starts_with($key, self::ARTICLE_BANNER_KEY_PREFIX)) {
+                $articleIds[] = substr($key, strlen(self::ARTICLE_BANNER_KEY_PREFIX));
+            }
+        }
+        foreach (self::ARCHIVED_SELECT_PICKUP_ARTICLES as $gameToraId => $announceId) {
+            if (AppSetting::getValue("cygames_article_processed_{$announceId}") === '1'
+                || GachaBanner::where('gametora_id', $gameToraId)->where('banner_type', 'support_card')->exists()) {
+                $articleIds[] = $announceId;
+            }
+        }
+
+        $articleIds = array_unique(array_map('intval', $articleIds));
+        rsort($articleIds, SORT_NUMERIC);
+
+        return $articleIds;
     }
 
     /**
@@ -331,22 +369,12 @@ class CygamesNewsService
     public function syncSelectPickupBanners(bool $force = false): array
     {
         $articles = $this->fetchNewsIndex();
-        if (empty($articles)) {
-            return ['success' => false, 'updated_count' => 0, 'articles_processed' => 0];
-        }
-
-        $relevantArticles = $this->filterSelectPickupArticles($articles);
-        if (empty($relevantArticles)) {
-            return ['success' => true, 'updated_count' => 0, 'articles_processed' => 0];
-        }
-
         $highestProcessedAnnounceId = (int) AppSetting::getValue('last_processed_cygames_announce_id', 0);
         $maxAnnounceIdInBatch = $highestProcessedAnnounceId;
         $updatedCount = 0;
         $processedCount = 0;
 
-        foreach ($relevantArticles as $articleSummary) {
-            $announceId = (int) ($articleSummary['announce_id'] ?? 0);
+        foreach ($this->selectPickupArticleIds($articles) as $announceId) {
             if ($announceId <= 0) {
                 continue;
             }
@@ -364,7 +392,7 @@ class CygamesNewsService
 
             $processedCount++;
             $parsed = $this->parseArticle($detail);
-            if (! $parsed) {
+            if (! $parsed || $parsed['announce_id'] !== $announceId) {
                 continue;
             }
 
@@ -388,54 +416,49 @@ class CygamesNewsService
                 $banner = $matches->count() === 1 ? $matches->first() : null;
             }
 
-            $applied = false;
-
-            if ($banner) {
-                // Provenance Precedence Guard:
-                // Ensure an older announcement (e.g. preview 予告) never overwrites a newer announcement (e.g. commencement 開催)
-                $existingProvAnnounceId = (int) AppSetting::getValue("select_pickup_provenance_id_{$banner->gametora_id}", 0);
-                if ($existingProvAnnounceId > 0 && $announceId < $existingProvAnnounceId) {
-                    $this->markArticleProcessed($announceId);
-                    $applied = true;
-                } else {
-                    $banner->category = 'select_rate_up';
-                    $banner->featured_items = $resolvedCandidates;
-                    if (! empty($parsed['end_date']) && ! $banner->end_date) {
-                        $banner->end_date = $parsed['end_date'];
-                    }
-                    $banner->save();
-
-                    AppSetting::setValue("select_pickup_provenance_{$banner->gametora_id}", $parsed['provenance_url']);
-                    AppSetting::setValue("select_pickup_provenance_id_{$banner->gametora_id}", (string) $announceId);
-                    $this->markArticleProcessed($announceId);
-                    $updatedCount++;
-                    $applied = true;
+            if (! $banner) {
+                if ($parsed['gametora_id'] === null || $parsed['start_date'] === null) {
+                    continue;
                 }
-            } elseif ($parsed['gametora_id'] !== null && ! empty($parsed['start_date'])) {
-                // Banner does not exist in local DB yet; create it proactively
-                $bannerDate = Carbon::parse($parsed['start_date']);
-                $banner = GachaBanner::create([
+
+                $banner = new GachaBanner([
                     'gametora_id' => $parsed['gametora_id'],
                     'banner_type' => 'support_card',
-                    'category' => 'select_rate_up',
                     'base_rate' => GachaBanner::DEFAULT_BASE_RATE,
-                    'name' => sprintf('Select Pick Up (%s %d)', $bannerDate->format('M'), $bannerDate->year),
-                    'featured_items' => $resolvedCandidates,
+                    'name' => 'Select Pick Up ('.Carbon::parse($parsed['start_date'])->format('M Y').')',
                     'start_date' => $parsed['start_date'],
-                    'end_date' => $parsed['end_date'],
                     'is_active' => true,
                 ]);
+            }
 
-                AppSetting::setValue("select_pickup_provenance_{$banner->gametora_id}", $parsed['provenance_url']);
-                AppSetting::setValue("select_pickup_provenance_id_{$banner->gametora_id}", (string) $announceId);
-                $this->markArticleProcessed($announceId);
+            $updated = DB::transaction(function () use ($banner, $announceId, $parsed, $resolvedCandidates): bool {
+                $gameToraId = (int) $banner->gametora_id;
+                $existingSourceId = (int) AppSetting::getValue("select_pickup_provenance_id_{$gameToraId}", 0);
+                if ($announceId < $existingSourceId) {
+                    $this->markArticleProcessed($announceId, $gameToraId);
+
+                    return false;
+                }
+
+                $banner->category = 'select_rate_up';
+                $banner->featured_items = $resolvedCandidates;
+                if ($parsed['end_date'] !== null) {
+                    $banner->start_date = $parsed['start_date'];
+                    $banner->end_date = $parsed['end_date'];
+                }
+                $banner->save();
+
+                AppSetting::setValue("select_pickup_provenance_{$gameToraId}", $parsed['provenance_url']);
+                AppSetting::setValue("select_pickup_provenance_id_{$gameToraId}", (string) $announceId);
+                $this->markArticleProcessed($announceId, $gameToraId);
+
+                return true;
+            });
+
+            if ($updated) {
                 $updatedCount++;
-                $applied = true;
             }
-
-            if ($applied && $announceId > $maxAnnounceIdInBatch) {
-                $maxAnnounceIdInBatch = $announceId;
-            }
+            $maxAnnounceIdInBatch = max($maxAnnounceIdInBatch, $announceId);
         }
 
         if ($maxAnnounceIdInBatch > $highestProcessedAnnounceId) {
@@ -443,7 +466,7 @@ class CygamesNewsService
         }
 
         return [
-            'success' => true,
+            'success' => $articles !== [] || $updatedCount > 0,
             'updated_count' => $updatedCount,
             'articles_processed' => $processedCount,
         ];
