@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Sparkles, Trophy, Users, Sun, Moon, Menu, X, Database, BarChart3, Calculator, Layers, ScrollText, GitFork, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, Sparkles, Trophy, Users, Sun, Moon, Menu, X, Database, BarChart3, Calculator, Layers, ScrollText, GitFork, CalendarDays, Activity } from 'lucide-react';
 
 export default function Navbar({ 
     activeTab, 
@@ -40,6 +40,7 @@ export default function Navbar({
         { id: 'club', label: 'Circle', fullName: 'Circle Club & Manajemen Anggota', icon: Users },
         { id: 'planner', label: 'Perencana', fullName: 'Perencana Jewel & Spark', icon: Calculator },
         { id: 'events', label: 'Event', fullName: 'Upcoming CM/LoH Competition Planner', icon: CalendarDays },
+        { id: 'health', label: 'Health', fullName: 'Kesehatan Data & Riwayat Sinkronisasi', icon: Activity },
     ];
 
     const circlePercent = Math.min(100, Math.round((monthlyFans / (circleGoal || 1)) * 100));
@@ -74,7 +75,7 @@ export default function Navbar({
                     </div>
 
                     {/* Desktop Navigation Tabs (Hidden on mobile / screens < md) */}
-                    <nav className="hidden md:flex items-center justify-center gap-1 xl:gap-1 flex-1 min-w-0 overflow-x-auto no-scrollbar">
+                    <nav className="hidden md:flex items-center justify-center-safe gap-1 xl:gap-1 flex-1 min-w-0 overflow-x-auto no-scrollbar">
                         {navItems.map((item) => {
                             const Icon = item.icon;
                             const isActive = activeTab === item.id;
@@ -84,6 +85,7 @@ export default function Navbar({
                                     type="button"
                                     onClick={() => handleSelectTab(item.id)}
                                     title={item.fullName}
+                                    aria-current={isActive ? 'page' : undefined}
                                     className={`flex items-center gap-1 px-1.5 xl:px-2 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 ${
                                         isActive
                                             ? 'bg-emerald-600/90 text-white shadow-inner ring-1 ring-emerald-400/50'
@@ -102,7 +104,7 @@ export default function Navbar({
                         {/* Circle Monthly Fans Badge (Desktop Only) */}
                         <div 
                             title={`Kuota Circle (Career Run lokal) ${circlePercent}%: ${(monthlyFans).toLocaleString()} / ${(circleGoal).toLocaleString()}`}
-                            className="hidden xl:flex items-center gap-1.5 bg-emerald-950/70 border border-emerald-700/50 px-2 py-1 rounded-xl whitespace-nowrap shrink-0 shadow-xs select-none"
+                            className="hidden 2xl:flex items-center gap-1.5 bg-emerald-950/70 border border-emerald-700/50 px-2 py-1 rounded-xl whitespace-nowrap shrink-0 shadow-xs select-none"
                         >
                             <div className="p-1 rounded-lg bg-emerald-800/80 text-amber-300 shrink-0">
                                 <Users className="w-3.5 h-3.5" />
@@ -182,6 +184,7 @@ export default function Navbar({
                                         key={item.id}
                                         type="button"
                                         onClick={() => handleSelectTab(item.id)}
+                                        aria-current={isActive ? 'page' : undefined}
                                         className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-bold transition-colors cursor-pointer ${
                                             isActive
                                                 ? 'bg-emerald-700 text-white shadow-inner border border-emerald-500/40'

@@ -13,6 +13,7 @@ const CollectionView = lazy(() => import('./components/CollectionView'));
 const CircleClubView = lazy(() => import('./components/CircleClubView'));
 const JewelPlannerView = lazy(() => import('./components/JewelPlannerView'));
 const CompetitionEventsView = lazy(() => import('./components/CompetitionEventsView'));
+const DataHealthView = lazy(() => import('./components/DataHealthView'));
 const CompetitionEventDetailView = lazy(() => import('./components/CompetitionEventDetailView'));
 const BackupRestoreModal = lazy(() => import('./components/BackupRestoreModal'));
 const ChangelogModal = lazy(() => import('./components/ChangelogModal'));
@@ -250,6 +251,8 @@ export default function AppMain() {
             {/* Main Content Area */}
             <main className="flex-1 w-full max-w-[1366px] 2xl:max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-5 xl:px-6 py-6 sm:py-8 pb-24 sm:pb-8 overflow-x-hidden relative z-10">
                 <Suspense fallback={<ViewLoadingFallback />}>
+                    {activeTab === 'health' && <DataHealthView />}
+
                     {activeTab === 'dashboard' && (
                         <DashboardView
                             summaryData={summaryData}
