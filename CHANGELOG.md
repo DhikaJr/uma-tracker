@@ -2,6 +2,20 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.4.0] - 24 November 2026
+
+### Data Health & transparansi sinkronisasi
+
+- Menambahkan riwayat sinkronisasi terstruktur untuk GameTora, Cygames, dan Umapyoi dengan status `success`, `degraded`, dan `failed`, termasuk hubungan antara sinkronisasi utama dan sumber turunannya.
+- Menambahkan halaman **Data Health** untuk melihat kesehatan data, status sinkronisasi terakhir, masalah Select Pick Up yang belum terselesaikan, serta riwayat eksekusi sinkronisasi.
+- Menambahkan API read-only Data Health dan riwayat sinkronisasi tanpa mengubah kontrak endpoint sinkronisasi yang sudah ada.
+- Menambahkan tindakan pemulihan terarah untuk menjalankan sinkronisasi GameTora normal, memeriksa ulang pengumuman resmi Cygames, dan menguji ulang sumber Umapyoi tanpa fitur `Fix All` atau force sync otomatis.
+- Status kesehatan kini dapat pulih setelah sumber yang sebelumnya gagal berhasil diperiksa ulang, sementara kegagalan inti GameTora tetap dilaporkan sebagai kegagalan utama.
+- Memperbaiki penanganan alias lama Select Pick Up Februari 2026 (`20030`/`20031`) dengan merekonsiliasikannya ke banner kanonis `30415` tanpa kehilangan riwayat pull atau pity.
+- Mempertahankan last-known-good lineup ketika sumber upstream gagal dan mencegah kandidat yang tidak terverifikasi menggantikan data resmi.
+- Memperjelas umpan balik tombol **Muat Ulang**, termasuk status pemuatan, waktu pembaruan hingga detik, dan konfirmasi setelah data telemetry berhasil dibaca ulang.
+- Menyesuaikan Navbar agar seluruh tab, termasuk Data Health, tetap terlihat pada resolusi desktop 1366 px tanpa memerlukan zoom-out.
+
 ## [Versi 3.3.16] - 23 November 2026
 
 ### Pemulihan lineup Select Pick Up
