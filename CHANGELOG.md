@@ -2,6 +2,14 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.4.1] - 24 November 2026
+
+### Ketahanan koneksi Umapyoi
+
+- Memperpanjang batas waktu pencarian berita Umapyoi dari 8 detik menjadi 20 detik dengan batas koneksi 5 detik agar respons Twinkle Collection dengan TTFB tinggi tidak gagal prematur sebagai `cURL 28`.
+- Batas waktu endpoint detail Umapyoi tetap 6 detik, sementara timeout GameTora dan Cygames tidak berubah dan tidak ada retry tambahan.
+- Pemeriksaan Umapyoi kini dapat menyelesaikan pengambilan search dan detail yang lambat; artikel yang terjemahan Inggrisnya tidak dapat diurai secara lengkap tetap dilaporkan sebagai gangguan parsial daripada menerima lineup yang tidak lengkap.
+
 ## [Versi 3.4.0] - 24 November 2026
 
 ### Data Health & transparansi sinkronisasi
