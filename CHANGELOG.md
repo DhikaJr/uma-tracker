@@ -2,6 +2,14 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.4.2] - 24 November 2026
+
+### Kompatibilitas lineup Twinkle Collection
+
+- Menambahkan validasi aman untuk format lama pengumuman Twinkle Collection Umapyoi yang memiliki terjemahan Inggris tidak lengkap tetapi lineup Jepang tetap terstruktur.
+- Lineup parsial tidak pernah disimpan; jika nama kanonis tidak dapat diekstrak lengkap dari Umapyoi, sinkronisasi GameTora tetap menggunakan lineup kanonis dari dataset GameTora.
+- Telemetri Umapyoi kini membedakan lineup yang berhasil diekstrak langsung dari lineup yang hanya dapat divalidasi strukturnya, sehingga sumber tidak lagi ditandai terganggu hanya karena format terjemahan lama.
+
 ## [Versi 3.4.1] - 24 November 2026
 
 ### Ketahanan koneksi Umapyoi
