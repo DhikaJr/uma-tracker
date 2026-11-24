@@ -10,7 +10,9 @@ use App\Models\SyncRun;
 use App\Models\UmaCatalogItem;
 use App\Services\CygamesNewsService;
 use App\Services\GameToraSyncService;
+use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
@@ -142,30 +144,81 @@ class DataHealthRecoveryApiTest extends TestCase
             'banner_type' => 'character', 'category' => 'twinkle', 'featured_items' => ['Existing [Official]'],
         ]);
         $bannersBefore = GachaBanner::orderBy('id')->get()->toArray();
+        $searchOptions = $detailOptions = [];
         Http::fake([
-            self::UMAPYOI_SEARCH => Http::response([
-                ['announce_id' => 999, 'title' => 'Twinkle Collection', 'post_at' => strtotime('2026-09-02')],
-            ]),
-            'https://umapyoi.net/api/v1/news/999' => Http::response([
-                'message_english' => '<img src="gacha_banner_30490.png">■ Eligible Umamusume<br>★★★ [Different] Tokai Teio<br>■',
-            ]),
+            self::UMAPYOI_SEARCH => function (Request $request, array $options) use (&$searchOptions): PromiseInterface {
+                $searchOptions = $options;
+
+                return Http::response([
+                    ['announce_id' => 999, 'title' => 'Twinkle Collection', 'post_at' => strtotime('2026-09-02')],
+                ]);
+            },
+            'https://umapyoi.net/api/v1/news/999' => function (Request $request, array $options) use (&$detailOptions): PromiseInterface {
+                $detailOptions = $options;
+
+                return Http::response([
+                    'message_english' => '<img src="gacha_banner_30490.png">■ Eligible Umamusume<br>★★★ [Different] Tokai Teio<br>■',
+                ]);
+            },
         ]);
 
         $run = $this->assertDirectRun($this->postJson(self::UMAPYOI_ACTION), SyncRun::SOURCE_UMAPYOI, SyncRun::STATUS_SUCCESS, 'Umapyoi');
 
+        $this->assertSame(20, $searchOptions['timeout']);
+        $this->assertSame(5, $searchOptions['connect_timeout']);
+        $this->assertSame(6, $detailOptions['timeout']);
+        $this->assertTrue($run->metadata['search_request_ok']);
         $this->assertSame(1, $run->metadata['lineups_found']);
         $this->assertSame($bannersBefore, GachaBanner::orderBy('id')->get()->toArray());
         $this->assertDatabaseCount('sync_runs', 1);
         Http::assertSentCount(2);
     }
 
+    public function test_successful_umapyoi_detail_requests_still_report_a_genuine_lineup_failure(): void
+    {
+        Http::fake([
+            self::UMAPYOI_SEARCH => Http::response([
+                ['announce_id' => 998, 'title_english' => 'Twinkle Collection Preview', 'post_at' => strtotime('2026-09-01')],
+                ['announce_id' => 999, 'title_english' => 'Twinkle Collection Pretty Derby Gacha', 'post_at' => strtotime('2026-09-02')],
+                ['announce_id' => 1000, 'title_english' => 'Twinkle Collection Pretty Derby Gacha', 'post_at' => strtotime('2026-06-01')],
+            ]),
+            'https://umapyoi.net/api/v1/news/999' => Http::response([
+                'message_english' => '■ Eligible Umamusume<br>★★★ [Official] Tokai Teio<br>■',
+            ]),
+            'https://umapyoi.net/api/v1/news/1000' => Http::response([
+                'message_english' => '<h2>Cultivating Umamusume</h2>Target Umamusume<br>★★★ [Costume] Runner One<br>Costume] Runner Two<br><h2>Support Cards</h2>',
+                'message' => '■対象ウマ娘<br>★★★&nbsp;[衣装一]ウマ娘一<br>★★★&nbsp;[衣装二]ウマ娘二<br>■',
+            ]),
+        ]);
+
+        $run = $this->assertDirectRun($this->postJson(self::UMAPYOI_ACTION), SyncRun::SOURCE_UMAPYOI, SyncRun::STATUS_DEGRADED, 'Umapyoi');
+
+        $this->assertTrue($run->metadata['search_request_ok']);
+        $this->assertSame(2, $run->metadata['detail_requests']);
+        $this->assertSame(0, $run->metadata['detail_failures']);
+        $this->assertSame(1, $run->metadata['lineups_found']);
+        $this->assertSame(1, $run->warning_count);
+        Http::assertSentCount(3);
+    }
+
     public function test_umapyoi_timeout_is_a_completed_request_with_sanitized_failed_telemetry(): void
     {
-        Http::fake([self::UMAPYOI_SEARCH => Http::failedConnection('cURL error 28: private upstream details')]);
+        $attempts = 0;
+        $timeout = Http::failedConnection('cURL error 28: private upstream details');
+        Http::fake([
+            self::UMAPYOI_SEARCH => function (Request $request) use (&$attempts, $timeout): PromiseInterface {
+                $attempts++;
+
+                return $timeout($request);
+            },
+        ]);
 
         $run = $this->assertDirectRun($this->postJson(self::UMAPYOI_ACTION), SyncRun::SOURCE_UMAPYOI, SyncRun::STATUS_FAILED, 'Umapyoi');
 
         $this->assertSame('Koneksi ke sumber gagal (cURL 28).', $run->error_summary);
+        $this->assertFalse($run->metadata['search_request_ok']);
+        $this->assertSame(1, $run->warning_count);
+        $this->assertSame(1, $attempts);
         $this->assertDatabaseCount('sync_runs', 1);
     }
 

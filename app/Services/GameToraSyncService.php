@@ -27,6 +27,10 @@ class GameToraSyncService
 {
     private const CATALOG_FORMAT_VERSION = '5';
 
+    private const UMAPYOI_SEARCH_CONNECT_TIMEOUT_SECONDS = 5;
+
+    private const UMAPYOI_SEARCH_TIMEOUT_SECONDS = 20;
+
     private const EVOLUTION_STATUS_EFFECTS = [
         7 => 'Fast Learner (切れ者)',
     ];
@@ -1041,7 +1045,10 @@ class GameToraSyncService
         $requestingDetail = false;
         $error = null;
         try {
-            $searchRes = VerifiedHttp::request()->timeout(8)->get('https://umapyoi.net/api/v1/news/search/twinkle');
+            $searchRes = VerifiedHttp::request()
+                ->connectTimeout(self::UMAPYOI_SEARCH_CONNECT_TIMEOUT_SECONDS)
+                ->timeout(self::UMAPYOI_SEARCH_TIMEOUT_SECONDS)
+                ->get('https://umapyoi.net/api/v1/news/search/twinkle');
             if (! $searchRes->successful()) {
                 $error = new \RuntimeException("HTTP {$searchRes->status()}");
 
