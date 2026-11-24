@@ -1,6 +1,6 @@
 # Uma Musume Pretty Derby Companion
 
-Aplikasi lokal untuk penggunaan personal di server Jepang (JP). Catat tarikan gacha dan hasil karier, pantau kuota fans Circle, serta rencanakan tabungan Jewel, dek support card, dan persiapan kompetisi.
+Aplikasi lokal untuk penggunaan personal di server Jepang (JP). Catat tarikan gacha dan hasil karier, pantau kuota fans Circle, serta rencanakan tabungan Jewel, dek support card, dan persiapan kompetisi. Aplikasi juga menyinkronkan katalog dan banner, memantau kesehatan data, mencatat riwayat sinkronisasi, dan menyediakan pemulihan sumber secara terarah.
 
 ## Fitur per menu
 
@@ -15,12 +15,13 @@ Aplikasi lokal untuk penggunaan personal di server Jepang (JP). Catat tarikan ga
 | Circle | Pantau ritme perolehan fans, estimasi jumlah sesi latihan, dan arsip bulanan dari Muxueuma. |
 | Perencana | Proyeksikan saldo Jewel dan tiket menuju target Spark serta simulasikan pengeluaran untuk farming. |
 | Event | Lihat jadwal CM dan LoH dari Cygames, rincian sirkuit dan skill dari GameTora, serta panduan atribut dan pemulihan dari GameWith. |
+| Health | Pantau kesehatan data, status sinkronisasi GameTora, Cygames, dan Umapyoi, serta masalah Select Pick Up yang belum terselesaikan. Lihat riwayat sinkronisasi utama dan turunannya, lalu jalankan pemulihan per sumber. |
 
 Aplikasi mendukung instalasi sebagai PWA dan navigasi ponsel.
 
 ## Mulai cepat
 
-Gunakan PHP 8.4.1 atau lebih baru sesuai dependensi terkunci, ekstensi PDO SQLite, Composer, dan Node.js 24 beserta npm.
+Persyaratan PHP proyek di `composer.json` adalah `^8.3`. Untuk menjalankan `composer install` dengan `composer.lock` saat ini, gunakan PHP 8.4.1 atau versi PHP 8.x yang lebih baru karena dependensi Symfony yang terkunci memerlukannya. Siapkan ekstensi PDO SQLite, Composer, dan Node.js 24 beserta npm.
 
 Untuk instalasi baru, jalankan dari direktori proyek di PowerShell.
 
@@ -41,6 +42,10 @@ Jalankan `php artisan serve` dan `npm run dev` di terminal terpisah, lalu buka a
 
 ## Sinkronisasi
 
+- **GameTora** adalah sumber utama katalog karakter, support card, skill, banner, serta data sirkuit dan lintasan balap.
+- **Cygames** menyediakan pengumuman resmi untuk memverifikasi lineup support card Select Pick Up dan mencatat rujukan resminya. Menu Event juga memakai jadwal resmi CM dan LoH dari Cygames.
+- **Umapyoi** adalah sumber tambahan untuk membaca pengumuman dan mengambil lineup Twinkle Collection.
+
 Pada instalasi baru, jalankan `php artisan db:seed --class=CompetitionEventSeeder` untuk mengisi jadwal awal sebelum menyinkronkan Event.
 
 ```powershell
@@ -48,15 +53,31 @@ php artisan uma:sync-catalog
 php artisan uma:sync-competitions
 ```
 
-Perintah pertama memperbarui katalog GameTora. Perintah kedua menyegarkan jadwal resmi Cygames dan panduan GameWith. Tambahkan `--force` pada perintah yang ingin dijalankan ulang tanpa pemeriksaan pembaruan normal.
+Perintah pertama menyinkronkan katalog dan banner dari GameTora serta memperkaya lineup dari sumber pendukung. Perintah kedua menyegarkan jadwal resmi Cygames dan panduan GameWith. Tambahkan `--force` pada perintah yang ingin dijalankan ulang tanpa pemeriksaan pembaruan normal.
 
 Jika PHP di Windows gagal memverifikasi sertifikat TLS, arahkan `UMA_HTTP_CA_BUNDLE` di `.env` atau `curl.cainfo` di `php.ini` ke berkas PEM bundel CA tepercaya. Jika konfigurasi Laravel dicache, perbarui cache setelah mengubah `.env`.
+
+### Data Health
+
+Menu **Health** menampilkan kondisi keseluruhan (**Sehat**, **Perlu Perhatian**, **Bermasalah**, atau **Belum Diketahui**), status sinkronisasi tiap sumber, pesan galat terakhir yang telah disaring, dan banner Select Pick Up yang belum memiliki lineup yang dapat digunakan. Riwayat terbaru mengelompokkan sinkronisasi Cygames dan Umapyoi yang dijalankan sebagai bagian dari sinkronisasi utama GameTora.
+
+Status didasarkan pada telemetri lokal dan kondisi data terakhir. **Muat Ulang** membaca kembali status dan riwayat yang tersimpan. Halaman ini tidak memantau ketersediaan sumber secara langsung.
+
+Tindakan pemulihan ditawarkan per sumber sesuai kondisi data. Tidak ada tindakan **Fix All**.
+
+- **Sinkronkan GameTora** menjalankan sinkronisasi normal dengan mode `force` dinonaktifkan dan tanpa mengizinkan penghapusan evolusi.
+- **Periksa ulang Cygames** memulihkan lineup Select Pick Up hanya jika kandidat resmi dapat diverifikasi.
+- **Periksa ulang Umapyoi** memeriksa pengumuman Twinkle Collection dan mencatat hasilnya di riwayat lokal tanpa menulis ulang banner.
+
+Jika pemeriksaan ulang Cygames atau Umapyoi gagal, hasil yang kosong atau belum terverifikasi tidak menggantikan lineup valid yang sudah tersimpan. Sinkronisasi normal GameTora dapat memakai sumber cadangan untuk lineup Twinkle Collection.
 
 ## Cadangan dan pemulihan
 
 Backup Schema v2.0 menyimpan sembilan entitas SQLite dalam berkas JSON. Cakupannya meliputi `gacha_banners`, `gacha_pulls`, `gacha_pities`, `career_runs`, `circle_snapshots`, `app_settings`, `uma_catalog_items`, `user_characters`, dan `user_support_cards`. Jadwal resmi `competition_events` dilindungi secara terpisah saat pemulihan.
 
 Preset dek di `storage/app/support_deck_presets.json`, cache sinkronisasi Event di `storage/app/competition_events_live_sync.json`, dan sesi Kalkulator Rating serta Skill Optimizer di `localStorage` berada di luar cakupan backup.
+
+Riwayat telemetri sinkronisasi (`sync_runs`) disimpan sebagai data operasional lokal di luar skema cadangan pengguna.
 
 ```powershell
 php artisan uma:backup
@@ -83,6 +104,6 @@ vendor/bin/pint
 
 Proyek buatan penggemar dan nonkomersial ini dikembangkan dengan bantuan AI. Hak cipta Uma Musume: Pretty Derby dan aset gim dimiliki oleh Cygames, Inc. [Uma Musume JP](https://umamusume.jp/) · [Cygames](https://www.cygames.co.jp/)
 
-Rujukan data dan mekanik mencakup GameTora, UmaTools, GameWith, portal berita Cygames JP, dan Muxueuma. [GameTora](https://gametora.com/umamusume) · [UmaTools](https://daftuyda.moe/) · [GameWith](https://gamewith.jp/uma-musume/) · [Berita Cygames JP](https://umamusume.jp/news/) · [Muxueuma](https://muxueuma.com/ja)
+Rujukan data dan mekanik mencakup GameTora, UmaTools, GameWith, portal berita Cygames JP, Umapyoi, dan Muxueuma. [GameTora](https://gametora.com/umamusume) · [UmaTools](https://daftuyda.moe/) · [GameWith](https://gamewith.jp/uma-musume/) · [Berita Cygames JP](https://umamusume.jp/news/) · [Umapyoi](https://umapyoi.net/) · [Muxueuma](https://muxueuma.com/ja)
 
 Lihat [riwayat rilis](CHANGELOG.md) untuk perubahan tiap versi.
