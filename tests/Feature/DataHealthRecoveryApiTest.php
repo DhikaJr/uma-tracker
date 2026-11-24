@@ -16,6 +16,7 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
+use PHPUnit\Framework\Attributes\TestWith;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -144,6 +145,7 @@ class DataHealthRecoveryApiTest extends TestCase
             'banner_type' => 'character', 'category' => 'twinkle', 'featured_items' => ['Existing [Official]'],
         ]);
         $bannersBefore = GachaBanner::orderBy('id')->get()->toArray();
+        $detail = $this->twinkleFixtures()[0]['detail'];
         $searchOptions = $detailOptions = [];
         Http::fake([
             self::UMAPYOI_SEARCH => function (Request $request, array $options) use (&$searchOptions): PromiseInterface {
@@ -153,12 +155,10 @@ class DataHealthRecoveryApiTest extends TestCase
                     ['announce_id' => 999, 'title' => 'Twinkle Collection', 'post_at' => strtotime('2026-09-02')],
                 ]);
             },
-            'https://umapyoi.net/api/v1/news/999' => function (Request $request, array $options) use (&$detailOptions): PromiseInterface {
+            'https://umapyoi.net/api/v1/news/999' => function (Request $request, array $options) use (&$detailOptions, $detail): PromiseInterface {
                 $detailOptions = $options;
 
-                return Http::response([
-                    'message_english' => '<img src="gacha_banner_30490.png">■ Eligible Umamusume<br>★★★ [Different] Tokai Teio<br>■',
-                ]);
+                return Http::response($detail);
             },
         ]);
 
@@ -174,31 +174,50 @@ class DataHealthRecoveryApiTest extends TestCase
         Http::assertSentCount(2);
     }
 
-    public function test_successful_umapyoi_detail_requests_still_report_a_genuine_lineup_failure(): void
-    {
-        Http::fake([
-            self::UMAPYOI_SEARCH => Http::response([
-                ['announce_id' => 998, 'title_english' => 'Twinkle Collection Preview', 'post_at' => strtotime('2026-09-01')],
-                ['announce_id' => 999, 'title_english' => 'Twinkle Collection Pretty Derby Gacha', 'post_at' => strtotime('2026-09-02')],
-                ['announce_id' => 1000, 'title_english' => 'Twinkle Collection Pretty Derby Gacha', 'post_at' => strtotime('2026-06-01')],
-            ]),
-            'https://umapyoi.net/api/v1/news/999' => Http::response([
-                'message_english' => '■ Eligible Umamusume<br>★★★ [Official] Tokai Teio<br>■',
-            ]),
-            'https://umapyoi.net/api/v1/news/1000' => Http::response([
-                'message_english' => '<h2>Cultivating Umamusume</h2>Target Umamusume<br>★★★ [Costume] Runner One<br>Costume] Runner Two<br><h2>Support Cards</h2>',
-                'message' => '■対象ウマ娘<br>★★★&nbsp;[衣装一]ウマ娘一<br>★★★&nbsp;[衣装二]ウマ娘二<br>■',
-            ]),
-        ]);
+    #[TestWith([5, 6, 0, SyncRun::STATUS_SUCCESS])]
+    #[TestWith([5, 5, 1, SyncRun::STATUS_DEGRADED])]
+    #[TestWith([0, 1, 1, SyncRun::STATUS_DEGRADED])]
+    #[TestWith([0, 0, 1, SyncRun::STATUS_FAILED])]
+    public function test_umapyoi_recheck_distinguishes_validated_lineups_from_invalid_articles(
+        int $extracted,
+        int $validatedOnly,
+        int $invalid,
+        string $status,
+    ): void {
+        $this->unresolvedBanner();
+        $bannersBefore = GachaBanner::orderBy('id')->get()->toArray();
+        $fixtures = $this->twinkleFixtures();
+        $articles = array_merge(array_slice($fixtures, 0, $extracted), array_slice($fixtures, 5, $validatedOnly + $invalid));
+        if ($invalid > 0) {
+            unset($articles[array_key_last($articles)]['detail']['message']);
+        }
+        $index = [['announce_id' => 998, 'title_english' => 'Twinkle Collection Preview', 'post_at' => strtotime('2026-09-01')]];
+        $responses = [];
+        foreach ($articles as $article) {
+            $index[] = [
+                'announce_id' => $article['announce_id'],
+                'title_english' => 'Twinkle Collection Pretty Derby Gacha',
+                'post_at' => $article['post_at'],
+            ];
+            $responses['https://umapyoi.net/api/v1/news/'.$article['announce_id']] = Http::response($article['detail']);
+        }
+        Http::fake([self::UMAPYOI_SEARCH => Http::response($index)] + $responses);
 
-        $run = $this->assertDirectRun($this->postJson(self::UMAPYOI_ACTION), SyncRun::SOURCE_UMAPYOI, SyncRun::STATUS_DEGRADED, 'Umapyoi');
+        $run = $this->assertDirectRun($this->postJson(self::UMAPYOI_ACTION), SyncRun::SOURCE_UMAPYOI, $status, 'Umapyoi');
 
         $this->assertTrue($run->metadata['search_request_ok']);
-        $this->assertSame(2, $run->metadata['detail_requests']);
+        $this->assertSame(count($articles), $run->metadata['detail_requests']);
         $this->assertSame(0, $run->metadata['detail_failures']);
-        $this->assertSame(1, $run->metadata['lineups_found']);
-        $this->assertSame(1, $run->warning_count);
-        Http::assertSentCount(3);
+        $this->assertSame($extracted, $run->metadata['lineups_found']);
+        $this->assertSame($extracted + $validatedOnly, $run->metadata['lineups_validated']);
+        $this->assertSame($validatedOnly, $run->metadata['lineups_validated_only']);
+        $this->assertSame($invalid, $run->metadata['lineup_failures']);
+        $this->assertSame($invalid, $run->warning_count);
+        if ($status === SyncRun::STATUS_SUCCESS) {
+            $this->assertNull($run->error_summary);
+        }
+        $this->assertSame($bannersBefore, GachaBanner::orderBy('id')->get()->toArray());
+        Http::assertSentCount(count($articles) + 1);
     }
 
     public function test_umapyoi_timeout_is_a_completed_request_with_sanitized_failed_telemetry(): void
@@ -266,6 +285,12 @@ class DataHealthRecoveryApiTest extends TestCase
         $this->assertNull($run->parent_id);
 
         return $run;
+    }
+
+    /** @return list<array{announce_id: int, post_at: int, detail: array<string, string>}> */
+    private function twinkleFixtures(): array
+    {
+        return json_decode(file_get_contents(base_path('tests/Fixtures/umapyoi_twinkle_2026.json')), true, flags: JSON_THROW_ON_ERROR);
     }
 
     /** @return array<string, mixed> */

@@ -17,6 +17,7 @@ use App\Support\CompetitionRacetrackHelper;
 use App\Support\SkillConditionTranslator;
 use App\Support\SupportCardUniqueEffectFormatter;
 use App\Support\UmaCatalog;
+use App\Support\UmapyoiTwinkleParser;
 use App\Support\VerifiedHttp;
 use Exception;
 use Illuminate\Support\Facades\Cache;
@@ -1026,7 +1027,7 @@ class GameToraSyncService
     }
 
     /**
-     * Fetch Twinkle Collection announcements from Umapyoi and extract Eligible Umamusume lineups.
+     * Validate Twinkle Collection announcements and return complete English lineups from Umapyoi.
      *
      * @return array<string|int, array<int, string>> Maps banner ID (or 'YYYY-MM') to array of eligible character strings
      */
@@ -1041,6 +1042,8 @@ class GameToraSyncService
             'detail_failures' => 0,
             'lineup_failures' => 0,
             'lineups_found' => 0,
+            'lineups_validated' => 0,
+            'lineups_validated_only' => 0,
         ];
         $requestingDetail = false;
         $error = null;
@@ -1084,34 +1087,26 @@ class GameToraSyncService
                     continue;
                 }
 
-                $detail = $detailRes->json() ?? [];
-                $msgEn = $detail['message_english'] ?? '';
-                if (empty($msgEn)) {
+                $detail = $detailRes->json();
+                $parsed = UmapyoiTwinkleParser::parse(is_array($detail) ? $detail : []);
+                if ($parsed['status'] === 'invalid') {
                     $observations['lineup_failures']++;
 
                     continue;
                 }
 
-                $lineupFound = false;
-                if (preg_match('/■\s*Eligible\s+Umamusume(.*?)(?:■|\*|<h2|<\/div|\z)/is', $msgEn, $matches)) {
-                    preg_match_all('/★+\s*\[(.*?)\]\s*([^<]+)/u', $matches[1], $charMatches, PREG_SET_ORDER);
-                    $chars = [];
-                    foreach ($charMatches as $cm) {
-                        $chars[] = trim($cm[2]).' ['.trim($cm[1]).']';
-                    }
+                $observations['lineups_validated']++;
+                if ($parsed['status'] === 'validated_only') {
+                    $observations['lineups_validated_only']++;
 
-                    if (! empty($chars)) {
-                        if (preg_match('/gacha_banner_(\d+)/', $msgEn, $bm)) {
-                            $lineups[(int) $bm[1]] = $chars;
-                            $lineupFound = true;
-                        }
-                        if ($postAt > 0) {
-                            $lineups[date('Y-m', $postAt)] = $chars;
-                            $lineupFound = true;
-                        }
-                    }
+                    continue;
                 }
-                $observations[$lineupFound ? 'lineups_found' : 'lineup_failures']++;
+
+                $observations['lineups_found']++;
+                $lineups[$parsed['banner_id']] = $parsed['characters'];
+                if ($postAt > 0) {
+                    $lineups[date('Y-m', $postAt)] = $parsed['characters'];
+                }
             }
         } catch (\Throwable $e) {
             $error = $e;
@@ -1125,7 +1120,7 @@ class GameToraSyncService
             $warningCount = (int) ! $observations['search_request_ok'] + $observations['detail_failures'] + $observations['lineup_failures'];
             $status = match (true) {
                 $warningCount === 0 => SyncRun::STATUS_SUCCESS,
-                $lineups !== [] => SyncRun::STATUS_DEGRADED,
+                $observations['lineups_validated'] > 0 => SyncRun::STATUS_DEGRADED,
                 default => SyncRun::STATUS_FAILED,
             };
             $run->finish($status, $observations, warningCount: $warningCount, error: $error);

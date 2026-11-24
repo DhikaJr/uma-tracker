@@ -112,14 +112,14 @@ test('timeline keeps each child nested once and formats run metadata as labeled 
         started_at: startedAt, finished_at: finishedAt, warning_count: 1, unresolved_count: 0, updated_count: null,
         metadata: { mode: 'full', characters_processed: 271, unknown_secret: 'hidden' },
         children: [
-            { id: 2, source: 'umapyoi', status: 'success', is_finished: true, metadata: { lineups_found: 1 }, children: [{ id: 4, source: 'grandchild' }] },
+            { id: 2, source: 'umapyoi', status: 'success', is_finished: true, metadata: { lineups_found: 5, lineups_validated: 11, lineups_validated_only: 6 }, children: [{ id: 4, source: 'grandchild' }] },
             { id: 3, source: 'cygames', status: 'degraded', is_finished: true, error_summary: 'Koneksi gagal' },
         ],
     }] });
     assert.match(html, /GameTora[\s\S]*Terganggu Sebagian[\s\S]*aria-label="Run turunan"[\s\S]*Umapyoi[\s\S]*Sehat[\s\S]*Cygames[\s\S]*Terganggu Sebagian/);
     assert.equal((html.match(/>Umapyoi</g) ?? []).length, 1);
     assert.equal((html.match(/>Cygames</g) ?? []).length, 1);
-    for (const label of ['Mode: Full', 'Karakter diproses: 271', 'Lineup ditemukan: 1', 'Ringkasan error', 'Durasi 3 dtk', 'Peringatan: 1']) {
+    for (const label of ['Mode: Full', 'Karakter diproses: 271', 'Lineup ditemukan: 5', 'Lineup tervalidasi: 11', 'Validasi sumber JP: 6', 'Ringkasan error', 'Durasi 3 dtk', 'Peringatan: 1']) {
         assert.ok(html.includes(label), label);
     }
     assert.doesNotMatch(html, /grandchild|unknown_secret|characters_processed|mode&quot;|Belum terselesaikan:|Diperbarui:/);

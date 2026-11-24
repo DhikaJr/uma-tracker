@@ -77,8 +77,46 @@ class SyncInstrumentationTest extends TestCase
         $this->assertSame([
             'search_request_ok' => true, 'articles_seen' => 1, 'detail_requests' => 1,
             'detail_failures' => 0, 'lineup_failures' => 0, 'lineups_found' => 1,
+            'lineups_validated' => 1, 'lineups_validated_only' => 0,
         ], $children['umapyoi']->metadata);
-        $this->assertSame(['Tokai Teio [Official]'], GachaBanner::where('gametora_id', 30490)->sole()->featured_items);
+        $this->assertSame($this->twinkleFixtures()[0]['previous_characters'], GachaBanner::where('gametora_id', 30490)->sole()->featured_items);
+    }
+
+    public function test_legacy_umapyoi_validation_preserves_canonical_gametora_banner_fallback(): void
+    {
+        $legacy = $this->twinkleFixtures()[5];
+        $cardIds = range(100101, 100108);
+        $cards = array_map(static fn (int $id): array => [
+            'card_id' => $id, 'name_en' => "Canonical Runner {$id}", 'title_en' => 'Costume',
+        ], $cardIds);
+        $base = GameToraSyncService::DATA_BASE_URL;
+        $this->fakeGameTora([
+            $base.'/character-cards.cards.json' => Http::response($cards),
+            $base.'/gacha/special.special.json' => Http::response([
+                ['id' => $legacy['banner_id'], 'start' => $legacy['post_at'], 'lineup' => [3750 => $cardIds]],
+            ]),
+            self::UMAPYOI_SEARCH => Http::response([[
+                'announce_id' => $legacy['announce_id'], 'title_english' => 'Twinkle Collection Pretty Derby Gacha',
+                'post_at' => $legacy['post_at'],
+            ]]),
+            self::UMAPYOI_NEWS.$legacy['announce_id'] => Http::response($legacy['detail']),
+        ]);
+
+        $this->postJson('/api/gacha/sync-gametora')->assertOk()->assertJsonPath('success', true);
+
+        $parent = SyncRun::forSource(SyncRun::SOURCE_GAMETORA)->sole();
+        $child = $parent->children()->forSource(SyncRun::SOURCE_UMAPYOI)->sole();
+        $this->assertSame(SyncRun::STATUS_SUCCESS, $parent->status);
+        $this->assertSame(SyncRun::STATUS_SUCCESS, $child->status);
+        $this->assertSame(0, $child->warning_count);
+        $this->assertNull($child->error_summary);
+        $this->assertSame(0, $child->metadata['lineups_found']);
+        $this->assertSame(1, $child->metadata['lineups_validated']);
+        $this->assertSame(1, $child->metadata['lineups_validated_only']);
+        $this->assertSame(
+            array_map(static fn (int $id): string => "Canonical Runner {$id} [Costume]", $cardIds),
+            GachaBanner::where('gametora_id', $legacy['banner_id'])->sole()->featured_items,
+        );
     }
 
     #[TestWith([200, SyncRun::STATUS_SUCCESS, SyncRun::STATUS_SUCCESS])]
@@ -254,9 +292,9 @@ class SyncInstrumentationTest extends TestCase
         $this->assertSame(0, SyncRun::finished()->count());
     }
 
-    #[TestWith([503, 0, SyncRun::STATUS_FAILED, 'Special Week [Fallback]'])]
-    #[TestWith([200, 2, SyncRun::STATUS_DEGRADED, 'Tokai Teio [Official]'])]
-    public function test_optional_umapyoi_failure_degrades_parent_and_preserves_existing_fallback(int $searchCode, int $details, string $status, string $featured): void
+    #[TestWith([503, 0, SyncRun::STATUS_FAILED])]
+    #[TestWith([200, 2, SyncRun::STATUS_DEGRADED])]
+    public function test_optional_umapyoi_failure_degrades_parent_and_preserves_existing_fallback(int $searchCode, int $details, string $status): void
     {
         $this->fakeGameTora([
             self::UMAPYOI_SEARCH => Http::response([$this->twinkleArticle(1), $this->twinkleArticle(2)], $searchCode),
@@ -275,7 +313,8 @@ class SyncInstrumentationTest extends TestCase
         $this->assertSame($details, $child->metadata['detail_requests']);
         $this->assertSame((int) ($details > 0), $child->metadata['detail_failures']);
         $this->assertSame((int) ($details > 0), $child->metadata['lineups_found']);
-        $this->assertSame([$featured], GachaBanner::where('gametora_id', 30490)->sole()->featured_items);
+        $featured = $details > 0 ? $this->twinkleFixtures()[0]['previous_characters'] : ['Special Week [Fallback]'];
+        $this->assertSame($featured, GachaBanner::where('gametora_id', 30490)->sole()->featured_items);
     }
 
     #[TestWith([200, 200, false, SyncRun::STATUS_SUCCESS])]
@@ -461,6 +500,14 @@ class SyncInstrumentationTest extends TestCase
     /** @return array{message_english: string} */
     private function twinkleDetail(): array
     {
-        return ['message_english' => '<img src="gacha_banner_30490.png">■ Eligible Umamusume<br>★★★ [Official] Tokai Teio<br>■'];
+        $detail = $this->twinkleFixtures()[0]['detail'];
+
+        return ['message_english' => str_replace('gacha_banner_30480', 'gacha_banner_30490', $detail['message_english'])];
+    }
+
+    /** @return list<array{announce_id: int, post_at: int, banner_id: int, detail: array{message_english: string, message?: string}, previous_characters?: list<string>}> */
+    private function twinkleFixtures(): array
+    {
+        return json_decode(file_get_contents(base_path('tests/Fixtures/umapyoi_twinkle_2026.json')), true, flags: JSON_THROW_ON_ERROR);
     }
 }

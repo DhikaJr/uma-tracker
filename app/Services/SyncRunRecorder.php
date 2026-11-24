@@ -20,7 +20,7 @@ final class SyncRunRecorder
         'index_fetch_ok', 'detail_fetch_failures', 'parse_failures', 'resolution_failures',
         'unmatched_articles', 'articles_processed', 'official_banners_updated',
         'search_request_ok', 'articles_seen', 'detail_requests', 'detail_failures', 'lineup_failures',
-        'lineups_found',
+        'lineups_found', 'lineups_validated', 'lineups_validated_only',
     ];
 
     private int $childWarningCount = 0;

@@ -158,6 +158,8 @@ const metadataLabels = {
     articles_processed: 'Artikel diproses',
     official_banners_updated: 'Banner resmi diperbarui',
     lineups_found: 'Lineup ditemukan',
+    lineups_validated: 'Lineup tervalidasi',
+    lineups_validated_only: 'Validasi sumber JP',
     detail_requests: 'Permintaan detail',
     detail_failures: 'Detail gagal',
     detail_fetch_failures: 'Detail gagal diambil',

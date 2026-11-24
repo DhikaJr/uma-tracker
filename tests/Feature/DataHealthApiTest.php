@@ -152,13 +152,17 @@ class DataHealthApiTest extends TestCase
             'metadata' => [
                 'mode' => 'full', 'force' => false, 'secret_internal_probe' => 'should_not_leak',
                 'index_fetch_ok' => 'Authorization: Bearer token', 'banners_processed' => ['raw_html' => '<p>Private</p>'],
+                'lineups_validated' => '11', 'lineups_validated_only' => true,
             ],
         ]);
         $child = SyncRun::factory()->for($root, 'parent')->create([
             'source' => SyncRun::SOURCE_UMAPYOI, 'trigger' => SyncRun::TRIGGER_EMBEDDED, 'status' => SyncRun::STATUS_DEGRADED,
             'started_at' => '2026-11-23 12:00:01', 'finished_at' => '2026-11-23 12:00:02',
             'warning_count' => 1, 'error_summary' => 'Permintaan sumber gagal (HTTP 503).',
-            'metadata' => ['lineups_found' => 1, 'mode' => 'C:\\private\\ca.pem', 'request_headers' => ['token']],
+            'metadata' => [
+                'lineups_found' => 1, 'lineups_validated' => 2, 'lineups_validated_only' => 1,
+                'mode' => 'C:\\private\\ca.pem', 'request_headers' => ['token'], 'japanese_candidates' => ['未公開'],
+            ],
         ]);
 
         $this->getJson('/api/data-health/sync-runs?limit=5')->assertOk()->assertExactJson([
@@ -173,7 +177,8 @@ class DataHealthApiTest extends TestCase
                     'status' => 'degraded', 'is_finished' => true,
                     'started_at' => '2026-11-23T12:00:01+00:00', 'finished_at' => '2026-11-23T12:00:02+00:00',
                     'created_count' => null, 'updated_count' => null, 'unresolved_count' => 0, 'warning_count' => 1,
-                    'error_summary' => 'Permintaan sumber gagal (HTTP 503).', 'metadata' => ['lineups_found' => 1],
+                    'error_summary' => 'Permintaan sumber gagal (HTTP 503).',
+                    'metadata' => ['lineups_found' => 1, 'lineups_validated' => 2, 'lineups_validated_only' => 1],
                 ]],
             ]],
             'meta' => ['limit' => 5, 'returned' => 1],
