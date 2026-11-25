@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\AppSetting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tests\TestCase;
 
 class PlannerApiTest extends TestCase
@@ -25,7 +27,11 @@ class PlannerApiTest extends TestCase
             ->assertJsonPath('config.shop_horseshoe_silver', true)
             ->assertJsonPath('config.shop_horseshoe_gold', true)
             ->assertJsonPath('config.shop_horseshoe_rainbow', false)
-            ->assertJsonPath('config.f2p_training_pass', true);
+            ->assertJsonPath('config.f2p_training_pass', true)
+            ->assertJsonPath('config.pakalive_carats_per_stream', 300)
+            ->assertJsonPath('config.campaign_bonus_carats', 0)
+            ->assertJsonPath('config.unexpected_bonus_carats', 0)
+            ->assertJsonPath('config.unexpected_bonus_note', '');
     }
 
     public function test_can_save_and_retrieve_custom_planner_config(): void
@@ -84,6 +90,73 @@ class PlannerApiTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['free_carats', 'target_banner_type', 'target_date', 'spark_goal_multiplier']);
+    }
+
+    public function test_can_save_and_reload_event_estimates_and_manual_bonuses(): void
+    {
+        $eventSettings = [
+            'story_events_count' => 2,
+            'legend_races_count' => 3,
+            'g1_bonus_enabled' => true,
+            'pakalive_streams_count' => 2,
+            'pakalive_carats_per_stream' => 500,
+            'campaign_bonus_carats' => 3000,
+            'unexpected_bonus_carats' => 450,
+            'unexpected_bonus_note' => 'Compensation + milestone',
+        ];
+
+        $this->postJson('/api/planner/config', $eventSettings + [
+            'free_carats' => 15000,
+            'target_date' => '2090-01-01',
+            'spark_goal_multiplier' => 1.0,
+        ])->assertOk()->assertJson(['config' => $eventSettings]);
+
+        $this->getJson('/api/planner/config')->assertOk()->assertJson(['config' => $eventSettings]);
+    }
+
+    public function test_legacy_event_counts_are_preserved_and_new_fields_receive_defaults(): void
+    {
+        $legacy = [
+            'story_events_count' => 2,
+            'legend_races_count' => 3,
+            'g1_bonus_enabled' => true,
+            'pakalive_streams_count' => 0,
+        ];
+        AppSetting::setValue('jewel_planner_config', json_encode($legacy));
+
+        $this->getJson('/api/planner/config')->assertOk()->assertJson(['config' => $legacy + [
+            'pakalive_carats_per_stream' => 300,
+            'campaign_bonus_carats' => 0,
+            'unexpected_bonus_carats' => 0,
+            'unexpected_bonus_note' => '',
+        ]]);
+    }
+
+    #[TestWith([-1, -1, -1])]
+    #[TestWith([10001, 1000001, 1000001])]
+    #[TestWith([1.5, 2.5, 3.5])]
+    public function test_rejects_event_amounts_outside_integer_limits(int|float $broadcast, int|float $campaign, int|float $unexpected): void
+    {
+        $this->postJson('/api/planner/config', [
+            'free_carats' => 15000,
+            'target_date' => '2090-01-01',
+            'spark_goal_multiplier' => 1.0,
+            'pakalive_carats_per_stream' => $broadcast,
+            'campaign_bonus_carats' => $campaign,
+            'unexpected_bonus_carats' => $unexpected,
+        ])->assertUnprocessable()->assertJsonValidationErrors([
+            'pakalive_carats_per_stream', 'campaign_bonus_carats', 'unexpected_bonus_carats',
+        ]);
+    }
+
+    public function test_rejects_bonus_note_longer_than_120_characters(): void
+    {
+        $this->postJson('/api/planner/config', [
+            'free_carats' => 15000,
+            'target_date' => '2090-01-01',
+            'spark_goal_multiplier' => 1.0,
+            'unexpected_bonus_note' => str_repeat('a', 121),
+        ])->assertUnprocessable()->assertJsonValidationErrors('unexpected_bonus_note');
     }
 
     public function test_can_save_and_retrieve_league_of_heroes_target_tiers_and_platinum_score_rewards(): void

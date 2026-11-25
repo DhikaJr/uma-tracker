@@ -40,10 +40,14 @@ class PlannerController extends Controller
             'shop_horseshoe_silver' => true,        // Silver Horseshoe: 2 Tiket Karakter + 2 Tiket Support / bulan
             'shop_horseshoe_gold' => true,          // Gold Horseshoe: 2 Tiket Karakter + 2 Tiket Support / bulan
             'shop_horseshoe_rainbow' => false,      // Rainbow Horseshoe: 2 Tiket Karakter + 2 Tiket Support / bulan (opsional, butuh buang SSR)
-            'story_events_count' => 1,      // 1000 carats each
-            'legend_races_count' => 1,      // 150 carats each (1 boss first-clear)
-            'g1_bonus_enabled' => false,    // Musiman (~300 carats/bulan saat aktif)
-            'pakalive_streams_count' => 1,  // 1500 carats each
+            'story_events_count' => 1,      // Estimasi full-clear: 2.250 Carat per event
+            'legend_races_count' => 1,      // 150 Carat per lawan first-clear
+            'g1_bonus_enabled' => false,    // Estimasi Support Missions: 300 Carat per bulan
+            'pakalive_streams_count' => 1,
+            'pakalive_carats_per_stream' => 300,
+            'campaign_bonus_carats' => 0,
+            'unexpected_bonus_carats' => 0,
+            'unexpected_bonus_note' => '',
             'daily_jewel_pack' => false,    // 500 paid carats + 50 free/day
             'trainer_pass' => false,        // Premium Training Pass: 1700 carats (350 paid + 1350 free) + 4 tickets/month (2 Karakter + 2 Support)
         ];
@@ -109,6 +113,10 @@ class PlannerController extends Controller
             'legend_races_count' => 'nullable|integer|min:0|max:10',
             'g1_bonus_enabled' => 'nullable|boolean',
             'pakalive_streams_count' => 'nullable|integer|min:0|max:10',
+            'pakalive_carats_per_stream' => 'nullable|integer|min:0|max:10000',
+            'campaign_bonus_carats' => 'nullable|integer|min:0|max:1000000',
+            'unexpected_bonus_carats' => 'nullable|integer|min:0|max:1000000',
+            'unexpected_bonus_note' => 'nullable|string|max:120',
             'daily_jewel_pack' => 'nullable|boolean',
             'trainer_pass' => 'nullable|boolean',
         ]);

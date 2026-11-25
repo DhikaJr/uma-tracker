@@ -25,6 +25,7 @@ import {
     ShoppingBag
 } from 'lucide-react';
 import JewelSacrificeCalculator from './JewelSacrificeCalculator';
+import { calculateEventIncome, EVENT_REWARD_DEFAULTS } from '../utils/jewelPlannerEventIncome';
 
 import {
     STADIUM_RETENTION_CARATS,
@@ -109,6 +110,86 @@ const CM_OPTIONS = {
     'none': { label: '0 / Lewati', carats: 0, tickets: 0, charTickets: 0, suppTickets: 0, group: 'Lainnya' },
 };
 
+const eventCard = 'min-w-0 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50';
+const eventLabel = 'text-sm font-bold text-slate-800 dark:text-slate-200';
+const eventHint = 'text-xs leading-relaxed text-slate-600 dark:text-slate-300';
+const eventInput = 'w-full min-w-0 rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-purple-600 dark:border-slate-600 dark:bg-slate-900 dark:text-white';
+const eventPreview = 'text-xs font-bold text-purple-700 dark:text-purple-300';
+const formatEventAmount = new Intl.NumberFormat('id-ID').format;
+
+function EventIncomeNumber({ label, value, max, step = 1, onChange }) {
+    return (
+        <label className="block space-y-1">
+            <span className={eventHint}>{label}</span>
+            <input type="number" min={0} max={max} step={step} value={value ?? 0} className={eventInput}
+                onChange={e => onChange(Math.min(max, Math.max(0, Number.parseInt(e.target.value, 10) || 0)))} />
+        </label>
+    );
+}
+
+export function EventIncomeFields({ config, calculation, update }) {
+    const pakaliveEstimate = config.pakalive_carats_per_stream ?? EVENT_REWARD_DEFAULTS.pakaliveStream;
+    const projection = (count, reward, total, unit = '') => calculation.diffDays > 0
+        ? `${formatEventAmount(count ?? 0)}${unit} × ${formatEventAmount(reward)} = ${formatEventAmount(total)} Carat`
+        : 'Proyeksi target 0 Carat';
+
+    return (
+        <div className="space-y-3 border-t border-slate-100 p-4 sm:p-6 dark:border-slate-800">
+            <p className={eventHint}>Masukkan hadiah yang dapat diklaim sebelum tanggal target.</p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+                <div className={eventCard}>
+                    <h3 className={eventLabel}>Story Event</h3>
+                    <p className={eventHint}>Estimasi {formatEventAmount(EVENT_REWARD_DEFAULTS.storyEvent)} Carat per event jika selesai penuh. Hasil aktual dapat berbeda.</p>
+                    <EventIncomeNumber label="Jumlah Story Event" value={config.story_events_count} max={10} onChange={value => update('story_events_count', value)} />
+                    <p className={eventPreview}>{projection(config.story_events_count, EVENT_REWARD_DEFAULTS.storyEvent, calculation.storyCarats)}</p>
+                </div>
+                <div className={eventCard}>
+                    <h3 className={eventLabel}>Legend Race — Lawan Baru</h3>
+                    <p className={eventHint}>{EVENT_REWARD_DEFAULTS.legendRaceOpponent} Carat per lawan. Hitung lawan yang belum pernah dikalahkan untuk hadiah first-clear.</p>
+                    <EventIncomeNumber label="Jumlah lawan" value={config.legend_races_count} max={10} onChange={value => update('legend_races_count', value)} />
+                    <p className={eventPreview}>{projection(config.legend_races_count, EVENT_REWARD_DEFAULTS.legendRaceOpponent, calculation.legendCarats, ' lawan')}</p>
+                </div>
+                <div className={eventCard}>
+                    <h3 className={eventLabel}>PakaLive TV Gift</h3>
+                    <EventIncomeNumber label="Jumlah siaran" value={config.pakalive_streams_count} max={10} onChange={value => update('pakalive_streams_count', value)} />
+                    <EventIncomeNumber label="Estimasi Carat per siaran" value={pakaliveEstimate} max={10000} onChange={value => update('pakalive_carats_per_stream', value)} />
+                    <p className={eventPreview}>{projection(config.pakalive_streams_count, pakaliveEstimate, calculation.pakaliveCarats)}</p>
+                </div>
+                <div className={eventCard}>
+                    <label className={'flex items-start gap-2 ' + eventLabel}>
+                        <input type="checkbox" checked={Boolean(config.g1_bonus_enabled)} onChange={e => update('g1_bonus_enabled', e.target.checked)}
+                            className="mt-0.5 size-4 shrink-0 rounded accent-purple-600" />
+                        <span>G1 Support Missions</span>
+                    </label>
+                    <p className={eventHint}>Estimasi ~{EVENT_REWARD_DEFAULTS.g1MonthlyEstimate} Carat per bulan, sekitar dua set misi × 150 Carat saat musim G1 aktif.</p>
+                    {config.g1_bonus_enabled && <p className={eventPreview}>Estimasi target +{formatEventAmount(calculation.g1Carats)} Carat</p>}
+                </div>
+                <div className={eventCard}>
+                    <h3 className={eventLabel}>Campaign / Anniversary Bonus</h3>
+                    <p className={eventHint}>Masukkan total hadiah kampanye yang sudah diumumkan dan dapat diklaim sebelum tanggal target.</p>
+                    <EventIncomeNumber label="Carat kampanye" value={config.campaign_bonus_carats} max={1000000} step={50} onChange={value => update('campaign_bonus_carats', value)} />
+                    <p className={eventPreview}>+{formatEventAmount(calculation.campaignCarats)} Carat</p>
+                </div>
+                <div className={eventCard}>
+                    <h3 className={eventLabel}>Bonus / Hadiah Tak Terduga</h3>
+                    <p className={eventHint}>Masukkan bonus seperti kompensasi, hadiah pencapaian, atau hadiah anime dan manga.</p>
+                    <EventIncomeNumber label="Carat hadiah tak terduga" value={config.unexpected_bonus_carats} max={1000000} step={50} onChange={value => update('unexpected_bonus_carats', value)} />
+                    <label className="block space-y-1">
+                        <span className={eventHint}>Catatan bonus (opsional)</span>
+                        <input type="text" maxLength={120} value={config.unexpected_bonus_note ?? ''} className={eventInput}
+                            placeholder="Contoh: kompensasi + hadiah anime" onChange={e => update('unexpected_bonus_note', e.target.value)} />
+                    </label>
+                    <p className={eventPreview}>+{formatEventAmount(calculation.unexpectedCarats)} Carat</p>
+                </div>
+            </div>
+            <p className={'flex items-start gap-2 ' + eventHint}>
+                <Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+                <span>Catat setiap hadiah di satu kategori saja. PakaLive hanya mencakup hadiah siaran. Masukkan hadiah anniversary atau skenario ke Campaign Bonus.</span>
+            </p>
+        </div>
+    );
+}
+
 export default function JewelPlannerView({ onNotify }) {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -143,6 +224,10 @@ export default function JewelPlannerView({ onNotify }) {
         legend_races_count: 1,
         g1_bonus_enabled: false,
         pakalive_streams_count: 1,
+        pakalive_carats_per_stream: EVENT_REWARD_DEFAULTS.pakaliveStream,
+        campaign_bonus_carats: 0,
+        unexpected_bonus_carats: 0,
+        unexpected_bonus_note: '',
         daily_jewel_pack: false,
         trainer_pass: false,
     });
@@ -261,12 +346,8 @@ export default function JewelPlannerView({ onNotify }) {
         const cmSuppTickets = (cmData.suppTickets ?? Math.ceil(cmData.tickets / 2)) * monthsCount;
         const totalCompetitiveCarats = circleCarats + cmCarats;
 
-        // PvE Events (Kalibrasi Realistis JP Server)
-        const storyCarats = diffDays > 0 ? (parseInt(config.story_events_count, 10) || 0) * 1000 : 0;
-        const legendCarats = diffDays > 0 ? (parseInt(config.legend_races_count, 10) || 0) * 150 : 0;
-        const g1Carats = config.g1_bonus_enabled ? monthsCount * 300 : 0;
-        const pakaliveCarats = diffDays > 0 ? (parseInt(config.pakalive_streams_count, 10) || 0) * 1500 : 0;
-        const totalPveCarats = storyCarats + legendCarats + g1Carats + pakaliveCarats;
+        // Event dan bonus
+        const eventIncome = calculateEventIncome(config, { diffDays, monthsCount });
 
         // Paid Passes (Daily Jewel Pack: 500 Paid Carat + 50 Free Carat/hari = 2.000 Carat / 30 hari pack)
         const { dailyPackPaid, dailyPackFree, dailyPackCarats } = calculateDailyJewelPack(diffDays, config.daily_jewel_pack);
@@ -279,7 +360,7 @@ export default function JewelPlannerView({ onNotify }) {
         const totalPassesCarats = dailyPackCarats + trainerPassCarats;
 
         // Grand Totals & Projections
-        const grandProjectedCarats = totalF2pCarats + totalCompetitiveCarats + totalPveCarats + totalPassesCarats;
+        const grandProjectedCarats = totalF2pCarats + totalCompetitiveCarats + eventIncome.totalEventCarats + totalPassesCarats;
         const grandTotalCarats = currentCarats + grandProjectedCarats;
 
         const grandProjectedTickets = getBannerTickets(
@@ -364,11 +445,7 @@ export default function JewelPlannerView({ onNotify }) {
             cmCharTickets,
             cmSuppTickets,
             totalCompetitiveCarats,
-            storyCarats,
-            legendCarats,
-            g1Carats,
-            pakaliveCarats,
-            totalPveCarats,
+            ...eventIncome,
             dailyPackCarats,
             dailyPackPaid,
             dailyPackFree,
@@ -500,7 +577,7 @@ export default function JewelPlannerView({ onNotify }) {
                                         ? 'bg-emerald-600 text-white shadow-sm'
                                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                                 }`}
-                                title="Hitung total kapasitas tarikan termasuk akumulasi F2P, Circle, PvP, PvE, dan Pass hingga tanggal target"
+                                title="Hitung kapasitas tarikan termasuk hadiah rutin, kompetisi, event, bonus, dan pass hingga tanggal target"
                             >
                                 <Sparkles className="w-3.5 h-3.5" />
                                 <span>Dengan Prediksi</span>
@@ -1351,115 +1428,34 @@ export default function JewelPlannerView({ onNotify }) {
                         )}
                     </div>
 
-                    {/* D. PvE Events & Livestreams */}
-                    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
+                    {/* D. Event, Campaign & Bonus */}
+                    <div className="rounded-3xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
                         <button
                             type="button"
+                            aria-expanded={expandedAccordion.pve}
                             onClick={() => toggleAccordion('pve')}
-                            className="w-full px-6 py-4 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left"
+                            className="flex w-full items-center justify-between gap-2 rounded-t-3xl bg-slate-50/50 px-4 py-3 text-left transition-colors hover:bg-slate-50 sm:px-6 dark:bg-slate-800/30 dark:hover:bg-slate-800/50"
                         >
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 flex items-center justify-center shrink-0">
-                                    <Gift className="w-4 h-4" />
+                            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                                <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+                                    <Gift aria-hidden="true" className="size-4" />
                                 </div>
-                                <div>
-                                    <div className="text-sm font-black text-slate-900 dark:text-white">
-                                        D. Event PvE & PakaLive Stream
-                                    </div>
-                                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                                        Story Events, Legend Race, G1 Bonus, & PakaLive Gift
-                                    </div>
+                                <div className="min-w-0">
+                                    <div className="text-sm font-black text-slate-900 dark:text-white">D. Event, Campaign &amp; Bonus</div>
+                                    <div className="text-xs text-slate-600 dark:text-slate-300">Story Event, Legend Race, G1 Mission, PakaLive, dan bonus kampanye</div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <span className="text-xs font-mono font-black text-purple-600 dark:text-purple-400">
-                                    +{calculation.totalPveCarats.toLocaleString()} Carat
+                            <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+                                <span className="max-w-24 text-right font-mono text-xs font-black text-purple-700 dark:text-purple-300">
+                                    +{formatEventAmount(calculation.totalEventCarats)} Carat
                                 </span>
-                                {expandedAccordion.pve ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                                {expandedAccordion.pve ? <ChevronUp aria-hidden="true" className="size-4 shrink-0 text-slate-500" /> : <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-slate-500" />}
                             </div>
                         </button>
 
                         {expandedAccordion.pve && (
-                            <div className="p-6 space-y-4 border-t border-slate-100 dark:border-slate-800">
-                                <p className="text-xs text-slate-500 dark:text-slate-400">
-                                    Masukkan jumlah Story Event, Legend Race, dan hadiah PakaLive yang dapat diklaim sebelum tanggal target.
-                                </p>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    {/* Story Events */}
-                                    <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-                                                Story Event (estimasi 1.000 Carat)
-                                            </label>
-                                            <span className="text-[10px] text-slate-400">Cerita, misi & roulette</span>
-                                        </div>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            max="10"
-                                            value={config.story_events_count}
-                                            onChange={(e) => setConfig({ ...config, story_events_count: parseInt(e.target.value, 10) || 0 })}
-                                            className="w-16 px-2.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono font-bold text-xs text-center text-slate-800 dark:text-white"
-                                        />
-                                    </div>
-
-                                    {/* Legend Race */}
-                                    <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-                                                Legend Race (150 Carat)
-                                            </label>
-                                            <span className="text-[10px] text-slate-400">1 bos first-clear</span>
-                                        </div>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            max="10"
-                                            value={config.legend_races_count}
-                                            onChange={(e) => setConfig({ ...config, legend_races_count: parseInt(e.target.value, 10) || 0 })}
-                                            className="w-16 px-2.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono font-bold text-xs text-center text-slate-800 dark:text-white"
-                                        />
-                                    </div>
-
-                                    {/* PakaLive Stream */}
-                                    <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-                                                PakaLive TV Gift (estimasi 1.500 Carat)
-                                            </label>
-                                            <span className="text-[10px] text-slate-400">Siaran resmi bulanan JP</span>
-                                        </div>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            max="10"
-                                            value={config.pakalive_streams_count}
-                                            onChange={(e) => setConfig({ ...config, pakalive_streams_count: parseInt(e.target.value, 10) || 0 })}
-                                            className="w-16 px-2.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono font-bold text-xs text-center text-slate-800 dark:text-white"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                                    <div>
-                                        <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200">
-                                            <input
-                                                type="checkbox"
-                                                checked={config.g1_bonus_enabled}
-                                                onChange={(e) => setConfig({ ...config, g1_bonus_enabled: e.target.checked })}
-                                                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
-                                            />
-                                            <span>G1 Commemorative Race Bonus (Musiman, ~300 Carat / Bulan)</span>
-                                        </label>
-                                        <span className="text-[11px] text-slate-400 pl-6.5 block">
-                                            Estimasi ~2 balapan G1 per bulan saat aktif musim pacuan JP
-                                        </span>
-                                    </div>
-                                    <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400">
-                                        +{calculation.g1Carats.toLocaleString()}
-                                    </span>
-                                </div>
-                            </div>
+                            <EventIncomeFields config={config} calculation={calculation}
+                                update={(key, value) => setConfig(previous => ({ ...previous, [key]: value }))} />
                         )}
                     </div>
 
