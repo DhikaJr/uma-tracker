@@ -2,6 +2,15 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.5.1] - 25 November 2026
+
+### Perawatan dan konsistensi aplikasi
+
+- Memperbaiki pembaruan tampilan dan state global setelah pemulihan backup sehingga data Planner, target Circle, fans bulanan, dan jumlah katalog langsung mencerminkan hasil restore tanpa perlu berpindah tab atau memuat ulang browser.
+- Menyamakan koneksi sinkronisasi Event dengan mekanisme HTTP terverifikasi aplikasi sehingga bundel CA dari `UMA_HTTP_CA_BUNDLE` juga digunakan untuk sumber Cygames dan GameWith.
+- Mengisolasi logging PHPUnit agar pengujian skenario gagal tidak lagi menulis ke log aplikasi utama.
+- Menyeragamkan notifikasi pengaturan Circle dan Base SSR Rate ke Bahasa Indonesia serta menghapus controller Competition Event lama yang tidak lagi digunakan.
+
 ## [Versi 3.5.0] - 25 November 2026
 
 ### Kalibrasi pendapatan event Jewel Planner
