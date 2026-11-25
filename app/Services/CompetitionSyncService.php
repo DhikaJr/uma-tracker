@@ -8,8 +8,8 @@ use App\Models\CompetitionEvent;
 use App\Support\AtomicJsonFile;
 use App\Support\CompetitionRacetrackHelper;
 use App\Support\CompetitionStatRecoveryRecommender;
+use App\Support\VerifiedHttp;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -230,7 +230,7 @@ class CompetitionSyncService
         $status = 'error';
 
         try {
-            $indexResponse = Http::withHeaders([
+            $indexResponse = VerifiedHttp::request()->withHeaders([
                 'User-Agent' => self::USER_AGENT,
                 'Referer' => 'https://umamusume.jp/news/',
             ])->timeout(10)->get(self::CYGAMES_INDEX_URL, [
@@ -272,7 +272,7 @@ class CompetitionSyncService
                 }
 
                 try {
-                    $detailResponse = Http::withHeaders([
+                    $detailResponse = VerifiedHttp::request()->withHeaders([
                         'User-Agent' => self::USER_AGENT,
                         'Referer' => 'https://umamusume.jp/news/',
                     ])->timeout(10)->get(self::CYGAMES_DETAIL_URL, [
@@ -721,7 +721,7 @@ class CompetitionSyncService
         $status = 'error';
 
         try {
-            $response = Http::withHeaders([
+            $response = VerifiedHttp::request()->withHeaders([
                 'User-Agent' => self::USER_AGENT,
             ])->timeout(10)->get(self::GAMEWITH_SUMMARY_URL);
 
@@ -785,7 +785,7 @@ class CompetitionSyncService
         $url = "https://gamewith.jp/uma-musume/article/show/{$articleId}";
 
         try {
-            $response = Http::withHeaders([
+            $response = VerifiedHttp::request()->withHeaders([
                 'User-Agent' => self::USER_AGENT,
             ])->timeout(10)->get($url);
 

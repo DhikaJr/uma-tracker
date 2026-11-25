@@ -20,6 +20,49 @@ class CompetitionEventTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_competition_sync_passes_configured_ca_bundle_to_all_four_requests(): void
+    {
+        CompetitionSyncService::setStoragePath(storage_path('framework/testing/test_competition_live_sync.json'));
+        $bundle = tmpfile();
+        $this->assertIsResource($bundle);
+
+        try {
+            $path = stream_get_meta_data($bundle)['uri'];
+            config(['services.uma_http.ca_bundle' => $path]);
+            $articleUrl = 'https://gamewith.jp/uma-musume/article/show/586061';
+            $responses = [
+                CompetitionSyncService::CYGAMES_INDEX_URL => Http::response(['information_list' => [
+                    ['announce_id' => 3525, 'title' => '対戦レースイベント', 'post_at' => '2026-10-30'],
+                ]]),
+                CompetitionSyncService::CYGAMES_DETAIL_URL => Http::response(['detail' => [
+                    'message' => '<p>■2027年1月下旬：チャンピオンズミーティングCLASSIC</p><p>東京 芝 2400m 左 冬</p>',
+                ]]),
+                CompetitionSyncService::GAMEWITH_SUMMARY_URL => Http::response(
+                    '<a href="/uma-musume/article/show/586061">1月チャンミ中距離のおすすめキャラと育成</a>'
+                ),
+                $articleUrl => Http::response('<div>2027年1月 チャンミ中距離</div>'),
+            ];
+            $requests = [];
+            Http::fake(function (Request $request, array $options) use ($responses, &$requests) {
+                $url = strtok($request->url(), '?');
+                $requests[] = [$url, $options['verify'] ?? null];
+
+                return $responses[$url] ?? null;
+            });
+
+            $this->postJson('/api/competition-events/sync')->assertOk();
+
+            $this->assertSame([
+                [CompetitionSyncService::CYGAMES_INDEX_URL, $path],
+                [CompetitionSyncService::CYGAMES_DETAIL_URL, $path],
+                [CompetitionSyncService::GAMEWITH_SUMMARY_URL, $path],
+                [$articleUrl, $path],
+            ], $requests);
+        } finally {
+            fclose($bundle);
+        }
+    }
+
     public function test_sync_reports_unchanged_partial_and_failure_through_api_and_cli(): void
     {
         $path = storage_path('framework/testing/test_competition_live_sync.json');

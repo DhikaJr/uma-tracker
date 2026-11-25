@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import Navbar from './components/Navbar';
 import MobileBottomNav from './components/MobileBottomNav';
 import Toast from './components/Toast';
@@ -40,6 +40,8 @@ function ViewLoadingFallback() {
 
 export default function AppMain() {
     const [activeTab, setActiveTab] = useState('dashboard');
+    const [restoreRevision, setRestoreRevision] = useState(0);
+    const latestRestoreRevision = useRef(0);
     const [summaryData, setSummaryData] = useState(null);
     const [loadingSummary, setLoadingSummary] = useState(true);
     const [toast, setToast] = useState(null);
@@ -55,23 +57,19 @@ export default function AppMain() {
         return parseInt(saved, 10) || 20000000;
     });
 
-    // Load persistent settings from database on mount
-    useEffect(() => {
-        const loadSettings = async () => {
-            try {
-                const res = await fetch('/api/settings');
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.circle_goal) {
-                        setCircleGoal(data.circle_goal);
-                        localStorage.setItem('uma_circle_goal', String(data.circle_goal));
-                    }
+    const loadSettings = useCallback(async (signal) => {
+        try {
+            const res = await fetch('/api/settings', { signal });
+            if (res.ok) {
+                const data = await res.json();
+                if (!signal.aborted && data.circle_goal) {
+                    setCircleGoal(data.circle_goal);
+                    localStorage.setItem('uma_circle_goal', String(data.circle_goal));
                 }
-            } catch (err) {
-                console.error('Failed to load settings from DB:', err);
             }
-        };
-        loadSettings();
+        } catch (err) {
+            if (!signal.aborted) console.error('Failed to load settings from DB:', err);
+        }
     }, []);
 
     // Dynamic GameTora catalog item counts (aligned with GachaView header)
@@ -86,12 +84,12 @@ export default function AppMain() {
         return { characters: 271, support_cards: 563 };
     });
 
-    useEffect(() => {
-        const fetchCatalogCounts = async () => {
-            try {
-                const res = await fetch('/api/gacha/metadata');
-                if (res.ok) {
-                    const data = await res.json();
+    const loadCatalogCounts = useCallback(async (signal) => {
+        try {
+            const res = await fetch('/api/gacha/metadata', { signal });
+            if (res.ok) {
+                const data = await res.json();
+                if (!signal.aborted) {
                     const counts = {
                         characters: data.characters?.length || 0,
                         support_cards: data.support_cards?.length || 0,
@@ -101,12 +99,20 @@ export default function AppMain() {
                         localStorage.setItem('uma_gametora_counts', JSON.stringify(counts));
                     }
                 }
-            } catch (err) {
-                console.error('Failed to load catalog counts for footer:', err);
             }
-        };
-        fetchCatalogCounts();
+        } catch (err) {
+            if (!signal.aborted) console.error('Failed to load catalog counts for footer:', err);
+        }
+    }, []);
 
+    useEffect(() => {
+        const controller = new AbortController();
+        loadSettings(controller.signal);
+        loadCatalogCounts(controller.signal);
+        return () => controller.abort();
+    }, [loadSettings, loadCatalogCounts, restoreRevision]);
+
+    useEffect(() => {
         const handleCatalogUpdated = (e) => {
             if (e.detail?.characters !== undefined && e.detail?.support_cards !== undefined) {
                 const counts = {
@@ -175,7 +181,7 @@ export default function AppMain() {
     const updateCircleGoal = async (val) => {
         setCircleGoal(val);
         localStorage.setItem('uma_circle_goal', String(val));
-        notify(`Circle goal updated to ${val.toLocaleString('id-ID')} fans!`, 'info');
+        notify(`Target Circle diperbarui menjadi ${val.toLocaleString('id-ID')} fans.`, 'info');
 
         // Persist to database so it stays saved across browsers & devices
         try {
@@ -194,7 +200,7 @@ export default function AppMain() {
         if (parsed > 0) {
             setBaseRate(parsed);
             localStorage.setItem('uma_base_ssr_rate', String(parsed));
-            notify(`Base SSR Rate benchmark set to ${parsed}%`, 'info');
+            notify(`Benchmark Base SSR Rate diatur ke ${parsed}%.`, 'info');
         }
     };
 
@@ -227,7 +233,7 @@ export default function AppMain() {
     }, [isDashboard, baseRate, summaryRevision]);
 
     const handleCareerStatsUpdate = (stats) => {
-        if (stats && typeof stats.monthly_fans === 'number') {
+        if (restoreRevision === latestRestoreRevision.current && typeof stats?.monthly_fans === 'number') {
             setLiveMonthlyFans(stats.monthly_fans);
         }
     };
@@ -250,7 +256,7 @@ export default function AppMain() {
 
             {/* Main Content Area */}
             <main className="flex-1 w-full max-w-[1366px] 2xl:max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-5 xl:px-6 py-6 sm:py-8 pb-24 sm:pb-8 overflow-x-hidden relative z-10">
-                <Suspense fallback={<ViewLoadingFallback />}>
+                <Suspense key={restoreRevision} fallback={<ViewLoadingFallback />}>
                     {activeTab === 'health' && <DataHealthView />}
 
                     {activeTab === 'dashboard' && (
@@ -334,9 +340,10 @@ export default function AppMain() {
                         isOpen={showBackupModal} 
                         onClose={() => setShowBackupModal(false)} 
                         onRestoreSuccess={() => {
+                            latestRestoreRevision.current += 1;
+                            setLiveMonthlyFans(null);
                             loadSummary();
-                            // trigger tab reload if needed
-                            setActiveTab((curr) => curr);
+                            setRestoreRevision(latestRestoreRevision.current);
                         }}
                         notify={notify}
                     />
