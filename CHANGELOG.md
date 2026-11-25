@@ -2,6 +2,16 @@
 
 Seluruh perubahan penting, penambahan fitur baru, perbaikan bug, dan penyempurnaan antarmuka pada aplikasi **Uma Musume Pretty Derby Companion** didokumentasikan dalam file ini. Format penomoran versi mengikuti prinsip [Semantic Versioning](https://semver.org/).
 
+## [Versi 3.5.0] - 25 November 2026
+
+### Kalibrasi pendapatan event Jewel Planner
+
+- Mengkalibrasi estimasi Story Event menjadi 2.250 Carat per event dan memperjelas Legend Race sebagai 150 Carat per lawan first-clear.
+- Mengubah estimasi PakaLive menjadi nilai per siaran yang dapat disesuaikan, dengan default 300 Carat, sehingga hadiah kampanye besar tidak lagi tercampur dengan gift siaran.
+- Mengganti label G1 menjadi G1 Support Missions dengan estimasi sekitar 300 Carat per bulan proyeksi.
+- Menambahkan input manual untuk bonus Campaign/Anniversary dan hadiah tak terduga seperti kompensasi, milestone, atau gift khusus.
+- Mempertahankan kompatibilitas konfigurasi planner lama dan memastikan bonus manual hanya memengaruhi mode proyeksi.
+
 ## [Versi 3.4.2] - 24 November 2026
 
 ### Kompatibilitas lineup Twinkle Collection
